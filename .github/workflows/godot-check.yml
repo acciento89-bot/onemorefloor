@@ -32,3 +32,7 @@ jobs:
       - name: Run main scene smoke test
         run: |
           ./godot --headless --path . --quit-after 10
+
+      - name: Run gameplay smoke script
+        run: |
+          ./godot --headless --path . --script res://scripts/smoke_test.gd
