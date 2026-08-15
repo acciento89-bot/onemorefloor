@@ -28,3 +28,7 @@ jobs:
       - name: Parse project headlessly
         run: |
           ./godot --headless --editor --path . --quit
+
+      - name: Run main scene smoke test
+        run: |
+          ./godot --headless --path . --quit-after 10
