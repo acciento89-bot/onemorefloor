@@ -36,18 +36,18 @@ func _run_smoke() -> void:
 		return
 
 	game.missions.record("kills", 25)
-	var coins_before_mission := int(game.meta.coins)
+	var coins_before_mission: int = int(game.meta.coins)
 	game.claim_mission(0)
 	if int(game.meta.coins) <= coins_before_mission:
 		_fail(5, "Smoke test: completed mission did not grant coins")
 		return
 
 	game.tower_pass.add_xp(400)
-	var pass_level := game.tower_pass.level()
+	var pass_level: int = int(game.tower_pass.level())
 	if pass_level < 1:
 		_fail(6, "Smoke test: Tower Pass did not level")
 		return
-	var coins_before_pass := int(game.meta.coins)
+	var coins_before_pass: int = int(game.meta.coins)
 	game.claim_pass_reward()
 	if int(game.meta.coins) <= coins_before_pass:
 		_fail(7, "Smoke test: Tower Pass reward did not grant coins")
