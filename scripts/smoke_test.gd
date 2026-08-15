@@ -3,11 +3,14 @@ extends SceneTree
 func _init() -> void:
 	call_deferred("_run_smoke")
 
+func _fail(code: int, message: String) -> void:
+	push_error(message)
+	quit(code)
+
 func _run_smoke() -> void:
 	var packed := load("res://scenes/main.tscn") as PackedScene
 	if packed == null:
-		push_error("Smoke test: main scene did not load")
-		quit(1)
+		_fail(1, "Smoke test: main scene did not load")
 		return
 
 	var game = packed.instantiate()
@@ -20,16 +23,44 @@ func _run_smoke() -> void:
 	game.buy_meta("precision")
 	game.buy_meta("fortune")
 
+	var forced_item: Dictionary = game.loot.roll_drop("warden", 5, game.rng)
+	if forced_item.is_empty() or game.loot.inventory.is_empty():
+		_fail(2, "Smoke test: guaranteed Warden loot did not drop")
+		return
+	if not game.loot.equip_index(0):
+		_fail(3, "Smoke test: loot could not be equipped")
+		return
+	var gear_bonus: Dictionary = game.loot.equipped_bonuses()
+	if float(gear_bonus["damage_pct"]) <= 0.0 and float(gear_bonus["hp"]) <= 0.0 and float(gear_bonus["crit_pct"]) <= 0.0 and float(gear_bonus["coin_pct"]) <= 0.0:
+		_fail(4, "Smoke test: equipped loot produced no bonus")
+		return
+
+	game.missions.record("kills", 25)
+	var coins_before_mission: int = int(game.meta.coins)
+	game.claim_mission(0)
+	if int(game.meta.coins) <= coins_before_mission:
+		_fail(5, "Smoke test: completed mission did not grant coins")
+		return
+
+	game.tower_pass.add_xp(400)
+	var pass_level: int = int(game.tower_pass.level())
+	if pass_level < 1:
+		_fail(6, "Smoke test: Tower Pass did not level")
+		return
+	var coins_before_pass: int = int(game.meta.coins)
+	game.claim_pass_reward()
+	if int(game.meta.coins) <= coins_before_pass:
+		_fail(7, "Smoke test: Tower Pass reward did not grant coins")
+		return
+
 	game.start_run()
 	if game.state != game.State.RUNNING:
-		push_error("Smoke test: run did not start")
-		quit(2)
+		_fail(8, "Smoke test: run did not start")
 		return
 
 	game.roll_upgrade_options()
 	if game.upgrade_options.size() != 3:
-		push_error("Smoke test: upgrade roll did not return three choices")
-		quit(3)
+		_fail(9, "Smoke test: upgrade roll did not return three choices")
 		return
 	game.apply_upgrade(0)
 	game.continue_run()
@@ -44,16 +75,14 @@ func _run_smoke() -> void:
 			e["hp"] = float(e["max_hp"]) * 0.45
 			break
 	if not found_warden:
-		push_error("Smoke test: Warden did not spawn on floor 5")
-		quit(4)
+		_fail(10, "Smoke test: Warden did not spawn on floor 5")
 		return
 	game.update_enemies(0.016)
 
 	game.run.run_coins = 50
 	game.cash_out()
 	if game.state != game.State.HOME:
-		push_error("Smoke test: cash out did not return home")
-		quit(5)
+		_fail(11, "Smoke test: cash out did not return home")
 		return
 
 	print("ONE MORE FLOOR gameplay smoke test passed")
