@@ -28,3 +28,13 @@ jobs:
       - name: Parse project headlessly
         run: |
           ./godot --headless --editor --path . --quit
+
+      - name: Run main scene smoke test
+        run: |
+          ./godot --headless --path . --quit-after 10
+
+      - name: Run gameplay smoke script
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 120 | tee smoke.log
+          grep -q "ONE MORE FLOOR gameplay smoke test passed" smoke.log
