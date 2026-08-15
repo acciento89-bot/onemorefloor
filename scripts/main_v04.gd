@@ -53,16 +53,16 @@ func spawn_floor() -> void:
 		_audio("warden")
 
 func update_warden(e: Dictionary, p: Vector2, to_player: Vector2, dist: float, delta: float) -> void:
-	var was_phase2 := bool(e["phase2"])
+	var was_phase2: bool = bool(e["phase2"])
 	super.update_warden(e, p, to_player, dist, delta)
 	if not was_phase2 and bool(e["phase2"]):
 		_audio("phase2")
 
 func fire_auto_attack() -> void:
-	var before := player_shots.size()
+	var before: int = player_shots.size()
 	super.fire_auto_attack()
 	if player_shots.size() > before:
-		var crit_found := false
+		var crit_found: bool = false
 		for i in range(before, player_shots.size()):
 			if bool(player_shots[i]["crit"]):
 				crit_found = true
@@ -75,24 +75,24 @@ func apply_damage_to_enemy(index: int, amount: float, crit: bool, hit_pos: Vecto
 		_audio("hit")
 
 func use_skill() -> void:
-	var ready := state == State.RUNNING and run.skill_cd <= 0.0
+	var ready: bool = state == State.RUNNING and float(run.skill_cd) <= 0.0
 	super.use_skill()
 	if ready:
 		_audio("nova")
 
 func roll_upgrade_options() -> void:
 	missions.record("floors", 1)
-	tower_pass.add_xp(12 + mini(28, run.floor_no * 2))
+	tower_pass.add_xp(12 + mini(28, int(run.floor_no) * 2))
 	super.roll_upgrade_options()
 
 func remove_dead() -> void:
 	for i in range(enemies.size() - 1, -1, -1):
 		if float(enemies[i]["hp"]) > 0.0:
 			continue
-		var e := enemies[i]
-		var kind := String(e["type"])
+		var e: Dictionary = enemies[i]
+		var kind: String = String(e["type"])
 		var bonuses: Dictionary = loot.equipped_bonuses()
-		var reward := int(round(float(e["reward"]) * meta.coin_multiplier() * (1.0 + float(bonuses["coin_pct"]))))
+		var reward: int = int(round(float(e["reward"]) * meta.coin_multiplier() * (1.0 + float(bonuses["coin_pct"]))))
 		coin_orbs.append({"pos":e["pos"],"value":reward,"age":0.0})
 		effects.append({"type":"burst","pos":e["pos"],"age":0.0,"dur":0.30,"color":enemy_color(kind),"kind":""})
 		missions.record("kills", 1)
@@ -110,16 +110,16 @@ func remove_dead() -> void:
 		enemies.remove_at(i)
 
 func cash_out() -> void:
-	var secured := int(run.run_coins)
+	var secured: int = int(run.run_coins)
 	if secured > 0:
 		missions.record("cash", secured)
 		tower_pass.add_xp(mini(120, maxi(5, int(secured / 6))))
 	super.cash_out()
 
 func claim_mission(index: int) -> void:
-	var weekly := index >= 3
+	var weekly: bool = index >= 3
 	var list: Array = missions.all_weekly() if weekly else missions.all_daily()
-	var local_index := index - 3 if weekly else index
+	var local_index: int = index - 3 if weekly else index
 	if local_index < 0 or local_index >= list.size():
 		return
 	var reward: Dictionary = missions.claim(list[local_index], weekly)
@@ -134,7 +134,7 @@ func claim_mission(index: int) -> void:
 	_audio("claim")
 
 func claim_pass_reward() -> void:
-	var level_no := tower_pass.next_claimable()
+	var level_no: int = int(tower_pass.next_claimable())
 	if level_no < 0:
 		return
 	var reward: Dictionary = tower_pass.claim(level_no)
@@ -212,8 +212,8 @@ func draw_vault_screen() -> void:
 	else:
 		for i in range(mini(6, loot.inventory.size())):
 			var item: Dictionary = loot.inventory[i]
-			var r := vault_item_rect(i)
-			var accent := rarity_color(String(item["rarity"]))
+			var r: Rect2 = vault_item_rect(i)
+			var accent: Color = rarity_color(String(item["rarity"]))
 			panel(r, C_PANEL, accent)
 			text(String(item["name"]), r.position + Vector2(20, 31), 20, C_TEXT)
 			text("%s • %s • Lv.%d" % [String(item["rarity"]), String(item["slot"]).to_upper(), int(item["level"])], r.position + Vector2(20, 57), 13, accent)
@@ -232,15 +232,16 @@ func draw_game() -> void:
 			warden = e
 			break
 	if not warden.is_empty():
-		var ratio := clampf(float(warden["hp"]) / float(warden["max_hp"]), 0.0, 1.0)
+		var ratio: float = clampf(float(warden["hp"]) / float(warden["max_hp"]), 0.0, 1.0)
 		panel(Rect2(118, 164, 484, 50), Color("151025"), C_PURPLE if not bool(warden["phase2"]) else C_RED)
 		text("THE WARDEN", Vector2(138, 185), 15, C_TEXT)
 		draw_rect(Rect2(260, 180, 318, 12), Color("381726"))
 		draw_rect(Rect2(260, 180, 318 * ratio, 12), C_RED if bool(warden["phase2"]) else C_PURPLE)
 	if boss_intro > 0.0:
-		var alpha := clampf(boss_intro, 0.0, 1.0)
+		var alpha: float = clampf(boss_intro, 0.0, 1.0)
 		draw_rect(Rect2(60, 500, 600, 145), Color(0.03, 0.02, 0.08, 0.84 * alpha))
-		var c := C_RED; c.a = alpha
+		var c: Color = C_RED
+		c.a = alpha
 		draw_string(font, Vector2(80, 558), "THE WARDEN", HORIZONTAL_ALIGNMENT_CENTER, 560, 48, c)
 		draw_string(font, Vector2(80, 605), "FLOOR %d BOSS" % run.floor_no, HORIZONTAL_ALIGNMENT_CENTER, 560, 18, C_TEXT)
 	_draw_notice(950)
@@ -259,25 +260,25 @@ func draw_missions_screen() -> void:
 	_draw_notice(1085)
 
 func draw_mission_row(mission: Dictionary, index: int, weekly: bool) -> void:
-	var r := mission_rect(index)
-	var complete := missions.is_complete(mission, weekly)
-	var claimed := missions.is_claimed(mission, weekly)
-	var accent := C_PURPLE if weekly else C_GREEN
+	var r: Rect2 = mission_rect(index)
+	var complete: bool = bool(missions.is_complete(mission, weekly))
+	var claimed: bool = bool(missions.is_claimed(mission, weekly))
+	var accent: Color = C_PURPLE if weekly else C_GREEN
 	if complete and not claimed:
 		accent = C_GOLD
 	if claimed:
 		accent = Color("4e5871")
 	panel(r, C_PANEL, accent)
 	text(String(mission["title"]), r.position + Vector2(18, 31), 18, C_TEXT)
-	var progress := missions.progress(mission, weekly)
+	var progress: int = int(missions.progress(mission, weekly))
 	text("%d / %d" % [progress, int(mission["goal"])], r.position + Vector2(18, 59), 14, C_MUTED)
 	text("%d coins  •  %d XP" % [int(mission["coins"]), int(mission["xp"])], r.position + Vector2(18, 84), 14, C_GOLD)
-	var status := "CLAIMED" if claimed else ("TAP TO CLAIM" if complete else "IN PROGRESS")
+	var status: String = "CLAIMED" if claimed else ("TAP TO CLAIM" if complete else "IN PROGRESS")
 	text(status, r.position + Vector2(435, 60), 14, C_GREEN if complete and not claimed else C_MUTED)
 
 func draw_pass_screen() -> void:
 	draw_meta_header("TOWER PASS", "Free progression — no purchase required", C_PURPLE)
-	var level_no := tower_pass.level()
+	var level_no: int = int(tower_pass.level())
 	var p: Dictionary = tower_pass.progress_to_next()
 	panel(Rect2(74, 240, 572, 190), C_PANEL, C_PURPLE)
 	draw_center("PASS LEVEL %d / %d" % [level_no, tower_pass.MAX_LEVEL], 300, 34, C_TEXT)
@@ -285,20 +286,20 @@ func draw_pass_screen() -> void:
 	draw_rect(Rect2(130, 340, 460 * float(p["ratio"]), 22), C_PURPLE)
 	draw_center("%d / %d XP TO NEXT LEVEL" % [int(p["current"]), int(p["needed"])], 397, 15, C_MUTED)
 	text("RECENT REWARDS", Vector2(74, 485), 18, C_GOLD)
-	var start_level := maxi(1, level_no - 2)
+	var start_level: int = maxi(1, level_no - 2)
 	for i in range(5):
-		var l := start_level + i
+		var l: int = start_level + i
 		if l > tower_pass.MAX_LEVEL:
 			break
 		var reward: Dictionary = tower_pass.reward_for(l)
-		var r := Rect2(74, 515 + i * 94, 572, 76)
-		var unlocked := l <= level_no
-		var claimable := tower_pass.can_claim(l)
+		var r: Rect2 = Rect2(74, 515 + i * 94, 572, 76)
+		var unlocked: bool = l <= level_no
+		var claimable: bool = bool(tower_pass.can_claim(l))
 		panel(r, C_PANEL, C_GOLD if claimable else (C_PURPLE if unlocked else Color("3c4261")))
 		text("LEVEL %d" % l, r.position + Vector2(18, 31), 17, C_TEXT)
 		text("%s • %d" % [String(reward["label"]), int(reward["coins"])], r.position + Vector2(145, 31), 15, C_MUTED)
 		text("CLAIM" if claimable else ("UNLOCKED" if unlocked else "LOCKED"), r.position + Vector2(455, 31), 14, C_GOLD if claimable else C_MUTED)
-	var next_claim := tower_pass.next_claimable()
+	var next_claim: int = int(tower_pass.next_claimable())
 	button(PASS_CLAIM, "CLAIM LEVEL %d" % next_claim if next_claim > 0 else "NO REWARD READY", C_GOLD if next_claim > 0 else C_MUTED, 18)
 	button(OVERLAY_BACK, "BACK", C_PURPLE, 20)
 	_draw_notice(1018)
