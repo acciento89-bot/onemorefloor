@@ -11,7 +11,7 @@ Mobile hybrid-casual roguelite by **Kamilunavo Games**.
 3. Clear the floor and collect the loot.
 4. Pick one of three random run upgrades.
 5. Decide to cash out or climb one more floor.
-6. Build permanent progression between runs.
+6. Spend secured coins on permanent Camp progression.
 
 ## Tech
 
@@ -19,31 +19,32 @@ Mobile hybrid-casual roguelite by **Kamilunavo Games**.
 - GDScript
 - Portrait-first mobile UI (720 × 1280 reference canvas)
 - iOS / iPadOS and Android targets
-- Headless Godot validation workflow in GitHub Actions
+- GitHub Actions validation with headless project load, main-scene launch and gameplay smoke test
 
-## Current playable slice — v0.2
+## Current playable slice — v0.3
 
-The current branch proves the complete run loop before production art and monetization are added.
+v0.3 keeps the complete combat/risk loop from v0.2 and adds the first real permanent-progression layer.
 
 ### Combat
 
 - Touch virtual joystick
 - WASD / arrow-key desktop fallback
 - Auto-targeting projectile attacks
-- Critical hits
-- Damage numbers
-- Hit / death effects
-- Screen shake
+- Critical hits and damage numbers
+- Hit / death effects and screen shake
 - Mobile haptics
 - NOVA active ability that damages enemies and clears hostile projectiles
-- Animated coin pickups that fly into the run counter
+- Animated coin pickups
 
 ### Enemies
 
 - **Goblin** — direct melee chaser
 - **Bat** — fast wobble movement and low HP
 - **Skeleton** — ranged enemy that tries to maintain distance
-- **The Warden** — boss every fifth floor with a radial projectile pattern and escorts
+- **The Warden** — boss every fifth floor
+  - telegraphed attacks
+  - Phase II below 50% HP
+  - alternating radial projectile rings and aimed fan attacks
 
 ### Run building
 
@@ -60,14 +61,36 @@ Ten temporary upgrades are currently available:
 - Nova Core
 - Warden's Plate
 
-Each floor rolls three different options from the pool.
+Each cleared floor rolls three different choices.
+
+### Permanent Camp progression
+
+The Camp now has interactive progression screens:
+
+- **Hero** — training increases starting HP and damage
+- **Forge** — permanent weapon-damage upgrades
+- **Talents**
+  - Vitality: starting HP
+  - Precision: starting critical chance
+  - Fortune: coin-drop multiplier
+- **Vault** — interactive placeholder for the upcoming artifact/equipment system
+
+Hero, Forge and Talent levels persist in `user://save.cfg` together with banked coins and best floor.
 
 ### Risk / reward
 
 - Cash out to secure all run coins.
 - Continue to push the tower higher.
-- Death currently secures only 60% of unsecured run coins.
-- Best floor and banked coins persist locally.
+- Death currently secures 60% of unsecured run coins.
+- Permanent Camp upgrades make future runs stronger.
+
+## Validation
+
+The CI pipeline uses Godot 4.7.1 and currently validates:
+
+1. Headless project/editor load.
+2. Main-scene launch.
+3. Gameplay smoke test that exercises permanent upgrades, starts a run, rolls a run upgrade, reaches a Floor 5 Warden setup, triggers Phase II logic and cashes out.
 
 ## Run locally
 
@@ -88,17 +111,19 @@ Each floor rolls three different options from the pool.
 - [x] Random three-choice upgrade roll
 - [x] Ten run upgrades
 - [x] Risk / reward decision
-- [x] First authored boss attack pattern — The Warden
+- [x] The Warden boss pattern
+- [x] Warden telegraphs and Phase II
 - [x] Basic haptics / combat feedback
 - [ ] First audio pass
 - [ ] Production sprites and animations
 
 ### Phase 2 — Meta progression
 - [x] Camp-style home shell
-- [ ] Interactive Hero screen
-- [ ] Forge
-- [ ] Talents
-- [ ] Vault
+- [x] Interactive Hero screen
+- [x] Forge
+- [x] Talents
+- [x] Vault shell
+- [ ] Artifact / equipment system
 - [ ] Missions
 - [ ] Tower Pass progression
 
@@ -122,9 +147,13 @@ Each floor rolls three different options from the pool.
 ## Repository layout
 
 ```text
-.github/    CI validation
-scenes/     Godot scenes
-scripts/    Gameplay and UI logic
-docs/       Game design / architecture notes
-assets/     Production art and audio (added incrementally)
+.github/                 CI validation
+scenes/                  Godot scenes
+scripts/main_v03.gd      Active game/controller UI
+scripts/progression.gd   Permanent Camp progression and save data
+scripts/run_profile.gd   Per-run player/build state
+scripts/enemy_factory.gd Enemy creation and scaling
+scripts/smoke_test.gd    Headless gameplay validation
+assets/                  Production art and audio (added incrementally)
+docs/                    Game-design and architecture notes
 ```
