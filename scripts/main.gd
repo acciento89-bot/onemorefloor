@@ -186,15 +186,15 @@ func update_player_shots(delta: float) -> void:
 	for i in range(player_shots.size() - 1, -1, -1):
 		var shot := player_shots[i]
 		shot["life"] = float(shot["life"]) - delta
-		shot["pos"] = Vector2(shot["pos"]) + Vector2(shot["vel"]) * delta
+		shot["pos"] = shot["pos"] + shot["vel"] * delta
 		var hit := false
 		for j in range(enemies.size()):
 			var e := enemies[j]
-			if Vector2(shot["pos"]).distance_to(Vector2(e["pos"])) <= float(e["radius"]) + 10.0:
-				apply_damage_to_enemy(j, float(shot["damage"]), bool(shot["crit"]), Vector2(shot["pos"]))
+			if shot["pos"].distance_to(e["pos"]) <= float(e["radius"]) + 10.0:
+				apply_damage_to_enemy(j, float(shot["damage"]), bool(shot["crit"]), shot["pos"])
 				hit = true
 				break
-		if hit or float(shot["life"]) <= 0.0 or not ARENA.grow(80).has_point(Vector2(shot["pos"])):
+		if hit or float(shot["life"]) <= 0.0 or not ARENA.grow(80).has_point(shot["pos"]):
 			player_shots.remove_at(i)
 		else:
 			player_shots[i] = shot
@@ -203,11 +203,11 @@ func update_enemy_shots(delta: float) -> void:
 	for i in range(enemy_shots.size() - 1, -1, -1):
 		var shot := enemy_shots[i]
 		shot["life"] = float(shot["life"]) - delta
-		shot["pos"] = Vector2(shot["pos"]) + Vector2(shot["vel"]) * delta
-		if Vector2(shot["pos"]).distance_to(player_pos) <= 28.0:
-			damage_player(float(shot["damage"]), Vector2(shot["pos"]))
+		shot["pos"] = shot["pos"] + shot["vel"] * delta
+		if shot["pos"].distance_to(player_pos) <= 28.0:
+			damage_player(float(shot["damage"]), shot["pos"])
 			enemy_shots.remove_at(i)
-		elif float(shot["life"]) <= 0.0 or not ARENA.grow(70).has_point(Vector2(shot["pos"])):
+		elif float(shot["life"]) <= 0.0 or not ARENA.grow(70).has_point(shot["pos"]):
 			enemy_shots.remove_at(i)
 		else:
 			enemy_shots[i] = shot
@@ -216,7 +216,7 @@ func update_visual_fx(delta: float) -> void:
 	for i in range(damage_numbers.size() - 1, -1, -1):
 		var d := damage_numbers[i]
 		d["age"] = float(d["age"]) + delta
-		d["pos"] = Vector2(d["pos"]) + Vector2(0, -42) * delta
+		d["pos"] = d["pos"] + Vector2(0, -42) * delta
 		if float(d["age"]) >= float(d["dur"]):
 			damage_numbers.remove_at(i)
 		else:
@@ -277,7 +277,7 @@ func nearest_enemy(ignore: Array[int]) -> int:
 	for i in range(enemies.size()):
 		if i in ignore:
 			continue
-		var dist := player_pos.distance_to(Vector2(enemies[i]["pos"]))
+		var dist := player_pos.distance_to(enemies[i]["pos"])
 		if dist <= attack_range and dist < best_dist:
 			best = i
 			best_dist = dist
@@ -323,8 +323,8 @@ func remove_dead() -> void:
 		if float(enemies[i]["hp"]) <= 0.0:
 			var e := enemies[i]
 			var reward := int(e["reward"])
-			coin_orbs.append({"pos":Vector2(e["pos"]), "value":reward, "age":0.0})
-			effects.append({"type":"burst","pos":Vector2(e["pos"]),"age":0.0,"dur":0.30,"color":enemy_color(String(e["type"]))})
+			coin_orbs.append({"pos":e["pos"], "value":reward, "age":0.0})
+			effects.append({"type":"burst","pos":e["pos"],"age":0.0,"dur":0.30,"color":enemy_color(String(e["type"]))})
 			if String(e["type"]) == "warden":
 				screen_shake = 12.0
 				haptic(80)
@@ -464,10 +464,10 @@ func use_skill() -> void:
 	haptic(38)
 	effects.append({"type":"nova","pos":player_pos,"age":0.0,"dur":0.38,"color":C_BLUE})
 	for i in range(enemies.size()):
-		if player_pos.distance_to(Vector2(enemies[i]["pos"])) <= nova_radius:
-			apply_damage_to_enemy(i, damage * nova_mult, false, Vector2(enemies[i]["pos"]))
+		if player_pos.distance_to(enemies[i]["pos"]) <= nova_radius:
+			apply_damage_to_enemy(i, damage * nova_mult, false, enemies[i]["pos"])
 	for i in range(enemy_shots.size() - 1, -1, -1):
-		if player_pos.distance_to(Vector2(enemy_shots[i]["pos"])) <= nova_radius:
+		if player_pos.distance_to(enemy_shots[i]["pos"]) <= nova_radius:
 			enemy_shots.remove_at(i)
 
 func roll_upgrade_options() -> void:
@@ -663,13 +663,13 @@ func draw_home() -> void:
 func draw_tower(center: Vector2) -> void:
 	draw_rect(Rect2(center.x - 78, center.y - 160, 156, 250), Color("11162f"))
 	draw_rect(Rect2(center.x - 54, center.y - 205, 108, 55), Color("181a3a"))
-	draw_polygon(
+	draw_colored_polygon(
 		PackedVector2Array([
 			Vector2(center.x - 70, center.y - 205),
 			Vector2(center.x, center.y - 275),
 			Vector2(center.x + 70, center.y - 205)
 		]),
-		PackedColorArray([Color("1b1c43")])
+		Color("1b1c43")
 	)
 	draw_circle(Vector2(center.x, center.y - 190), 22, C_PURPLE)
 	for row in range(3):
@@ -707,7 +707,7 @@ func draw_game() -> void:
 		var c: Color = d["color"]
 		c.a = alpha
 		var fs := 25 if bool(d["crit"]) else 19
-		draw_string(font, Vector2(d["pos"]) + Vector2(-28, 0), ("CRIT %d" if bool(d["crit"]) else "%d") % int(d["value"]), HORIZONTAL_ALIGNMENT_CENTER, 70, fs, c)
+		draw_string(font, d["pos"] + Vector2(-28, 0), ("CRIT %d" if bool(d["crit"]) else "%d") % int(d["value"]), HORIZONTAL_ALIGNMENT_CENTER, 70, fs, c)
 
 	draw_set_transform(Vector2.ZERO)
 
@@ -745,13 +745,13 @@ func draw_enemy(e: Dictionary) -> void:
 
 	if kind == "goblin":
 		draw_circle(p, radius, c)
-		draw_polygon(
+		draw_colored_polygon(
 			PackedVector2Array([p + Vector2(-18,-13), p + Vector2(-8,-32), p + Vector2(-2,-12)]),
-			PackedColorArray([c])
+			c
 		)
-		draw_polygon(
+		draw_colored_polygon(
 			PackedVector2Array([p + Vector2(18,-13), p + Vector2(8,-32), p + Vector2(2,-12)]),
-			PackedColorArray([c])
+			c
 		)
 		draw_circle(p + Vector2(-7,-4), 3, C_TEXT)
 		draw_circle(p + Vector2(7,-4), 3, C_TEXT)
@@ -760,13 +760,13 @@ func draw_enemy(e: Dictionary) -> void:
 	elif kind == "bat":
 		draw_circle(p, 10, c)
 		var flap := 8.0 + sin(elapsed * 13.0 + float(e["phase"])) * 6.0
-		draw_polygon(
+		draw_colored_polygon(
 			PackedVector2Array([p + Vector2(-8,0), p + Vector2(-30,-flap), p + Vector2(-23,12), p + Vector2(-5,8)]),
-			PackedColorArray([c])
+			c
 		)
-		draw_polygon(
+		draw_colored_polygon(
 			PackedVector2Array([p + Vector2(8,0), p + Vector2(30,-flap), p + Vector2(23,12), p + Vector2(5,8)]),
-			PackedColorArray([c])
+			c
 		)
 		draw_circle(p + Vector2(-4,-2), 2, C_RED)
 		draw_circle(p + Vector2(4,-2), 2, C_RED)
@@ -783,9 +783,9 @@ func draw_enemy(e: Dictionary) -> void:
 		draw_circle(p, radius, Color("48214f"))
 		draw_circle(p, radius - 8, c)
 		draw_rect(Rect2(p.x - 32, p.y - 30, 64, 38), Color("252a47"))
-		draw_polygon(
+		draw_colored_polygon(
 			PackedVector2Array([p + Vector2(-34,-30),p + Vector2(-22,-56),p + Vector2(-8,-34),p + Vector2(0,-62),p + Vector2(10,-34),p + Vector2(26,-55),p + Vector2(34,-30)]),
-			PackedColorArray([C_GOLD])
+			C_GOLD
 		)
 		draw_circle(p + Vector2(-12,-12), 4, C_RED)
 		draw_circle(p + Vector2(12,-12), 4, C_RED)
@@ -811,14 +811,14 @@ func enemy_color(kind: String) -> Color:
 func draw_wanderer(pos: Vector2, scale: float, combat: bool) -> void:
 	draw_circle(pos + Vector2(0, 12) * scale, 23 * scale, Color("273050"))
 	draw_circle(pos + Vector2(0, -13) * scale, 15 * scale, Color("d4a47b"))
-	draw_polygon(
+	draw_colored_polygon(
 		PackedVector2Array([
 			pos + Vector2(-22, 3) * scale,
 			pos + Vector2(-6, 40) * scale,
 			pos + Vector2(25, 28) * scale,
 			pos + Vector2(18, 0) * scale
 		]),
-		PackedColorArray([Color("6b2948")])
+		Color("6b2948")
 	)
 	draw_line(pos + Vector2(13, 6) * scale, pos + Vector2(43, -26) * scale, C_GOLD, 5 * scale)
 	draw_line(pos + Vector2(43, -26) * scale, pos + Vector2(48, -32) * scale, C_TEXT, 2 * scale)
