@@ -35,4 +35,6 @@ jobs:
 
       - name: Run gameplay smoke script
         run: |
-          ./godot --headless --path . --script res://scripts/smoke_test.gd
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 120 | tee smoke.log
+          grep -q "ONE MORE FLOOR gameplay smoke test passed" smoke.log
