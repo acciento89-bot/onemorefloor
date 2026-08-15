@@ -1,6 +1,9 @@
 extends SceneTree
 
-func _initialize() -> void:
+func _init() -> void:
+	call_deferred("_run_smoke")
+
+func _run_smoke() -> void:
 	var packed := load("res://scenes/main.tscn") as PackedScene
 	if packed == null:
 		push_error("Smoke test: main scene did not load")
