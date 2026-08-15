@@ -3,6 +3,7 @@ extends RefCounted
 const SAVE_PATH := "user://save.cfg"
 const RARITIES := ["COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY"]
 const RARITY_MULT := [1.0, 1.35, 1.85, 2.6, 3.8]
+const SETS := ["EMBER", "CRYPT", "WARDEN"]
 
 var inventory: Array = []
 var equipped := {"weapon": "", "armor": "", "relic": ""}
@@ -59,9 +60,9 @@ func _make_item(slot: String, rarity_index: int, floor_no: int, rng: RandomNumbe
 	var level: int = maxi(1, floor_no)
 	var item_id: String = "%d-%d-%d" % [Time.get_ticks_msec(), rng.randi(), inventory.size()]
 	var names: Dictionary = {
-		"weapon": ["Rustfang", "Tower Blade", "Void Edge", "Warden Breaker"],
-		"armor": ["Ironhide", "Crypt Guard", "Tower Plate", "Warden Shell"],
-		"relic": ["Ember Eye", "Lucky Sigil", "Void Charm", "Warden Seal"]
+		"weapon": ["Rustfang", "Tower Blade", "Void Edge", "Warden Breaker", "Crypt Cleaver"],
+		"armor": ["Ironhide", "Crypt Guard", "Tower Plate", "Warden Shell", "Grave Mantle"],
+		"relic": ["Ember Eye", "Lucky Sigil", "Void Charm", "Warden Seal", "Bone Lantern"]
 	}
 	var item: Dictionary = {
 		"id": item_id,
@@ -73,7 +74,9 @@ func _make_item(slot: String, rarity_index: int, floor_no: int, rng: RandomNumbe
 		"damage_pct": 0.0,
 		"hp": 0.0,
 		"crit_pct": 0.0,
-		"coin_pct": 0.0
+		"coin_pct": 0.0,
+		"trait": "",
+		"set": ""
 	}
 	if slot == "weapon":
 		item["damage_pct"] = (0.025 + float(level) * 0.0022) * mult
@@ -84,7 +87,18 @@ func _make_item(slot: String, rarity_index: int, floor_no: int, rng: RandomNumbe
 			item["crit_pct"] = (0.008 + float(level) * 0.0007) * mult
 		else:
 			item["coin_pct"] = (0.018 + float(level) * 0.0013) * mult
+	if rarity_index >= 2:
+		item["trait"] = _roll_trait(slot, rng)
+	if rarity_index >= 1 and rng.randf() < (0.82 if rarity_index >= 2 else 0.35):
+		item["set"] = String(SETS[rng.randi_range(0, SETS.size() - 1)])
 	return item
+
+func _roll_trait(slot: String, rng: RandomNumberGenerator) -> String:
+	if slot == "weapon":
+		return "EXECUTIONER" if rng.randf() < 0.55 else "FRENZY"
+	if slot == "armor":
+		return "BULWARK" if rng.randf() < 0.55 else "VITAL CORE"
+	return "VAMPIRIC" if rng.randf() < 0.55 else "FORTUNE"
 
 func equip_index(index: int) -> bool:
 	if index < 0 or index >= inventory.size():
@@ -97,16 +111,60 @@ func equip_index(index: int) -> bool:
 func is_equipped(item: Dictionary) -> bool:
 	return String(equipped.get(String(item["slot"]), "")) == String(item["id"])
 
+func equipped_items() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for raw_item in inventory:
+		var item: Dictionary = raw_item
+		if is_equipped(item):
+			result.append(item)
+	return result
+
 func equipped_bonuses() -> Dictionary:
-	var result := {"damage_pct":0.0, "hp":0.0, "crit_pct":0.0, "coin_pct":0.0}
-	for item in inventory:
-		if not is_equipped(item):
-			continue
+	var result := {
+		"damage_pct":0.0, "hp":0.0, "crit_pct":0.0, "coin_pct":0.0,
+		"lifesteal":0.0, "armor":0.0, "attack_speed":0.0, "nova_mult":0.0
+	}
+	var set_counts := {"EMBER":0, "CRYPT":0, "WARDEN":0}
+	for item in equipped_items():
 		result["damage_pct"] += float(item.get("damage_pct", 0.0))
 		result["hp"] += float(item.get("hp", 0.0))
 		result["crit_pct"] += float(item.get("crit_pct", 0.0))
 		result["coin_pct"] += float(item.get("coin_pct", 0.0))
+		var trait := String(item.get("trait", ""))
+		match trait:
+			"EXECUTIONER": result["damage_pct"] += 0.06
+			"FRENZY": result["attack_speed"] += 0.07
+			"BULWARK": result["armor"] += 0.04
+			"VITAL CORE": result["hp"] += 18.0
+			"VAMPIRIC": result["lifesteal"] += 0.025
+			"FORTUNE": result["coin_pct"] += 0.06
+		var set_name := String(item.get("set", ""))
+		if set_counts.has(set_name):
+			set_counts[set_name] += 1
+	_apply_set_bonus(result, set_counts)
 	return result
+
+func _apply_set_bonus(result: Dictionary, counts: Dictionary) -> void:
+	if int(counts["EMBER"]) >= 2:
+		result["damage_pct"] += 0.08
+	if int(counts["EMBER"]) >= 3:
+		result["crit_pct"] += 0.05
+	if int(counts["CRYPT"]) >= 2:
+		result["hp"] += 25.0
+	if int(counts["CRYPT"]) >= 3:
+		result["lifesteal"] += 0.03
+	if int(counts["WARDEN"]) >= 2:
+		result["armor"] += 0.035
+	if int(counts["WARDEN"]) >= 3:
+		result["nova_mult"] += 0.20
+
+func equipped_set_counts() -> Dictionary:
+	var counts := {"EMBER":0, "CRYPT":0, "WARDEN":0}
+	for item in equipped_items():
+		var set_name := String(item.get("set", ""))
+		if counts.has(set_name):
+			counts[set_name] += 1
+	return counts
 
 func rarity_color_name(item: Dictionary) -> String:
 	return String(item.get("rarity", "COMMON"))
@@ -119,3 +177,13 @@ func stat_line(item: Dictionary) -> String:
 	if float(item.get("crit_pct", 0.0)) > 0.0:
 		return "+%.1f%% crit" % (float(item["crit_pct"]) * 100.0)
 	return "+%.1f%% coins" % (float(item.get("coin_pct", 0.0)) * 100.0)
+
+func trait_line(item: Dictionary) -> String:
+	var parts: Array[String] = []
+	var set_name := String(item.get("set", ""))
+	var trait := String(item.get("trait", ""))
+	if set_name != "":
+		parts.append("%s SET" % set_name)
+	if trait != "":
+		parts.append(trait)
+	return " • ".join(parts)
