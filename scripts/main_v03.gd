@@ -273,24 +273,24 @@ func update_coin_orbs(delta: float) -> void:
 func fire_auto_attack() -> void:
 	var used: Array[int] = []
 	for n in range(1 + run.extra_targets):
-		var idx := nearest_enemy(used)
+		var idx: int = nearest_enemy(used)
 		if idx == -1: break
 		used.append(idx)
 		var target: Vector2 = enemies[idx]["pos"]
-		var crit := rng.randf() < run.crit_chance
-		var shot_damage := run.damage * (run.crit_mult if crit else 1.0)
-		var spread := (float(n) - float(run.extra_targets) * 0.5) * 0.06
-		var dir := (target - player_pos).normalized().rotated(spread)
+		var crit: bool = rng.randf() < float(run.crit_chance)
+		var shot_damage: float = float(run.damage) * (float(run.crit_mult) if crit else 1.0)
+		var spread: float = (float(n) - float(run.extra_targets) * 0.5) * 0.06
+		var dir: Vector2 = (target - player_pos).normalized().rotated(spread)
 		player_shots.append({"pos":player_pos + dir * 28.0,"vel":dir * 720.0,"damage":shot_damage,"life":0.60,"crit":crit})
 		effects.append({"type":"slash","pos":player_pos,"dir":dir,"age":0.0,"dur":0.12,"color":C_GOLD,"kind":""})
 
 func nearest_enemy(ignore: Array[int]) -> int:
-	var best := -1
-	var best_dist := run.attack_range + 1.0
+	var best: int = -1
+	var best_dist: float = float(run.attack_range) + 1.0
 	for i in range(enemies.size()):
 		if i in ignore: continue
-		var dist := player_pos.distance_to(enemies[i]["pos"])
-		if dist <= run.attack_range and dist < best_dist:
+		var dist: float = player_pos.distance_to(enemies[i]["pos"])
+		if dist <= float(run.attack_range) and dist < best_dist:
 			best = i
 			best_dist = dist
 	return best
@@ -559,7 +559,7 @@ func draw_talents_screen() -> void:
 		panel(r, C_PANEL, row["c"])
 		text(row["name"], r.position + Vector2(26, 42), 23, C_TEXT)
 		text("Lv. %d  •  %s" % [row["level"], row["desc"]], r.position + Vector2(26, 78), 16, C_MUTED)
-		var cost := meta.talent_cost(row["kind"])
+		var cost: int = int(meta.talent_cost(String(row["kind"])))
 		text("UPGRADE %d" % cost, r.position + Vector2(395, 92), 17, C_GOLD if meta.coins >= cost else C_MUTED)
 
 func draw_vault_screen() -> void:
