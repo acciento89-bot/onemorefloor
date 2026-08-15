@@ -127,8 +127,8 @@ func equipped_bonuses() -> Dictionary:
 		result["hp"] = float(result["hp"]) + float(item.get("hp", 0.0))
 		result["crit_pct"] = float(result["crit_pct"]) + float(item.get("crit_pct", 0.0))
 		result["coin_pct"] = float(result["coin_pct"]) + float(item.get("coin_pct", 0.0))
-		var trait: String = String(item.get("trait", ""))
-		match trait:
+		var trait_name: String = String(item.get("trait", ""))
+		match trait_name:
 			"EXECUTIONER": result["damage_pct"] = float(result["damage_pct"]) + 0.06
 			"FRENZY": result["attack_speed"] = float(result["attack_speed"]) + 0.07
 			"BULWARK": result["armor"] = float(result["armor"]) + 0.04
@@ -179,9 +179,9 @@ func stat_line(item: Dictionary) -> String:
 
 func trait_line(item: Dictionary) -> String:
 	var set_name: String = String(item.get("set", ""))
-	var trait: String = String(item.get("trait", ""))
-	if set_name != "" and trait != "":
-		return "%s SET • %s" % [set_name, trait]
+	var trait_name: String = String(item.get("trait", ""))
+	if set_name != "" and trait_name != "":
+		return "%s SET • %s" % [set_name, trait_name]
 	if set_name != "":
 		return "%s SET" % set_name
-	return trait
+	return trait_name
