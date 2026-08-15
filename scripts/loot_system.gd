@@ -24,15 +24,15 @@ func save_data() -> void:
 	cfg.save(SAVE_PATH)
 
 func roll_drop(enemy_type: String, floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
-	var chance := 0.055 + minf(0.08, float(floor_no) * 0.002)
+	var chance: float = 0.055 + minf(0.08, float(floor_no) * 0.002)
 	if enemy_type == "warden":
 		chance = 1.0
 	if rng.randf() > chance:
 		return {}
-	var rarity_index := _roll_rarity(enemy_type == "warden", floor_no, rng)
-	var slot_roll := rng.randi_range(0, 2)
-	var slot := ["weapon", "armor", "relic"][slot_roll]
-	var item := _make_item(slot, rarity_index, floor_no, rng)
+	var rarity_index: int = _roll_rarity(enemy_type == "warden", floor_no, rng)
+	var slot_roll: int = rng.randi_range(0, 2)
+	var slot: String = String(["weapon", "armor", "relic"][slot_roll])
+	var item: Dictionary = _make_item(slot, rarity_index, floor_no, rng)
 	inventory.push_front(item)
 	if inventory.size() > 60:
 		inventory.resize(60)
@@ -40,8 +40,8 @@ func roll_drop(enemy_type: String, floor_no: int, rng: RandomNumberGenerator) ->
 	return item
 
 func _roll_rarity(warden: bool, floor_no: int, rng: RandomNumberGenerator) -> int:
-	var roll := rng.randf()
-	var bonus := minf(0.12, float(floor_no) * 0.0025)
+	var roll: float = rng.randf()
+	var bonus: float = minf(0.12, float(floor_no) * 0.0025)
 	if warden:
 		if roll < 0.04 + bonus * 0.35: return 4
 		if roll < 0.20 + bonus: return 3
@@ -54,16 +54,16 @@ func _roll_rarity(warden: bool, floor_no: int, rng: RandomNumberGenerator) -> in
 	return 0
 
 func _make_item(slot: String, rarity_index: int, floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
-	var rarity := RARITIES[rarity_index]
-	var mult := float(RARITY_MULT[rarity_index])
-	var level := maxi(1, floor_no)
-	var item_id := "%d-%d-%d" % [Time.get_ticks_msec(), rng.randi(), inventory.size()]
-	var names := {
+	var rarity: String = String(RARITIES[rarity_index])
+	var mult: float = float(RARITY_MULT[rarity_index])
+	var level: int = maxi(1, floor_no)
+	var item_id: String = "%d-%d-%d" % [Time.get_ticks_msec(), rng.randi(), inventory.size()]
+	var names: Dictionary = {
 		"weapon": ["Rustfang", "Tower Blade", "Void Edge", "Warden Breaker"],
 		"armor": ["Ironhide", "Crypt Guard", "Tower Plate", "Warden Shell"],
 		"relic": ["Ember Eye", "Lucky Sigil", "Void Charm", "Warden Seal"]
 	}
-	var item := {
+	var item: Dictionary = {
 		"id": item_id,
 		"slot": slot,
 		"name": names[slot][rng.randi_range(0, names[slot].size() - 1)],
