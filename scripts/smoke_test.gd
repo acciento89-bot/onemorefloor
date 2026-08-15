@@ -27,44 +27,75 @@ func _run_smoke() -> void:
 	if forced_item.is_empty() or game.loot.inventory.is_empty():
 		_fail(2, "Smoke test: guaranteed Warden loot did not drop")
 		return
-	if not game.loot.equip_index(0):
-		_fail(3, "Smoke test: loot could not be equipped")
-		return
+
+	game.loot.inventory = [
+		{"id":"set-w","slot":"weapon","name":"Crypt Blade","rarity":"EPIC","rarity_index":3,"level":12,"damage_pct":0.12,"hp":0.0,"crit_pct":0.0,"coin_pct":0.0,"trait":"EXECUTIONER","set":"CRYPT"},
+		{"id":"set-a","slot":"armor","name":"Crypt Plate","rarity":"EPIC","rarity_index":3,"level":12,"damage_pct":0.0,"hp":30.0,"crit_pct":0.0,"coin_pct":0.0,"trait":"BULWARK","set":"CRYPT"},
+		{"id":"set-r","slot":"relic","name":"Crypt Eye","rarity":"EPIC","rarity_index":3,"level":12,"damage_pct":0.0,"hp":0.0,"crit_pct":0.03,"coin_pct":0.0,"trait":"VAMPIRIC","set":"CRYPT"}
+	]
+	game.loot.equipped = {"weapon":"", "armor":"", "relic":""}
+	for i in range(3):
+		if not game.loot.equip_index(i):
+			_fail(3, "Smoke test: set item could not be equipped")
+			return
 	var gear_bonus: Dictionary = game.loot.equipped_bonuses()
-	if float(gear_bonus["damage_pct"]) <= 0.0 and float(gear_bonus["hp"]) <= 0.0 and float(gear_bonus["crit_pct"]) <= 0.0 and float(gear_bonus["coin_pct"]) <= 0.0:
-		_fail(4, "Smoke test: equipped loot produced no bonus")
+	if float(gear_bonus["damage_pct"]) <= 0.15 or float(gear_bonus["hp"]) < 55.0 or float(gear_bonus["lifesteal"]) < 0.05:
+		_fail(4, "Smoke test: traits or three-piece Crypt set bonus missing")
+		return
+
+	var crypt_pool: Array[String] = game.room_system.enemy_pool("CRYPT", 13)
+	if not ("ghoul" in crypt_pool) or not ("necromancer" in crypt_pool):
+		_fail(5, "Smoke test: Crypt enemy pool missing new archetypes")
+		return
+	var enemy_factory = load("res://scripts/enemy_factory.gd")
+	var ghoul: Dictionary = enemy_factory.make_enemy("ghoul", 13, game.rng, Vector2(360, 700))
+	var necro: Dictionary = enemy_factory.make_enemy("necromancer", 13, game.rng, Vector2(360, 700))
+	if String(ghoul["type"]) != "ghoul" or String(necro["type"]) != "necromancer" or not necro.has("summon_cd"):
+		_fail(6, "Smoke test: Crypt enemy factory output invalid")
 		return
 
 	game.missions.record("kills", 25)
 	var coins_before_mission: int = int(game.meta.coins)
 	game.claim_mission(0)
 	if int(game.meta.coins) <= coins_before_mission:
-		_fail(5, "Smoke test: completed mission did not grant coins")
+		_fail(7, "Smoke test: completed mission did not grant coins")
 		return
 
 	game.tower_pass.add_xp(400)
 	var pass_level: int = int(game.tower_pass.level())
 	if pass_level < 1:
-		_fail(6, "Smoke test: Tower Pass did not level")
+		_fail(8, "Smoke test: Tower Pass did not level")
 		return
 	var coins_before_pass: int = int(game.meta.coins)
 	game.claim_pass_reward()
 	if int(game.meta.coins) <= coins_before_pass:
-		_fail(7, "Smoke test: Tower Pass reward did not grant coins")
+		_fail(9, "Smoke test: Tower Pass reward did not grant coins")
 		return
 
 	game.start_run()
 	if game.state != game.State.RUNNING:
-		_fail(8, "Smoke test: run did not start")
+		_fail(10, "Smoke test: run did not start")
+		return
+	if float(game.run.lifesteal) < 0.05 or float(game.run.armor) < 0.04:
+		_fail(11, "Smoke test: equipped traits/set bonuses were not applied to run")
 		return
 
+	game.current_room = {"area":"DUNGEON","type":"TREASURE","reward_bonus":50,"hazard":"none"}
+	game.rewarded_floor = 0
+	var coins_before_room: int = int(game.run.run_coins)
 	game.roll_upgrade_options()
-	if game.upgrade_options.size() != 3:
-		_fail(9, "Smoke test: upgrade roll did not return three choices")
+	if int(game.run.run_coins) < coins_before_room + 50 or game.upgrade_options.size() != 3:
+		_fail(12, "Smoke test: treasure room reward or upgrade roll failed")
 		return
 	game.apply_upgrade(0)
 	game.continue_run()
 	game.use_skill()
+
+	game.run.floor_no = 11
+	game.spawn_floor()
+	if String(game.current_room.get("area", "")) != "CRYPT":
+		_fail(13, "Smoke test: Floor 11 did not enter Crypt area")
+		return
 
 	game.run.floor_no = 5
 	game.spawn_floor()
@@ -75,14 +106,14 @@ func _run_smoke() -> void:
 			e["hp"] = float(e["max_hp"]) * 0.45
 			break
 	if not found_warden:
-		_fail(10, "Smoke test: Warden did not spawn on floor 5")
+		_fail(14, "Smoke test: Warden did not spawn on floor 5")
 		return
 	game.update_enemies(0.016)
 
 	game.run.run_coins = 50
 	game.cash_out()
 	if game.state != game.State.HOME:
-		_fail(11, "Smoke test: cash out did not return home")
+		_fail(15, "Smoke test: cash out did not return home")
 		return
 
 	print("ONE MORE FLOOR gameplay smoke test passed")
