@@ -31,6 +31,7 @@ jobs:
           ./godot --headless --path . --script res://scripts/enemy_factory.gd --check-only
           ./godot --headless --path . --script res://scripts/room_system.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v04.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v05.gd --check-only
 
       - name: Parse project headlessly
         run: |
