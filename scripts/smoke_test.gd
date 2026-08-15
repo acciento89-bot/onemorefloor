@@ -9,7 +9,6 @@ func _initialize() -> void:
 
 	var game = packed.instantiate()
 	root.add_child(game)
-	await process_frame
 
 	game.meta.coins = 100000
 	game.buy_meta("hero")
