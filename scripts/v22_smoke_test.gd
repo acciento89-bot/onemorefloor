@@ -30,8 +30,9 @@ func _run() -> void:
 		return
 
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	if not scene_text.contains("main_v22.gd") or scene_text.contains("main_v20.gd"):
-		_fail(1106,"v1.10 main scene is not using component runtime renderer")
+	var component_renderer := scene_text.contains("main_v22.gd") or scene_text.contains("main_v23.gd")
+	if not component_renderer or scene_text.contains("main_v20.gd"):
+		_fail(1106,"v1.10+ main scene is not using component runtime renderer")
 		return
 
 	var renderer := FileAccess.get_file_as_string("res://scripts/main_v22.gd")
@@ -59,7 +60,6 @@ func _run() -> void:
 		_fail(1112,"v1.10 old reference raster payload is not excluded")
 		return
 
-	# Navigation must remain real after replacing the chrome/icon renderer.
 	game.tutorial_active = false
 	game.settings_open = false
 	game.state = game.State.HOME
@@ -81,7 +81,6 @@ func _run() -> void:
 		_fail(1116,"v1.10 Tower Pass BACK regressed")
 		return
 
-	# Bottom tabs must still route into the real progression screens.
 	var tabs: Array = [
 		[game.HERO_TAB,game.State.HERO],
 		[game.FORGE_TAB,game.State.FORGE],
