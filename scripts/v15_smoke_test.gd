@@ -15,7 +15,7 @@ func _run_v15_smoke() -> void:
 	var game = packed.instantiate()
 	root.add_child(game)
 	if not game.has_method("_v15_premium_panel") or not game.has_method("_v15_home_tab"):
-		_fail(502, "v1.4 smoke: premium renderer is not active")
+		_fail(502, "v1.4 smoke: premium renderer is not present in the inheritance chain")
 		return
 	if game.tex_v15_citadel == null or game.tex_v15_citadel.get_width() < 720 or game.tex_v15_citadel.get_height() < 640:
 		_fail(503, "v1.4 smoke: premium menu citadel missing or undersized")
@@ -52,19 +52,10 @@ func _run_v15_smoke() -> void:
 		_fail(509, "v1.4 smoke: Settings BACK regression returned")
 		return
 
+	# Version/build ownership moves to the latest release smoke. v1.4 only protects its features.
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	if not project_text.contains("config/version=\"1.4.0-rc1\""):
-		_fail(510, "v1.4 smoke: project version missing")
-		return
 	if not project_text.contains("pointing/emulate_mouse_from_touch=false"):
-		_fail(511, "v1.4 smoke: native touch hardening regressed")
-		return
-	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not export_text.contains("application/short_version=\"1.4.0\"") or not export_text.contains("version/name=\"1.4.0\""):
-		_fail(512, "v1.4 smoke: mobile visible version missing")
-		return
-	if not export_text.contains("application/version=\"7\"") or not export_text.contains("version/code=7"):
-		_fail(513, "v1.4 smoke: mobile build number 7 missing")
+		_fail(510, "v1.4 smoke: native touch hardening regressed")
 		return
 
 	print("ONE MORE FLOOR v1.4 premium overhaul smoke test passed")
