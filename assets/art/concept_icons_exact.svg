@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="768" viewBox="0 0 1024 768">
+<defs>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#70400d"/><stop offset=".2" stop-color="#ffe795"/><stop offset=".45" stop-color="#bd7624"/><stop offset=".68" stop-color="#fff0a8"/><stop offset="1" stop-color="#7a440d"/></linearGradient>
+ <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4d5666"/><stop offset=".25" stop-color="#f5f7fb"/><stop offset=".5" stop-color="#8994a5"/><stop offset=".76" stop-color="#fff"/><stop offset="1" stop-color="#4a5261"/></linearGradient>
+ <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4a1675"/><stop offset=".25" stop-color="#d68cff"/><stop offset=".5" stop-color="#772dcc"/><stop offset=".76" stop-color="#efceff"/><stop offset="1" stop-color="#5a1d91"/></linearGradient>
+ <linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#15512f"/><stop offset=".3" stop-color="#6cff9d"/><stop offset=".55" stop-color="#22ad5c"/><stop offset=".8" stop-color="#d0ffe0"/><stop offset="1" stop-color="#12613a"/></linearGradient>
+ <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#153d66"/><stop offset=".3" stop-color="#64caff"/><stop offset=".55" stop-color="#277bbd"/><stop offset=".8" stop-color="#d6f5ff"/><stop offset="1" stop-color="#194677"/></linearGradient>
+ <radialGradient id="shine"><stop stop-color="#fff" stop-opacity=".32"/><stop offset=".42" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+ <g id="ring"><circle cx="128" cy="128" r="104" fill="#02050b" stroke="url(#gold)" stroke-width="12"/><circle cx="128" cy="128" r="87" fill="#080b14" stroke="#5a3187" stroke-width="4"/><circle cx="128" cy="128" r="76" fill="url(#shine)"/><path d="M128 16l15 17-15 17-15-17z" fill="url(#purple)" stroke="#f0d6ff" stroke-width="2"/></g>
+</defs>
+<!-- 0 HERO/HEART -->
+<g transform="translate(0 0)"><use href="#ring"/><path d="M128 77c35-37 79-13 79 27 0 42-44 71-79 95-35-24-79-53-79-95 0-40 44-64 79-27z" fill="url(#green)" stroke="#b8ffd1" stroke-width="4"/><path d="M118 99h20v22h22v20h-22v22h-20v-22H96v-20h22z" fill="#fff"/></g>
+<!-- 1 PRECISION -->
+<g transform="translate(256 0)"><use href="#ring"/><circle cx="128" cy="128" r="54" fill="none" stroke="url(#purple)" stroke-width="7"/><path d="M128 61l15 50 50 17-50 17-15 50-15-50-50-17 50-17z" fill="url(#purple)" stroke="#f2d8ff" stroke-width="3"/><circle cx="128" cy="128" r="12" fill="#fff4ff"/></g>
+<!-- 2 MUSIC -->
+<g transform="translate(512 0)"><use href="#ring"/><path d="M111 79v84c0 16-14 28-32 28s-30-10-30-24 13-25 30-25c6 0 11 1 15 3V92l79-19v73c0 16-14 28-32 28s-30-10-30-24 13-25 30-25c6 0 11 1 15 3V58z" fill="url(#gold)" stroke="#fff0b0" stroke-width="3"/></g>
+<!-- 3 SFX -->
+<g transform="translate(768 0)"><use href="#ring"/><path d="M63 111h38l38-32v98l-38-32H63z" fill="url(#silver)"/><path d="M158 101q33 27 0 54M174 85q55 43 0 86" fill="none" stroke="url(#gold)" stroke-width="8" stroke-linecap="round"/></g>
+<!-- 4 HAPTICS -->
+<g transform="translate(0 256)"><use href="#ring"/><rect x="91" y="60" width="74" height="136" rx="13" fill="#111723" stroke="url(#silver)" stroke-width="7"/><rect x="104" y="78" width="48" height="91" fill="#20334a"/><circle cx="128" cy="182" r="6" fill="#ddd"/><path d="M69 89q-24 39 0 78M187 89q24 39 0 78" fill="none" stroke="url(#purple)" stroke-width="7" stroke-linecap="round"/></g>
+<!-- 5 ANALYTICS -->
+<g transform="translate(256 256)"><use href="#ring"/><path d="M65 180V137h24v43zm38 0V105h25v75zm39 0V78h25v102zm39 0V51h24v129z" fill="url(#silver)"/><path d="M61 187h150" stroke="url(#gold)" stroke-width="5"/></g>
+<!-- 6 TOWER PASS / SWORD -->
+<g transform="translate(512 256)"><use href="#ring"/><path d="M72 181l95-95 19 19-95 95z" fill="url(#silver)" stroke="#fff" stroke-width="2"/><path d="M158 75l42-13-13 42z" fill="url(#blue)"/><path d="M83 164l-22 22 20 20 22-22z" fill="url(#gold)"/></g>
+<!-- 7 ANVIL -->
+<g transform="translate(768 256)"><use href="#ring"/><path d="M55 91h154l-22 29-35 12-3 26 34 31H73l34-31-3-26-30-12z" fill="url(#silver)" stroke="#f7f8fb" stroke-width="3"/><path d="M61 98h137" stroke="#fff" stroke-width="4" opacity=".6"/></g>
+<!-- 8 ARMOR -->
+<g transform="translate(0 512)"><use href="#ring"/><path d="M79 69l49-20 49 20 31 37-25 96h-110l-25-96z" fill="url(#blue)" stroke="#c9edff" stroke-width="4"/><path d="M128 50v151M79 69l49 44 49-44M50 106l78 7 80-7" fill="none" stroke="#163d6a" stroke-width="5"/></g>
+<!-- 9 SETTINGS -->
+<g transform="translate(256 512)"><use href="#ring"/><path d="M128 69l16 8 18-6 12 15-3 19 14 12-7 18 7 18-14 12 3 19-12 15-18-6-16 8-16-8-18 6-12-15 3-19-14-12 7-18-7-18 14-12-3-19 12-15 18 6z" fill="url(#gold)"/><circle cx="128" cy="135" r="31" fill="#111724" stroke="#fff0ae" stroke-width="5"/><circle cx="128" cy="135" r="11" fill="url(#purple)"/></g>
+<!-- 10 VAULT CHEST -->
+<g transform="translate(512 512)"><use href="#ring"/><path d="M64 110q4-47 64-47t64 47v73H64z" fill="#713c17" stroke="url(#gold)" stroke-width="7"/><path d="M64 110h128M92 67v116M164 67v116" stroke="url(#gold)" stroke-width="8"/><rect x="113" y="118" width="30" height="42" rx="4" fill="url(#gold)"/><circle cx="128" cy="133" r="6" fill="#2b1709"/></g>
+<!-- 11 COIN -->
+<g transform="translate(768 512)"><use href="#ring"/><circle cx="128" cy="132" r="60" fill="url(#gold)" stroke="#fff0a3" stroke-width="4"/><circle cx="128" cy="132" r="46" fill="#c88726" stroke="#74400d" stroke-width="3"/><path d="M128 91l12 25 28 4-20 20 5 28-25-13-25 13 5-28-20-20 28-4z" fill="#ffefa1" stroke="#a35c16" stroke-width="3"/></g>
+</svg>
