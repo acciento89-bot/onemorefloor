@@ -1,9 +1,9 @@
-name: Raster Reference v1.8 Check
+name: Raster Reference v1.8.1 Check
 
 on:
   push:
     branches:
-      - agent/v1.8-raster-reference-skin
+      - agent/v1.8.1-home-nav-icons-fix
       - main
   pull_request:
 
@@ -22,7 +22,7 @@ jobs:
           mv Godot_v4.7.1-stable_linux.x86_64 godot
           chmod +x godot
 
-      - name: Parse v1.8 renderer
+      - name: Parse v1.8.1 renderer
         run: |
           ./godot --headless --path . --script res://scripts/main_v20.gd --check-only
           ./godot --headless --path . --script res://scripts/v20_smoke_test.gd --check-only
@@ -41,8 +41,8 @@ jobs:
             exit 1
           fi
 
-      - name: Run v1.8 raster reference regression
+      - name: Run v1.8.1 Home regression
         run: |
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v20_smoke_test.gd --quit-after 120 | tee raster-v20.log
-          grep -q "ONE MORE FLOOR v1.8 raster reference smoke test passed" raster-v20.log
+          grep -q "ONE MORE FLOOR v1.8.1 Home navigation/icon smoke test passed" raster-v20.log
