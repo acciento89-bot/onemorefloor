@@ -23,7 +23,7 @@ func setup(settings_ref) -> void:
 	add_child(music_player_b)
 	music_players = [music_player, music_player_b]
 	music_streams = {
-		"menu": load("res://assets/audio/tower_theme.wav"),
+		"menu": _make_music_stream("menu"),
 		"dungeon": _make_music_stream("dungeon"),
 		"crypt": _make_music_stream("crypt"),
 		"castle": _make_music_stream("castle"),
@@ -162,6 +162,8 @@ func _make_music_stream(kind: String) -> AudioStreamWAV:
 
 func _music_sample(kind: String, t: float) -> float:
 	match kind:
+		"menu":
+			return _menu_sample(t)
 		"crypt":
 			return _crypt_sample(t)
 		"castle":
@@ -169,6 +171,20 @@ func _music_sample(kind: String, t: float) -> float:
 		"boss":
 			return _boss_sample(t)
 	return _dungeon_sample(t)
+
+func _menu_sample(t: float) -> float:
+	var chord_step: int = int(floor(t / 1.5)) % 4
+	var roots := [65.41, 73.42, 82.41, 61.74]
+	var root: float = roots[chord_step]
+	var swell: float = 0.72 + 0.28 * sin(TAU * 0.083 * t - PI * 0.5)
+	var pad: float = sin(TAU * root * t) * 0.065
+	pad += sin(TAU * root * 1.5 * t + 0.35) * 0.034
+	pad += sin(TAU * root * 2.0 * t + 0.8) * 0.020
+	var sparkle_step: int = int(floor(t / 0.75)) % 8
+	var sparkle_notes := [261.63, 329.63, 392.00, 329.63, 293.66, 369.99, 440.00, 369.99]
+	var sparkle_env: float = exp(-fmod(t, 0.75) * 6.0)
+	var sparkle: float = sin(TAU * float(sparkle_notes[sparkle_step]) * t) * sparkle_env * 0.028
+	return pad * swell + sparkle
 
 func _dungeon_sample(t: float) -> float:
 	var step: int = int(floor(t / 0.75)) % 8
