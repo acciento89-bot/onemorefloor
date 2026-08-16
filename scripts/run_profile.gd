@@ -20,8 +20,9 @@ var nova_mult := 2.8
 var nova_radius := 250.0
 var skill_cd := 0.0
 
-# Run-build depth. These values are intentionally not persisted: every tower run
-# starts fresh, but combinations of upgrades can unlock one-time synergies.
+# Every run starts fresh. Upgrade counts form synergies while the new scaled
+# application path lets the same upgrade roll at Common/Rare/Epic/Legendary
+# strength without duplicating four separate upgrade pools.
 var upgrade_counts: Dictionary = {}
 var active_synergies: Dictionary = {}
 var last_synergy_unlocked := ""
@@ -50,22 +51,36 @@ func reset(meta) -> void:
 	last_synergy_unlocked = ""
 
 func apply_upgrade(kind: String) -> void:
+	apply_upgrade_scaled(kind, 1.0)
+
+func apply_upgrade_scaled(kind: String, strength: float) -> void:
+	strength = clampf(strength, 0.5, 3.0)
 	upgrade_counts[kind] = int(upgrade_counts.get(kind, 0)) + 1
 	match kind:
-		"power": damage *= 1.25
-		"lifesteal": lifesteal = minf(0.30, lifesteal + 0.05)
-		"multi": extra_targets = mini(4, extra_targets + 1)
-		"haste": attack_delay = maxf(0.18, attack_delay * 0.82)
-		"range": attack_range *= 1.22
+		"power":
+			damage *= 1.0 + 0.25 * strength
+		"lifesteal":
+			lifesteal = minf(0.36, lifesteal + 0.05 * strength)
+		"multi":
+			var shots := 2 if strength >= 2.0 else 1
+			extra_targets = mini(5, extra_targets + shots)
+		"haste":
+			attack_delay = maxf(0.16, attack_delay * maxf(0.54, 1.0 - 0.18 * strength))
+		"range":
+			attack_range *= 1.0 + 0.22 * strength
 		"vitality":
-			max_hp += 25.0
-			hp = minf(max_hp, hp + 25.0)
-		"speed": speed *= 1.12
-		"crit": crit_chance = minf(0.55, crit_chance + 0.08)
+			var hp_gain := 25.0 * strength
+			max_hp += hp_gain
+			hp = minf(max_hp, hp + hp_gain)
+		"speed":
+			speed *= 1.0 + 0.12 * strength
+		"crit":
+			crit_chance = minf(0.68, crit_chance + 0.08 * strength)
 		"nova":
-			nova_mult *= 1.25
-			nova_radius = minf(390.0, nova_radius * 1.25)
-		"armor": armor = minf(0.40, armor + 0.08)
+			nova_mult *= 1.0 + 0.25 * strength
+			nova_radius = minf(440.0, nova_radius * (1.0 + 0.25 * strength))
+		"armor":
+			armor = minf(0.55, armor + 0.08 * strength)
 	_evaluate_synergies()
 
 func upgrade_count(kind: String) -> int:
@@ -77,25 +92,36 @@ func has_synergy(id: String) -> bool:
 func synergy_count() -> int:
 	return active_synergies.size()
 
+func synergy_label(id: String) -> String:
+	match id:
+		"shatter_volley": return "SHATTER VOLLEY"
+		"bloodsteel": return "BLOODSTEEL"
+		"stormcore": return "STORMCORE"
+		"hunters_edge": return "HUNTER'S EDGE"
+		"momentum": return "MOMENTUM"
+	return id.to_upper()
+
+func active_synergy_names() -> Array[String]:
+	var names: Array[String] = []
+	for id in ["shatter_volley", "bloodsteel", "stormcore", "hunters_edge", "momentum"]:
+		if has_synergy(id):
+			names.append(synergy_label(id))
+	return names
+
 func consume_synergy_notice() -> String:
 	var result := last_synergy_unlocked
 	last_synergy_unlocked = ""
 	return result
 
 func _evaluate_synergies() -> void:
-	# MULTISHOT + DEADLY EDGE: stronger crits and slightly higher base output.
 	if upgrade_count("multi") > 0 and upgrade_count("crit") > 0:
 		_unlock_synergy("shatter_volley", "SHATTER VOLLEY")
-	# BLOOD PACT + WARDEN'S PLATE: sustain build becomes genuinely tanky.
 	if upgrade_count("lifesteal") > 0 and upgrade_count("armor") > 0:
 		_unlock_synergy("bloodsteel", "BLOODSTEEL")
-	# NOVA CORE + QUICK HANDS: turns NOVA into a heavier room-clearing tool.
 	if upgrade_count("nova") > 0 and upgrade_count("haste") > 0:
 		_unlock_synergy("stormcore", "STORMCORE")
-	# POWER SURGE + LONG REACH: rewards a ranged damage build.
 	if upgrade_count("power") > 0 and upgrade_count("range") > 0:
 		_unlock_synergy("hunters_edge", "HUNTER'S EDGE")
-	# QUICK HANDS + SWIFT BOOTS: high-mobility attack build.
 	if upgrade_count("haste") > 0 and upgrade_count("speed") > 0:
 		_unlock_synergy("momentum", "MOMENTUM")
 
@@ -114,13 +140,13 @@ func _unlock_synergy(id: String, display_name: String) -> void:
 			armor = minf(0.48, armor + 0.04)
 		"stormcore":
 			nova_mult *= 1.30
-			nova_radius = minf(420.0, nova_radius + 35.0)
+			nova_radius = minf(440.0, nova_radius + 35.0)
 		"hunters_edge":
 			damage *= 1.12
 			attack_range *= 1.12
 		"momentum":
 			speed *= 1.08
-			attack_delay = maxf(0.18, attack_delay * 0.92)
+			attack_delay = maxf(0.16, attack_delay * 0.92)
 
 func next_floor() -> void:
 	floor_no += 1
