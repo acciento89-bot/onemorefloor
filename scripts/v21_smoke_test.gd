@@ -21,7 +21,7 @@ func _run() -> void:
 		return
 
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	var live_renderer := scene_text.contains("main_v21.gd") or scene_text.contains("main_v22.gd") or scene_text.contains("main_v23.gd")
+	var live_renderer := scene_text.contains("main_v21.gd") or scene_text.contains("main_v22.gd") or scene_text.contains("main_v23.gd") or scene_text.contains("main_v35.gd")
 	if not live_renderer or scene_text.contains("main_v20.gd"):
 		_fail(1003,"v1.9+ main scene is not using the live UI renderer")
 		return
@@ -37,13 +37,13 @@ func _run() -> void:
 			return
 
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	var version_ok := project_text.contains("config/version=\"1.9.0-runtime-ui\"") or project_text.contains("config/version=\"1.10.0-premium-components\"")
+	var version_ok := project_text.contains("config/version=\"1.9.0-runtime-ui\"") or project_text.contains("config/version=\"1.10.0-premium-components\"") or project_text.contains("config/version=\"1.24.0\"")
 	if not version_ok:
 		_fail(1006,"v1.9+ project version missing")
 		return
 
 	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	var ios_ok := (export_text.contains("application/short_version=\"1.9.0\"") and export_text.contains("application/version=\"14\"")) or (export_text.contains("application/short_version=\"1.10.0\"") and export_text.contains("application/version=\"15\""))
+	var ios_ok := (export_text.contains("application/short_version=\"1.9.0\"") and export_text.contains("application/version=\"14\"")) or (export_text.contains("application/short_version=\"1.10.0\"") and export_text.contains("application/version=\"15\"")) or (export_text.contains("application/short_version=\"1.24.0\"") and export_text.contains("application/version=\"16\""))
 	if not ios_ok:
 		_fail(1007,"v1.9+ iOS version/build missing")
 		return
