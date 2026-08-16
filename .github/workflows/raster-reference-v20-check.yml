@@ -1,14 +1,14 @@
-name: Raster Reference v1.8 Check
+name: Runtime UI v1.9 Check
 
 on:
   push:
     branches:
-      - agent/v1.8-raster-reference-skin
+      - agent/v1.9-runtime-ui-rebuild
       - main
   pull_request:
 
 jobs:
-  raster-reference:
+  runtime-ui:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -22,27 +22,29 @@ jobs:
           mv Godot_v4.7.1-stable_linux.x86_64 godot
           chmod +x godot
 
-      - name: Parse v1.8 renderer
+      - name: Parse v1.9 runtime UI renderer
         run: |
-          ./godot --headless --path . --script res://scripts/main_v20.gd --check-only
-          ./godot --headless --path . --script res://scripts/v20_smoke_test.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v21.gd --check-only
+          ./godot --headless --path . --script res://scripts/v21_smoke_test.gd --check-only
 
-      - name: Validate raster payload size
+      - name: Assert full-screen raster UI is not active
         run: |
           set -euo pipefail
-          chars=$(cat assets/art/reference/home_*.b64 | tr -d '\r\n' | wc -c | tr -d ' ')
-          test "$chars" = "59344"
+          grep -q 'main_v21.gd' scenes/main.tscn
+          ! grep -q 'main_v20.gd' scenes/main.tscn
+          ! grep -q 'include_filter="assets/art/reference/\*.b64"' export_presets.cfg
+          ! grep -q '_v20_load_chunked_webp' scripts/main_v21.gd
 
       - name: Import project
         run: |
           set -o pipefail
-          ./godot --headless --editor --path . --quit 2>&1 | tee raster-import.log
-          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script" raster-import.log; then
+          ./godot --headless --editor --path . --quit 2>&1 | tee runtime-ui-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script" runtime-ui-import.log; then
             exit 1
           fi
 
-      - name: Run v1.8 raster reference regression
+      - name: Run v1.9 runtime UI regression
         run: |
           set -o pipefail
-          ./godot --headless --path . --script res://scripts/v20_smoke_test.gd --quit-after 120 | tee raster-v20.log
-          grep -q "ONE MORE FLOOR v1.8 raster reference smoke test passed" raster-v20.log
+          ./godot --headless --path . --script res://scripts/v21_smoke_test.gd --quit-after 120 | tee runtime-ui-v21.log
+          grep -q "ONE MORE FLOOR v1.9 runtime UI smoke test passed" runtime-ui-v21.log
