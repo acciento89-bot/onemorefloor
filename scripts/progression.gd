@@ -4,6 +4,7 @@ const SAVE_PATH := "user://save.cfg"
 const CURRENT_SAVE_VERSION := 2
 
 var best_floor := 1
+var checkpoint_floor := 1
 var coins := 0
 var hero_level := 1
 var forge_level := 0
@@ -21,6 +22,15 @@ func load_data() -> void:
 	if from_version < CURRENT_SAVE_VERSION:
 		_migrate(cfg, from_version)
 	best_floor = int(cfg.get_value("progress", "best_floor", 1))
+	if not cfg.has_section_key("progress", "checkpoint_floor"):
+		checkpoint_floor = 50 if best_floor >= 50 else 1
+		cfg.set_value("progress", "checkpoint_floor", checkpoint_floor)
+		cfg.set_value("system", "checkpoint_feature", "v1.12")
+		cfg.save(SAVE_PATH)
+	else:
+		checkpoint_floor = int(cfg.get_value("progress", "checkpoint_floor", 1))
+	if checkpoint_floor > 1 and checkpoint_floor < 50:
+		checkpoint_floor = 1
 	coins = int(cfg.get_value("progress", "coins", 0))
 	hero_level = int(cfg.get_value("meta", "hero_level", 1))
 	forge_level = int(cfg.get_value("meta", "forge_level", 0))
@@ -29,21 +39,23 @@ func load_data() -> void:
 	fortune_level = int(cfg.get_value("meta", "fortune_level", 0))
 
 func _migrate(cfg: ConfigFile, from_version: int) -> void:
-	# v1/v2 intentionally keep every existing section and key. The migration
-	# only adds release metadata so older Loot/Missions/Tower Pass saves survive.
+	# Preserve every existing save section/key. Checkpoints are additive metadata,
+	# so the established v2 save format stays compatible with older builds/tests.
 	if from_version < 1:
 		cfg.set_value("system", "created_with", "pre-v1.0")
 	if from_version < 2:
-		cfg.set_value("system", "save_version", CURRENT_SAVE_VERSION)
 		cfg.set_value("system", "last_migration", "v1.0-rc1")
+	cfg.set_value("system", "save_version", CURRENT_SAVE_VERSION)
 	cfg.save(SAVE_PATH)
 
 func save_data() -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(SAVE_PATH)
 	cfg.set_value("system", "save_version", CURRENT_SAVE_VERSION)
-	cfg.set_value("system", "game_version", "1.0.0-rc1")
+	cfg.set_value("system", "game_version", "1.12-checkpoint-difficulty")
+	cfg.set_value("system", "checkpoint_feature", "v1.12")
 	cfg.set_value("progress", "best_floor", best_floor)
+	cfg.set_value("progress", "checkpoint_floor", checkpoint_floor)
 	cfg.set_value("progress", "coins", coins)
 	cfg.set_value("meta", "hero_level", hero_level)
 	cfg.set_value("meta", "forge_level", forge_level)
@@ -54,6 +66,17 @@ func save_data() -> void:
 
 func save_version() -> int:
 	return CURRENT_SAVE_VERSION
+
+func run_start_floor() -> int:
+	return checkpoint_floor if checkpoint_floor >= 50 else 1
+
+func unlock_checkpoint(floor_no: int) -> bool:
+	if floor_no < 50 or floor_no <= checkpoint_floor:
+		return false
+	checkpoint_floor = floor_no
+	best_floor = maxi(best_floor, floor_no)
+	save_data()
+	return true
 
 func hero_cost() -> int:
 	return 90 + (hero_level - 1) * 70
