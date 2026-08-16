@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="576" viewBox="0 0 512 576">
+<defs>
+ <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dfe7f2"/><stop offset=".45" stop-color="#64738a"/><stop offset="1" stop-color="#20283a"/></linearGradient>
+ <linearGradient id="darksteel"><stop stop-color="#657086"/><stop offset="1" stop-color="#202636"/></linearGradient>
+ <linearGradient id="purpleBlade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset=".25" stop-color="#d49cff"/><stop offset=".65" stop-color="#8b3df3"/><stop offset="1" stop-color="#351166"/></linearGradient>
+ <linearGradient id="gold"><stop stop-color="#ffe68b"/><stop offset=".45" stop-color="#d89b36"/><stop offset="1" stop-color="#704317"/></linearGradient>
+ <radialGradient id="purpleGlow"><stop stop-color="#d887ff" stop-opacity=".65"/><stop offset="1" stop-color="#7a25cc" stop-opacity="0"/></radialGradient>
+ <radialGradient id="blueGlow"><stop stop-color="#9bf4ff" stop-opacity=".7"/><stop offset="1" stop-color="#2a8bd0" stop-opacity="0"/></radialGradient>
+</defs>
+
+<!-- 0 WANDERER cell 0,0 -->
+<g transform="translate(64 94)">
+ <ellipse cx="0" cy="70" rx="35" ry="11" fill="#03060c" opacity=".65"/>
+ <circle cy="-20" r="27" fill="#151b2b"/><path d="M-25-29C-12-50 14-51 28-29L18-16-18-14Z" fill="#101827" stroke="#426080" stroke-width="2"/>
+ <path d="M-17-19c4-17 31-17 35 0v17c-7 11-27 11-35 0Z" fill="#d5a373"/><path d="M-20-27l13-18 9 10 15-11 8 20-16-5-12 7Z" fill="#111827"/>
+ <circle cx="-7" cy="-15" r="2.5" fill="#1a1c24"/><circle cx="8" cy="-15" r="2.5" fill="#1a1c24"/>
+ <path d="M-29 1l19-11 11 7 13-7 20 12 9 48-18 22-52-3-15-25Z" fill="#1d2839" stroke="#8290a4" stroke-width="2"/>
+ <path d="M-29 2l-13 43 22 18 14-39Z" fill="#742d45"/><path d="M-24 5L5 12l-4 29-31-7Z" fill="#344d70"/><path d="M10-4l18 9-4 22-16-3Z" fill="url(#steel)"/>
+ <path d="M-16 46l-6 32h17L1 49M14 47l2 31h18l-8-34" fill="#202634" stroke="#4b5568" stroke-width="3"/>
+ <path d="M24 18L48-20" stroke="#6a451e" stroke-width="8"/><path d="M25 15L53-30" stroke="url(#purpleBlade)" stroke-width="5"/><path d="M20 18l14 8" stroke="#e2ad46" stroke-width="5"/>
+</g>
+
+<!-- 1 GOBLIN -->
+<g transform="translate(192 96)">
+ <ellipse cy="68" rx="33" ry="10" fill="#020509" opacity=".65"/>
+ <path d="M-20-18l-34-17 22 33M20-18l34-17-22 33" fill="#4c9b4f" stroke="#2d6031" stroke-width="3"/>
+ <circle cy="-12" r="28" fill="#5aa957" stroke="#2d6031" stroke-width="3"/><path d="M-20-18l8-9M20-18l-8-9" stroke="#263926" stroke-width="5"/><circle cx="-10" cy="-10" r="4" fill="#ffdb62"/><circle cx="10" cy="-10" r="4" fill="#ffdb62"/><path d="M-11 6q11 9 22 0" fill="none" stroke="#263026" stroke-width="3"/><path d="M-5 3l3 7M6 3l-3 7" stroke="#eee8cc" stroke-width="2"/>
+ <path d="M-27 16l17-8 10 8 11-8 18 10 4 42-28 15-34-14Z" fill="#4c3b2a" stroke="#2c261f" stroke-width="3"/><path d="M-23 26h44l-4 13h-36Z" fill="#7a542c"/>
+ <path d="M-16 58l-6 19M15 58l7 19" stroke="#365c37" stroke-width="9" stroke-linecap="round"/>
+ <path d="M24 31l27-18" stroke="#6b4c31" stroke-width="5"/><path d="M35 24l20-14-13 24Z" fill="#b6c1cc" stroke="#596676" stroke-width="2"/>
+</g>
+
+<!-- 2 BAT -->
+<g transform="translate(320 96)">
+ <ellipse cy="64" rx="31" ry="9" fill="#020509" opacity=".6"/>
+ <path d="M-7-1C-37-34-57-25-55 10l17-12 7 24 24-7M7-1C37-34 57-25 55 10L38-2l-7 24-24-7" fill="#6f3e9d" stroke="#b678e0" stroke-width="3"/>
+ <ellipse cy="6" rx="17" ry="24" fill="#352347" stroke="#8e54b7" stroke-width="3"/><path d="M-11-13l-8-14 14 7M11-13l8-14-14 7" fill="#6f3e9d"/>
+ <circle cx="-6" cy="0" r="3" fill="#ff73ff"/><circle cx="6" cy="0" r="3" fill="#ff73ff"/><path d="M-7 10l7 6 7-6" fill="none" stroke="#e6b9ff" stroke-width="2"/>
+ <path d="M-6 28l-8 24M6 28l8 24" stroke="#6f3e9d" stroke-width="4"/><path d="M-18 52l9-5M18 52l-9-5" stroke="#a76bd0" stroke-width="3"/>
+</g>
+
+<!-- 3 SKELETON -->
+<g transform="translate(448 96)">
+ <ellipse cy="68" rx="33" ry="10" fill="#020509" opacity=".65"/>
+ <circle cy="-18" r="24" fill="#d9d4c5" stroke="#807c72" stroke-width="3"/><circle cx="-8" cy="-20" r="5" fill="#20222a"/><circle cx="8" cy="-20" r="5" fill="#20222a"/><path d="M0-12l6 8H-6Z" fill="#42434a"/><path d="M-11 0h22M-6-1v9M2-1v9" stroke="#77746c" stroke-width="2"/>
+ <path d="M0 8v48M-20 24h40M-15 42h30" stroke="#d0cbc0" stroke-width="6" stroke-linecap="round"/><path d="M-18 24l-17 30M18 24l15 28M-7 55l-11 23M7 55l12 23" stroke="#bfbab0" stroke-width="6" stroke-linecap="round"/>
+ <circle cx="-34" cy="48" r="18" fill="#3c4452" stroke="#95a0af" stroke-width="4"/><path d="M-46 48h24M-34 36v24" stroke="#718095" stroke-width="3"/>
+ <path d="M31 26l23 37" stroke="#6b4c31" stroke-width="5"/><path d="M34 24l15-10 8 8-18 9Z" fill="url(#steel)"/>
+</g>
+
+<!-- 4 GHOUL -->
+<g transform="translate(64 286)">
+ <ellipse cy="70" rx="35" ry="11" fill="#020509" opacity=".65"/>
+ <path d="M-25-17l8-23 13 13 12-15 18 23" fill="#354b45"/><circle cy="-12" r="27" fill="#617d62" stroke="#31463b" stroke-width="3"/><circle cx="-9" cy="-10" r="4" fill="#d9ff82"/><circle cx="9" cy="-10" r="4" fill="#d9ff82"/><path d="M-11 8l8-5 5 7 10-4" stroke="#263b31" stroke-width="3" fill="none"/>
+ <path d="M-29 12l16-9 12 8 14-7 18 11 7 45-34 16-37-15Z" fill="#303a35" stroke="#53655b" stroke-width="3"/><path d="M-21 30l-23 23M23 28l27 18" stroke="#617d62" stroke-width="8" stroke-linecap="round"/><path d="M-4 56l-8 24M12 55l12 23" stroke="#4b6250" stroke-width="9"/>
+</g>
+
+<!-- 5 NECROMANCER -->
+<g transform="translate(192 286)">
+ <ellipse cy="71" rx="37" ry="11" fill="#020509" opacity=".65"/>
+ <circle cy="-18" r="39" fill="url(#purpleGlow)"/><path d="M-31 2l8-42 23-18 24 18 8 42-14 14h-36Z" fill="#2d1a42" stroke="#8f55bf" stroke-width="3"/><path d="M-15-21q15-17 30 0v27q-15 15-30 0Z" fill="#aa9e96"/><circle cx="-6" cy="-14" r="3" fill="#ad5bff"/><circle cx="7" cy="-14" r="3" fill="#ad5bff"/><path d="M-35 10l22-8 14 10 15-10 22 10-2 58-34 11-37-12Z" fill="#261837" stroke="#65408b" stroke-width="3"/><path d="M29 22l25 53" stroke="#5d4331" stroke-width="6"/><path d="M53 7v33M38 23h30" stroke="#aa65e7" stroke-width="5"/><circle cx="53" cy="22" r="17" fill="none" stroke="#d68fff" stroke-width="3"/>
+</g>
+
+<!-- 6 WARDEN -->
+<g transform="translate(320 286)">
+ <ellipse cy="73" rx="40" ry="12" fill="#020509" opacity=".7"/>
+ <path d="M-34-13l6-31 16-18 12 15 13-15 17 18 6 31-14 14h-44Z" fill="#272538" stroke="#c08b40" stroke-width="3"/><path d="M-24-43l9-22 15 17 15-17 10 22" fill="#bb8737"/><path d="M-14-20q14-17 28 0v22q-14 14-28 0Z" fill="#5b324e"/><circle cx="-6" cy="-13" r="3" fill="#ff5c6d"/><circle cx="6" cy="-13" r="3" fill="#ff5c6d"/>
+ <path d="M-38 4l23-10 15 11 16-11 24 11 4 62-42 16-43-16Z" fill="#2b2d43" stroke="#b48443" stroke-width="4"/><path d="M-26 17h52l-8 28h-36Z" fill="#46334f"/><path d="M-12 64l-7 19M15 63l8 19" stroke="#25293a" stroke-width="11"/>
+ <path d="M34 16l21 39" stroke="#9c6a31" stroke-width="7"/><path d="M38 16l17-16 9 11-20 12Z" fill="url(#steel)"/>
+</g>
+
+<!-- 7 CRYPT KEEPER -->
+<g transform="translate(448 286)">
+ <ellipse cy="73" rx="42" ry="12" fill="#020509" opacity=".7"/>
+ <circle cy="-13" r="42" fill="url(#blueGlow)" opacity=".55"/><path d="M-35-8l5-36 20-20 10 15 10-15 20 20 5 36-14 17h-42Z" fill="#18313a" stroke="#55ccd5" stroke-width="3"/><path d="M-14-17q14-17 28 0v23q-14 14-28 0Z" fill="#72979b"/><circle cx="-6" cy="-10" r="3" fill="#8ef6ff"/><circle cx="6" cy="-10" r="3" fill="#8ef6ff"/>
+ <path d="M-40 8l24-10 16 12 17-12 24 11 4 60-43 15-45-15Z" fill="#1b3038" stroke="#5b9ea4" stroke-width="4"/><path d="M-26 22h52l-7 25h-38Z" fill="#254950"/><path d="M35 16l19 42" stroke="#496f6e" stroke-width="7"/><path d="M54 3l9 14-9 16-9-16Z" fill="#70f0f5" stroke="#c8ffff" stroke-width="2"/>
+</g>
+
+<!-- 8 GARGOYLE -->
+<g transform="translate(64 478)">
+ <ellipse cy="70" rx="36" ry="11" fill="#020509" opacity=".68"/>
+ <path d="M-15-15C-48-44-61-23-49 17l24-17M15-15C48-44 61-23 49 17L25 0" fill="#536070" stroke="#8491a2" stroke-width="3"/><path d="M-20-19l-7-23 18 13M20-19l7-23-18 13" fill="#677382"/><circle cy="-12" r="25" fill="#626e7d" stroke="#96a1b0" stroke-width="3"/><circle cx="-8" cy="-11" r="3" fill="#ffb44e"/><circle cx="8" cy="-11" r="3" fill="#ffb44e"/><path d="M-25 12l17-8 9 8 10-8 18 9 6 47-33 15-36-15Z" fill="#4a5563" stroke="#7f8b99" stroke-width="3"/><path d="M-10 59l-13 20M15 58l14 20" stroke="#4c5867" stroke-width="9"/>
+</g>
+
+<!-- 9 SENTINEL -->
+<g transform="translate(192 478)">
+ <ellipse cy="72" rx="40" ry="12" fill="#020509" opacity=".7"/>
+ <path d="M-31-4l5-43h52l5 43-14 15h-34Z" fill="url(#darksteel)" stroke="#c5a866" stroke-width="4"/><path d="M-20-45l7-17 13 15 13-15 7 17" fill="#b88738"/><path d="M-15-22h30v17h-30Z" fill="#11141d"/><circle cx="-7" cy="-14" r="3" fill="#ffc452"/><circle cx="7" cy="-14" r="3" fill="#ffc452"/>
+ <path d="M-39 7l24-12 15 12 16-12 24 12 3 61-41 17-44-17Z" fill="url(#darksteel)" stroke="#bca05f" stroke-width="4"/><path d="M-29 18h58l-8 30h-42Z" fill="#3c4453"/><circle cx="-45" cy="36" r="25" fill="#303846" stroke="#c2a66c" stroke-width="4"/><path d="M-45 16v40M-65 36h40" stroke="#7c8796" stroke-width="3"/><path d="M35 17l22 47" stroke="#86602f" stroke-width="7"/><path d="M39 15l16-15 9 10-19 13Z" fill="url(#steel)"/>
+</g>
+
+<!-- 10 HEXER -->
+<g transform="translate(320 478)">
+ <ellipse cy="72" rx="35" ry="11" fill="#020509" opacity=".65"/>
+ <circle cy="-13" r="39" fill="url(#purpleGlow)" opacity=".55"/><path d="M-30-5l7-40 23-20 23 20 7 40-14 16h-32Z" fill="#311746" stroke="#ae58dd" stroke-width="3"/><path d="M-12-20q12-14 24 0v23q-12 12-24 0Z" fill="#b89baf"/><circle cx="-5" cy="-12" r="3" fill="#ff8bff"/><circle cx="5" cy="-12" r="3" fill="#ff8bff"/><path d="M-33 9l20-8 13 9 14-9 21 9 3 56-37 16-38-16Z" fill="#2c193f" stroke="#7d3fa5" stroke-width="3"/><path d="M31 20l21 45" stroke="#5b3b2c" stroke-width="6"/><path d="M52 6l11 17-11 18-11-18Z" fill="#d57bff" stroke="#f2caff" stroke-width="2"/>
+</g>
+
+<!-- 11 HOLLOW KING -->
+<g transform="translate(448 478)">
+ <ellipse cy="74" rx="43" ry="12" fill="#020509" opacity=".72"/>
+ <circle cy="-13" r="45" fill="url(#purpleGlow)" opacity=".65"/><path d="M-34-5l4-39 15-19 15 20 15-20 15 19 4 39-15 16h-38Z" fill="#25172f" stroke="#d5a23d" stroke-width="4"/><path d="M-26-47l5-28 21 24 21-24 5 28-13-7L0-35l-13-19Z" fill="url(#gold)" stroke="#ffe58a" stroke-width="2"/><path d="M-14-21q14-17 28 0v24q-14 14-28 0Z" fill="#6a5365"/><circle cx="-6" cy="-13" r="3" fill="#ffcc58"/><circle cx="6" cy="-13" r="3" fill="#ffcc58"/>
+ <path d="M-41 8l25-11 16 12 17-12 25 12 4 61-44 16-46-16Z" fill="#251d32" stroke="#c99a3c" stroke-width="4"/><path d="M-28 21h56l-7 29h-42Z" fill="#3d2447"/><path d="M36 17l20 45" stroke="#9d6b2c" stroke-width="7"/><path d="M55 1l10 17-10 19-10-19Z" fill="#bb5cff" stroke="#f0c6ff" stroke-width="2"/>
+</g>
+</svg>
