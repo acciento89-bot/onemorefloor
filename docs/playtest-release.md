@@ -8,8 +8,10 @@ This milestone turns the first 30 floors into a device-playtest candidate. It is
 - Engine: Godot 4.7.1
 - Orientation: portrait
 - Reference viewport: 720 × 1280
-- Recommended mobile application identifier: `de.kamilunavo.onemorefloor`
+- Application identifier: `de.kamilunavo.onemorefloor`
+- Apple Team ID: `TKG684N5GL`
 - Target families: iPhone + iPad + Android phones/tablets
+- Mobile presets: `iOS Playtest` and `Android Playtest` in `export_presets.cfg`
 
 ## Release systems included
 
@@ -56,19 +58,27 @@ These replace the procedural tone generator during v1.0 gameplay. The old genera
 
 ### iPhone / iPad
 
-Before a signed device/TestFlight build, configure the Godot iOS export preset with:
+The committed `iOS Playtest` preset already contains:
 
-1. Bundle Identifier (`de.kamilunavo.onemorefloor` is the current recommendation).
-2. The real Apple App Store Team ID.
-3. iPhone & iPad as the targeted device family.
-4. Godot 4.7.1 export templates.
-5. A macOS machine with Xcode and the appropriate signing identity/provisioning.
+1. Bundle Identifier `de.kamilunavo.onemorefloor`.
+2. Apple App Store Team ID `TKG684N5GL`.
+3. iPhone & iPad targeted device family.
+4. arm64 architecture.
+5. User-facing version `1.0.0`.
 
-The repository intentionally does not commit a fake Team ID or signing certificate.
+A signed device/TestFlight build still requires Godot 4.7.1 export templates plus a macOS machine with Xcode and the appropriate signing identity/provisioning profile. Signing certificates/profiles are intentionally not stored in the repository.
 
 ### Android
 
-Before APK/AAB export, configure Godot with OpenJDK 17 and the Android SDK, then create the Android export preset with the package identifier and VIBRATE permission for handheld feedback. Store release keystore credentials outside the repository.
+The committed `Android Playtest` preset already contains:
+
+- package identifier `de.kamilunavo.onemorefloor`
+- version code 1 / version name 1.0.0
+- Gradle build enabled
+- VIBRATE permission for handheld feedback
+- arm64-v8a and armeabi-v7a targets
+
+Before APK/AAB export, configure Godot with OpenJDK 17 and the Android SDK. Store release keystore credentials outside the repository.
 
 ## Playtest checklist
 
@@ -84,6 +94,7 @@ Before APK/AAB export, configure Godot with OpenJDK 17 and the Android SDK, then
 - [x] Pause / Resume state test
 - [x] Tutorial completion persistence test
 - [x] Release balance profile test
+- [x] iOS/Android export identity and preset preparation
 - [ ] Physical iPhone touch / haptics / audio pass
 - [ ] Physical iPad layout pass
 - [ ] Signed TestFlight archive
