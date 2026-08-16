@@ -33,6 +33,7 @@ func _run() -> void:
 		or scene_text.contains("main_v20.gd")
 		or scene_text.contains("main_v21.gd")
 		or scene_text.contains("main_v22.gd")
+		or scene_text.contains("main_v23.gd")
 	)
 	if not compatible_renderer:
 		_fail(906,"v1.7 menus: compatible v19+ main renderer is not active")
@@ -69,7 +70,6 @@ func _run() -> void:
 	if not android_ok:
 		_fail(910,"v1.7 menus: compatible Android version/build missing")
 		return
-	# Prove the moved Hero and Forge buttons still reach the real progression system.
 	game.tutorial_active = false
 	game.state = game.State.HERO
 	var hero_before := int(game.meta.hero_level)
