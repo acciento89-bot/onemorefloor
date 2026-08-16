@@ -20,15 +20,21 @@ var nova_mult := 2.8
 var nova_radius := 250.0
 var skill_cd := 0.0
 
-# Every run starts fresh. Upgrade counts form synergies while the new scaled
-# application path lets the same upgrade roll at Common/Rare/Epic/Legendary
-# strength without duplicating four separate upgrade pools.
+# Every normal climb still starts fresh. Once Floor 50 has been reached, the
+# progression layer supplies a persistent checkpoint and this profile rebuilds a
+# modest catch-up loadout so a resumed deep-tower run is viable without handing
+# the player a fully maxed build.
 var upgrade_counts: Dictionary = {}
 var active_synergies: Dictionary = {}
 var last_synergy_unlocked := ""
+var checkpoint_bootstrap_picks := 0
+var _meta_ref = null
 
 func reset(meta) -> void:
+	_meta_ref = meta
 	floor_no = 1
+	if meta != null and meta.has_method("run_start_floor"):
+		floor_no = maxi(1, int(meta.run_start_floor()))
 	run_coins = 0
 	saved_after_death = 0
 	max_hp = 100.0 + meta.hp_bonus()
@@ -48,6 +54,26 @@ func reset(meta) -> void:
 	skill_cd = 0.0
 	upgrade_counts.clear()
 	active_synergies.clear()
+	last_synergy_unlocked = ""
+	checkpoint_bootstrap_picks = 0
+	if floor_no >= 50:
+		_apply_checkpoint_bootstrap(floor_no)
+
+func _apply_checkpoint_bootstrap(start_floor: int) -> void:
+	# Roughly two upgrades per five floors worth of climb, deliberately below the
+	# power of a lucky full Floor 1-49 run. Checkpoint runs therefore remain hard.
+	var order: Array[String] = [
+		"vitality", "power", "haste", "armor", "crit",
+		"range", "lifesteal", "nova", "speed", "multi"
+	]
+	checkpoint_bootstrap_picks = mini(34, 18 + int((start_floor - 50) / 3))
+	var strength := minf(1.25, 0.92 + float(maxi(0, start_floor - 50)) * 0.008)
+	for i in range(checkpoint_bootstrap_picks):
+		apply_upgrade_scaled(order[i % order.size()], strength)
+	hp = max_hp
+	attack_timer = 0.12
+	# Bootstrap synergies are expected and should not masquerade as a newly found
+	# synergy when the first real upgrade is chosen after resuming.
 	last_synergy_unlocked = ""
 
 func apply_upgrade(kind: String) -> void:
@@ -151,6 +177,8 @@ func _unlock_synergy(id: String, display_name: String) -> void:
 func next_floor() -> void:
 	floor_no += 1
 	hp = minf(max_hp, hp + max_hp * 0.18)
+	if floor_no >= 50 and _meta_ref != null and _meta_ref.has_method("unlock_checkpoint"):
+		_meta_ref.unlock_checkpoint(floor_no)
 
 func death_secure_amount() -> int:
 	return int(round(float(run_coins) * 0.60))
