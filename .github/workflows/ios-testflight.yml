@@ -168,19 +168,8 @@ jobs:
           ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
         run: |
           set -euo pipefail
-          # Normal development stays build-only. The user explicitly approved one
-          # automatic TestFlight upload for v1.24.0 build 16 when this release PR
-          # lands on main. Manual workflow_dispatch on main remains supported.
-          RELEASE_APPROVED=false
-          if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/main" ]] \
-             && grep -q 'application/short_version="1.24.0"' export_presets.cfg \
-             && grep -q 'application/version="16"' export_presets.cfg; then
-            RELEASE_APPROVED=true
-          fi
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF" == "refs/heads/main" ]]; then
-            RELEASE_APPROVED=true
-          fi
-          if [[ "$RELEASE_APPROVED" == "true" && -n "$ASC_ISSUER_ID" && -n "$ASC_KEY_ID" && -n "$ASC_PRIVATE_KEY_B64" ]]; then
+          # TestFlight upload is intentionally manual. Normal pushes/PRs only build/test.
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF" == "refs/heads/main" && -n "$ASC_ISSUER_ID" && -n "$ASC_KEY_ID" && -n "$ASC_PRIVATE_KEY_B64" ]]; then
             echo 'available=true' >> "$GITHUB_OUTPUT"
           else
             echo 'available=false' >> "$GITHUB_OUTPUT"
