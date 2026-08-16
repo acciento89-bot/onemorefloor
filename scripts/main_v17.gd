@@ -56,7 +56,6 @@ func _v17_panel_skin(accent: Color) -> Texture2D:
 		return tex_v17_panel_purple
 	return tex_v17_panel_gold
 
-# Concept-locked environment selection.
 func _v16_backdrop(kind: String = "arcane", dim: float = 0.0) -> void:
 	var texture: Texture2D = tex_v17_arcane
 	if kind == "home":
@@ -70,20 +69,19 @@ func _v16_backdrop(kind: String = "arcane", dim: float = 0.0) -> void:
 	if dim > 0.0:
 		draw_rect(Rect2(Vector2.ZERO, SIZE), Color(0.0, 0.0, 0.01, dim))
 
-# Real texture-backed concept panels. No procedural indie boxes.
 func _v16_frame(r: Rect2, accent: Color, fill: Color = V16_NAVY, glow: float = 0.15) -> void:
 	var skin: Texture2D = _v17_panel_skin(accent)
 	if skin != null:
 		draw_texture_rect(skin, Rect2(r.position + Vector2(5,7), r.size), false, Color(0,0,0,0.58))
 		draw_texture_rect(skin, r, false, Color.WHITE)
 		if fill.a > 0.0:
-			draw_rect(r.grow(-12), Color(fill, minf(fill.a, 0.18)))
+			draw_rect(r.grow(-12), Color(fill.r, fill.g, fill.b, minf(fill.a, 0.18)))
 	else:
 		super._v16_frame(r, accent, fill, glow)
 
 func _v16_button(r: Rect2, label: String, accent: Color, size: int, icon_index: int = -1, enabled: bool = true) -> void:
 	var skin: Texture2D = _v17_button_skin(accent)
-	var modulate := Color.WHITE if enabled else Color(0.48,0.49,0.55,0.72)
+	var modulate: Color = Color.WHITE if enabled else Color(0.48,0.49,0.55,0.72)
 	if skin != null:
 		draw_texture_rect(skin, Rect2(r.position + Vector2(5,7),r.size), false, Color(0,0,0,0.50))
 		draw_texture_rect(skin, r, false, modulate)
@@ -92,27 +90,25 @@ func _v16_button(r: Rect2, label: String, accent: Color, size: int, icon_index: 
 		return
 	if icon_index >= 0:
 		_v16_medallion(Vector2(r.position.x+38,r.get_center().y), minf(25.0,r.size.y*0.28), accent, icon_index)
-		var start_x := r.position.x + 74.0
+		var start_x: float = r.position.x + 74.0
 		draw_string(v16_title_font, Vector2(start_x,r.get_center().y+size*0.35), label, HORIZONTAL_ALIGNMENT_CENTER, r.end.x-start_x-16.0, size, V16_TEXT if enabled else V16_MUTED)
 	else:
 		draw_string(v16_title_font, Vector2(r.position.x+10,r.get_center().y+size*0.34), label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x-20, size, V16_TEXT if enabled else V16_MUTED)
 
 func _v16_medallion(center: Vector2, radius: float, accent: Color, icon_index: int) -> void:
-	# Gold outer hardware + colored inner magic ring, matching the concept references.
 	draw_circle(center, radius+8.0, Color(0,0,0,0.58))
 	draw_circle(center, radius+5.0, Color("090b12"))
 	draw_arc(center,radius+5.0,0,TAU,64,Color("6f4614"),4.0)
 	draw_arc(center,radius+3.0,0,TAU,64,V16_GOLD_HI,1.4)
-	draw_circle(center,radius-1.0,Color(accent,0.12))
-	draw_arc(center,radius-1.0,0,TAU,64,Color(accent,0.95),2.2)
+	draw_circle(center,radius-1.0,Color(accent.r, accent.g, accent.b, 0.12))
+	draw_arc(center,radius-1.0,0,TAU,64,Color(accent.r, accent.g, accent.b, 0.95),2.2)
 	draw_arc(center,radius-5.0,-2.45,-0.4,24,Color(1,1,1,0.32),1.2)
 	_v12_icon(icon_index, Rect2(center-Vector2(radius*0.62,radius*0.62),Vector2(radius*1.24,radius*1.24)))
-	var gem := center + Vector2(0,-radius-5)
+	var gem: Vector2 = center + Vector2(0,-radius-5)
 	draw_colored_polygon(PackedVector2Array([gem+Vector2(0,-6),gem+Vector2(6,0),gem+Vector2(0,6),gem+Vector2(-6,0)]),V16_PURPLE)
 	draw_colored_polygon(PackedVector2Array([gem+Vector2(0,-3),gem+Vector2(3,0),gem+Vector2(0,3),gem+Vector2(-3,0)]),V16_PURPLE_HI)
 
 func _v16_title(label: String, y: float, size: int, accent: Color = V16_GOLD) -> void:
-	# Concept titles use warm metallic gold faces, not flat category colors.
 	var shadow := Color(0,0,0,0.92)
 	draw_string(v16_title_font,Vector2(40,y+4),label,HORIZONTAL_ALIGNMENT_CENTER,640,size,shadow)
 	draw_string(v16_title_font,Vector2(40,y+2),label,HORIZONTAL_ALIGNMENT_CENTER,640,size,Color("8f5715"))
@@ -135,7 +131,6 @@ func _v16_header(title: String, subtitle: String, accent: Color, icon_index: int
 	if meta_notice_time > 0.0:
 		_v16_center(meta_notice,1090,16,C_GREEN if meta_notice.begins_with("UPGRADE") else C_RED)
 
-# HOME locked to the supplied concept hierarchy.
 func draw_home() -> void:
 	if home_overlay == "missions":
 		draw_missions_screen()
@@ -148,12 +143,10 @@ func draw_home() -> void:
 	_v16_text("BEST FLOOR",Vector2(45,60),12,V16_MUTED,true)
 	_v16_text("%02d" % int(meta.best_floor),Vector2(58,104),38,V16_TEXT,true)
 	_v16_currency(int(meta.coins),Rect2(510,24,190,82))
-	# Exact concept title split.
 	draw_string(v16_title_font,Vector2(65,163),"ONE MORE",HORIZONTAL_ALIGNMENT_CENTER,590,48,Color("eee4f4"))
 	draw_string(v16_title_font,Vector2(65,226),"FLOOR",HORIZONTAL_ALIGNMENT_CENTER,590,72,Color("ffe6a0"))
 	_v16_rule(248,V16_PURPLE,390)
 	_v16_center("CLIMB  •  LOOT  •  RISK IT ALL",279,14,V16_MUTED)
-	# The environment asset contains the complete citadel, bridge, banners and crystal.
 	_v15_soft_glow(Vector2(360,725),65,V16_PURPLE,0.85)
 	draw_wanderer(Vector2(360,716),0.90,false)
 	_v16_button(V10_SETTINGS_HOME,"SETTINGS",V16_BLUE,14,9)
@@ -174,7 +167,7 @@ func draw_home() -> void:
 		_draw_tutorial_overlay()
 
 func _v17_home_tile(r: Rect2,label: String,icon_index: int,accent: Color) -> void:
-	var skin := _v17_button_skin(accent)
+	var skin: Texture2D = _v17_button_skin(accent)
 	if skin != null:
 		draw_texture_rect(skin,r,false,Color.WHITE)
 	else:
@@ -182,7 +175,6 @@ func _v17_home_tile(r: Rect2,label: String,icon_index: int,accent: Color) -> voi
 	_v16_medallion(Vector2(r.get_center().x,r.position.y+35),25,accent,icon_index)
 	draw_string(v16_title_font,Vector2(r.position.x+4,r.end.y-15),label,HORIZONTAL_ALIGNMENT_CENTER,r.size.x-8,14,V16_TEXT)
 
-# Forge concept uses the dedicated molten environment and much larger central emblem.
 func draw_forge_screen() -> void:
 	_v16_header("FORGE","Temper the Wanderer's weapon",V16_ORANGE,7,"forge")
 	_v15_soft_glow(Vector2(360,420),205,V16_ORANGE,1.0)
@@ -196,7 +188,6 @@ func draw_forge_screen() -> void:
 	_v16_button(META_BUY,"TEMPER  %d" % int(meta.forge_cost()),V16_GOLD,23,11,meta.coins >= meta.forge_cost())
 	_v16_center("Every Forge level adds +8.5% permanent damage.",980,15,V16_MUTED)
 
-# Hero concept: large pedestal hero and stat panel under it.
 func draw_hero_screen() -> void:
 	_v16_header("HERO","Permanent Wanderer training",V16_PURPLE,0,"arcane")
 	_v15_soft_glow(Vector2(360,442),210,V16_PURPLE,1.0)
@@ -210,7 +201,6 @@ func draw_hero_screen() -> void:
 	_v16_button(META_BUY,"TRAIN  %d" % int(meta.hero_cost()),V16_PURPLE,22,-1,meta.coins >= meta.hero_cost())
 	_v16_center("Each Hero level: +5 HP and +3.5% damage",974,15,V16_MUTED)
 
-# Settings locked to the supplied modal composition.
 func _draw_settings_overlay() -> void:
 	draw_rect(Rect2(Vector2.ZERO,SIZE),Color(0,0,0,0.76))
 	var modal := Rect2(54,142,612,792)
@@ -222,7 +212,7 @@ func _draw_settings_overlay() -> void:
 	_v16_setting_row(V10_SET_SFX,"SFX",bool(settings.sfx_enabled),int(float(settings.sfx_volume)*100.0),3,V16_GREEN)
 	_v16_setting_row(V10_SET_HAPTICS,"HAPTICS",bool(settings.haptics_enabled),-1,4,V16_GREEN)
 	_v16_setting_row(V10_SET_ANALYTICS,"ANALYTICS",bool(settings.analytics_enabled),-1,5,Color("5e6475"))
-	_v16_button(V10_REPLAY_TUTORIAL,"REPLAY TUTORIAL",V16_PURPLE,18,6)
+	_v16_button(V10_SET_TUTORIAL,"REPLAY TUTORIAL",V16_PURPLE,18,6)
 	_v16_rule(731,V16_PURPLE,390)
-	_v16_button(V10_SETTINGS_BACK,"BACK",V16_BLUE,22)
+	_v16_button(V10_SET_BACK,"BACK",V16_BLUE,22)
 	_v16_center("Analytics is opt-in. Playtest events stay local in this build.",889,12,V16_MUTED)
