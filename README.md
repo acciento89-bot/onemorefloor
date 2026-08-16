@@ -11,7 +11,7 @@ Mobile hybrid-casual roguelite by **Kamilunavo Games**.
 3. Clear the room and collect coins and gear.
 4. Pick one of three random run upgrades.
 5. Cash out or climb one more floor.
-6. Spend secured resources, equip/craft gear, complete missions and progress the Tower Pass.
+6. Spend secured resources, compare/equip/craft gear, complete missions and progress the Tower Pass.
 
 ## Tech
 
@@ -21,90 +21,100 @@ Mobile hybrid-casual roguelite by **Kamilunavo Games**.
 - iOS / iPadOS and Android targets
 - GitHub Actions validation with direct script checks, headless import, main-scene launch and gameplay smoke test
 
-## Current playable slice — v0.7
+## Current playable slice — v0.8
 
-v0.7 starts moving ONE MORE FLOOR from procedural placeholder rendering to a real external art pipeline while completing the first equipment-material loop.
+v0.8 turns the v0.7 external art pipeline into an authored combat-animation layer and upgrades the Vault from a simple equipment list into a practical build-management screen.
 
-### External character art pipeline
+### Combat animation atlas
 
-The current combat roster now has standalone SVG textures under `assets/art/`:
+`assets/art/combat_atlas.svg` is a 500 × 800 external texture containing 40 authored combat cells:
 
-- Wanderer
-- Goblin
-- Bat
-- Skeleton
-- Ghoul
-- Necromancer
-- The Warden
-- The Crypt Keeper
+- 8 actor rows: Wanderer, Goblin, Bat, Skeleton, Ghoul, Necromancer, Warden and Crypt Keeper
+- 5 states per actor: **Idle, Move, Attack, Hit and Death**
 
-`main_v07.gd` loads these imported textures at runtime and uses the older procedural drawing as a fallback if an asset is unavailable. Motion is currently driven by runtime bob/flap/tint effects; multi-frame sprite-sheet animation is still a later production pass.
+`main_v08.gd` selects atlas regions at runtime using gameplay state instead of relying only on static textures.
 
-### Areas and rooms
+Animation events now react to actual combat:
+
+- Player movement switches between Idle / Move.
+- Auto-attack triggers Attack.
+- NOVA uses the attack frame plus its own cyan skill treatment.
+- Player damage triggers Hit.
+- Enemy damage triggers Hit.
+- Recent contact/ranged/boss casts trigger Attack.
+- Enemy death creates a short Death-frame actor effect before disappearing.
+- The Game Over screen uses the Wanderer Death frame.
+- Elite, rage and boss Phase-II effects remain layered over the animated actors.
+
+The original v0.7 standalone SVGs and v0.6 procedural drawing remain available as fallback paths.
+
+### Areas and bosses
 
 - **Dungeon** — Floors 1–10
 - **Crypt** — Floors 11–20
 - **Deep Tower** — reserved routing for Floor 21+
 
-Non-boss floors can roll Combat, Ambush, Elite and Treasure encounters. Crypt rooms keep Soul Mist / Bone Rune hazards and their colder cyan-purple visual language.
+Current bosses:
 
-### Combat and bosses
+- **The Warden** — recurring milestone boss with telegraphs and Phase II
+- **The Crypt Keeper** — dedicated Floor-20 boss with cyan-purple radial and fan patterns
 
-- Touch virtual joystick plus WASD / arrow-key desktop fallback
-- Auto-targeting projectile attacks
-- Critical hits, damage numbers, hit/death effects and screen shake
-- Mobile haptics
-- NOVA active ability
-- Procedural first-pass audio feedback
-- Rarity-colored loot beams and room transitions
-- **The Warden** as the recurring milestone boss
-- **The Crypt Keeper** as the dedicated Floor-20 boss with custom cyan-purple attack patterns
+### Advanced Vault + Forge
 
-### Permanent progression
+v0.8 adds safer and faster gear management:
 
-- **Hero** — permanent HP and damage training
-- **Forge** — permanent weapon-damage upgrades
-- **Talents** — Vitality, Precision and Fortune
-- **Vault + Forge** — persistent equipment, selection, equip, dismantling and targeted crafting
-- **Missions** — daily and weekly contracts
-- **Tower Pass** — 20-level free progression track
+- Item **Lock / Unlock**
+- Locked gear cannot be dismantled
+- Filters: **All / Weapon / Armor / Relic**
+- Sort modes: **Rarity / Level / Score**
+- Persistent chosen sort mode
+- Item score derived from rarity, level, primary stats, trait and set presence
+- Selected-vs-equipped comparison panel
+- Live score delta for the selected slot
+- Explicit Equip and Dismantle actions
+- Paging for filtered inventory views
+- Existing targeted Weapon / Armor / Relic crafting remains available
 
-### Loot, traits, sets and Soul Shards
+### Loot economy
 
-Equipment uses Common, Uncommon, Rare, Epic and Legendary rarities across Weapon, Armor and Relic slots.
+Equipment uses Common, Uncommon, Rare, Epic and Legendary rarities.
 
-Rare+ equipment can roll Executioner, Frenzy, Bulwark, Vital Core, Vampiric or Fortune traits. Ember, Crypt and Warden sets provide real two-piece and three-piece run bonuses.
+Soul Shard dismantle values:
 
-v0.7 adds **Soul Shards**:
-
-- Common dismantle: 5 Shards
+- Common: 5
 - Uncommon: 12
 - Rare: 30
 - Epic: 70
 - Legendary: 160
-- Craft cost: 120 Shards
-- Crafting is slot-targeted: Weapon, Armor or Relic
-- Crafted equipment is guaranteed **Rare+**, with a chance for Epic or Legendary
-- Equipped items cannot be dismantled accidentally
-- Shards persist in the existing save file
 
-### Risk / reward
+Crafting costs 120 Soul Shards and guarantees Rare+ gear.
 
-- Cash out to secure all run coins.
-- Continue to push the tower higher.
-- Death currently secures 60% of unsecured run coins.
-- Camp progression, equipped gear, traits, sets and crafted equipment strengthen future runs.
+Rare+ items can roll Executioner, Frenzy, Bulwark, Vital Core, Vampiric or Fortune traits. Ember, Crypt and Warden sets provide real two-piece and three-piece run bonuses.
+
+### Permanent progression
+
+- Hero training
+- Forge upgrades
+- Vitality / Precision / Fortune talents
+- Persistent Vault equipment
+- Daily / weekly Missions
+- 20-level free Tower Pass
 
 ## Validation
 
 The Godot 4.7.1 CI pipeline validates:
 
-1. Direct parser checks for critical gameplay scripts including `main_v07.gd`.
+1. Direct parser checks through the active `main_v08.gd` controller.
 2. Headless project/editor import with script errors treated as failures.
 3. Main-scene runtime launch.
-4. Import of all eight external SVG character assets as `Texture2D` resources.
-5. Soul Shard dismantling and guaranteed Rare+ crafting.
-6. Existing Crypt routing, Treasure rewards, Missions, Tower Pass, Crypt Keeper, standard Warden, equipment bonuses and cash-out.
+4. All standalone SVG character imports.
+5. The 500 × 800 combat atlas import.
+6. Item locking and locked-item dismantle protection.
+7. Slot filtering, score sorting and selected-vs-equipped comparison.
+8. Soul Shard dismantling and guaranteed Rare+ crafting.
+9. Player Attack / Hit / NOVA animation state triggers.
+10. Enemy Hit and Death animation event paths.
+11. Existing Crypt routing, Treasure rewards, Missions, Tower Pass, Crypt Keeper, standard Warden, equipment bonuses and cash-out regressions.
 
 ## Run locally
 
@@ -122,9 +132,9 @@ The Godot 4.7.1 CI pipeline validates:
 - [x] Run upgrades and risk/reward decision
 - [x] Warden + Crypt Keeper boss encounters
 - [x] Haptics and first procedural audio feedback
-- [x] Procedural visual baseline
-- [x] First external production vector asset pass
-- [ ] Multi-frame sprite sheets / authored frame animations
+- [x] External production vector asset pass
+- [x] Multi-state combat atlas with Idle / Move / Attack / Hit / Death
+- [ ] Higher-frame-count walk / attack sequences and directional variants
 - [ ] Production audio / music
 
 ### Phase 2 — Meta progression
@@ -134,7 +144,7 @@ The Godot 4.7.1 CI pipeline validates:
 - [x] Free Tower Pass
 - [x] Item traits and set bonuses
 - [x] Equipment dismantling / Soul Shards / targeted crafting
-- [ ] Item locking, sorting and comparison UI
+- [x] Item locking, filtering, sorting and comparison UI
 
 ### Phase 3 — Release systems
 - [ ] Analytics
@@ -150,8 +160,9 @@ The Godot 4.7.1 CI pipeline validates:
 - [x] Combat / Ambush / Elite / Treasure rooms
 - [x] Ghoul and Necromancer
 - [x] The Crypt Keeper
-- [ ] Forgotten Castle
+- [ ] Forgotten Castle — Floors 21–30
 - [ ] More heroes
+- [ ] Third authored boss
 - [ ] Upgrade synergies and room events
 
 ## Repository layout
@@ -159,17 +170,18 @@ The Godot 4.7.1 CI pipeline validates:
 ```text
 .github/                  CI validation
 scenes/                   Godot scenes
-assets/art/               External character/boss SVG textures
+assets/art/               Standalone SVGs + combat animation atlas
 scripts/main_v03.gd       Combat/meta controller
 scripts/main_v04.gd       Loot/Missions/Tower Pass extension
 scripts/main_v05.gd       Crypt/rooms/traits extension
 scripts/main_v06.gd       Visual baseline / Crypt Keeper extension
-scripts/main_v07.gd       External asset renderer + crafting Vault UI
+scripts/main_v07.gd       External asset renderer + Soul Shard crafting
+scripts/main_v08.gd       Combat atlas state renderer + advanced Vault UX
 scripts/progression.gd    Permanent Camp progression and save data
 scripts/run_profile.gd    Per-run player/build state
 scripts/enemy_factory.gd  Enemy creation, scaling, elites and boss variants
 scripts/room_system.gd    Area routing and room generation
-scripts/loot_system.gd    Gear, traits, sets, Soul Shards and crafting
+scripts/loot_system.gd    Gear, traits, sets, locks, score, Soul Shards and crafting
 scripts/mission_system.gd Daily/weekly mission progress and claims
 scripts/tower_pass.gd     Free Tower Pass XP and rewards
 scripts/audio_feedback.gd Procedural first-pass sound feedback
