@@ -54,8 +54,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -L --fail --retry 3 \
-            -o "$RUNNER_TEMP/godot.zip" \
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/godot.zip" \
             "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_macos.universal.zip"
           mkdir -p "$RUNNER_TEMP/godot"
           unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
@@ -70,21 +69,19 @@ jobs:
           set -euo pipefail
           TEMPLATE_ROOT="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
           mkdir -p "$TEMPLATE_ROOT"
-          curl -L --fail --retry 3 \
-            -o "$RUNNER_TEMP/templates.tpz" \
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/templates.tpz" \
             "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_export_templates.tpz"
           rm -rf "$RUNNER_TEMP/export-templates"
           mkdir -p "$RUNNER_TEMP/export-templates"
           unzip -q "$RUNNER_TEMP/templates.tpz" -d "$RUNNER_TEMP/export-templates"
           cp -R "$RUNNER_TEMP/export-templates/templates/." "$TEMPLATE_ROOT/"
           test -f "$TEMPLATE_ROOT/ios.zip"
-          echo "Installed iOS template: $TEMPLATE_ROOT/ios.zip"
 
       - name: Import project headlessly
         shell: bash
         run: |
           set -euo pipefail
-          "$GODOT" --headless --editor --path . --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          "$GODOT" --headless --editor --path . --quit
 
       - name: Export Godot Xcode project
         shell: bash
@@ -96,9 +93,8 @@ jobs:
           "$GODOT" --headless --path . --export-release "iOS Playtest" build/ios/OneMoreFloor.zip
           test -d build/ios/OneMoreFloor.xcodeproj
           test -d build/ios/OneMoreFloor
-          PROJECT="build/ios/OneMoreFloor.xcodeproj"
-          echo "XCODE_PROJECT=$PROJECT" >> "$GITHUB_ENV"
-          ditto -c -k --sequesterRsrc --keepParent build/ios/OneMoreFloor.xcodeproj "$RUNNER_TEMP/OneMoreFloor-project.zip"
+          echo "XCODE_PROJECT=build/ios/OneMoreFloor.xcodeproj" >> "$GITHUB_ENV"
+
           rm -rf "$RUNNER_TEMP/xcode-package"
           mkdir -p "$RUNNER_TEMP/xcode-package"
           cp -R build/ios/OneMoreFloor build/ios/OneMoreFloor.xcodeproj build/ios/OneMoreFloor.xcframework "$RUNNER_TEMP/xcode-package/"
@@ -106,28 +102,25 @@ jobs:
           if [[ -f build/ios/PrivacyInfo.xcprivacy ]]; then cp build/ios/PrivacyInfo.xcprivacy "$RUNNER_TEMP/xcode-package/"; fi
           ditto -c -k --sequesterRsrc "$RUNNER_TEMP/xcode-package" build/ios/OneMoreFloor-Xcode.zip
           test -s build/ios/OneMoreFloor-Xcode.zip
-          echo "Generated Xcode project: $PROJECT"
 
       - name: Inspect generated Xcode project
         id: xcode
         shell: bash
         run: |
           set -euo pipefail
-          xcodebuild -project "$XCODE_PROJECT" -list -json | tee "$RUNNER_TEMP/xcode-list.json"
+          xcodebuild -project "$XCODE_PROJECT" -list -json > "$RUNNER_TEMP/xcode-list.json"
           SCHEME=$(python3 - <<'PY'
           import json, os
-          p=os.environ['RUNNER_TEMP']+'/xcode-list.json'
-          d=json.load(open(p))
-          project=d.get('project', {})
-          schemes=project.get('schemes') or []
-          targets=project.get('targets') or []
+          d=json.load(open(os.environ['RUNNER_TEMP']+'/xcode-list.json'))
+          p=d.get('project', {})
+          schemes=p.get('schemes') or []
+          targets=p.get('targets') or []
           print(schemes[0] if schemes else (targets[0] if targets else ''))
           PY
           )
           test -n "$SCHEME"
           echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
           echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
-          echo "Selected scheme/target: $SCHEME"
 
       - name: Compile unsigned iPhone/iPad device build
         shell: bash
@@ -148,7 +141,6 @@ jobs:
           APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphoneos" -maxdepth 1 -name '*.app' -type d -print -quit)
           test -n "$APP" -a -d "$APP"
           echo "DEVICE_APP=$APP" >> "$GITHUB_ENV"
-          echo "Unsigned device app built: $APP"
 
       - name: Package unsigned device app
         shell: bash
@@ -178,10 +170,8 @@ jobs:
           set -euo pipefail
           if [[ "$GITHUB_REF" == "refs/heads/main" && -n "$ASC_ISSUER_ID" && -n "$ASC_KEY_ID" && -n "$ASC_PRIVATE_KEY_B64" ]]; then
             echo 'available=true' >> "$GITHUB_OUTPUT"
-            echo 'Main branch and App Store Connect signing secrets detected; TestFlight stage enabled.'
           else
             echo 'available=false' >> "$GITHUB_OUTPUT"
-            echo 'Unsigned iOS validation complete. Signed/TestFlight stages run only on main with all ASC secrets available.'
           fi
 
       - name: Prepare App Store Connect API key
@@ -198,14 +188,12 @@ jobs:
           grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
           echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
 
-      - name: Archive signed iPhone/iPad app
+      - name: Create unsigned release archive
         if: steps.asc.outputs.available == 'true'
         shell: bash
-        env:
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         run: |
           set -euo pipefail
+          rm -rf "$RUNNER_TEMP/OneMoreFloor.xcarchive"
           xcodebuild \
             -project "$XCODE_PROJECT" \
             -scheme "$SCHEME" \
@@ -214,18 +202,13 @@ jobs:
             -archivePath "$RUNNER_TEMP/OneMoreFloor.xcarchive" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
-            CODE_SIGN_STYLE=Automatic \
-            CODE_SIGN_IDENTITY="Apple Development" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$ASC_KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
             archive
           APP=$(find "$RUNNER_TEMP/OneMoreFloor.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' -type d -print -quit)
           test -n "$APP" -a -d "$APP"
-          codesign --verify --deep --strict --verbose=2 "$APP"
-          codesign -dvv "$APP" 2>&1 | grep -E 'Identifier=|Authority=|TeamIdentifier=' || true
+          test -f "$RUNNER_TEMP/OneMoreFloor.xcarchive/Info.plist"
 
       - name: Create TestFlight export options
         if: steps.asc.outputs.available == 'true'
@@ -236,23 +219,17 @@ jobs:
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
-            <key>method</key>
-            <string>app-store-connect</string>
-            <key>destination</key>
-            <string>upload</string>
-            <key>signingStyle</key>
-            <string>automatic</string>
-            <key>teamID</key>
-            <string>$TEAM_ID</string>
-            <key>uploadSymbols</key>
-            <true/>
-            <key>manageAppVersionAndBuildNumber</key>
-            <false/>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
           </dict>
           </plist>
           PLIST
 
-      - name: Upload to TestFlight with Apple cloud signing
+      - name: Upload to TestFlight with Apple cloud distribution signing
         id: testflight
         if: steps.asc.outputs.available == 'true'
         continue-on-error: true
@@ -276,21 +253,11 @@ jobs:
           STATUS=${PIPESTATUS[0]}
           set -e
           cp "$RUNNER_TEMP/testflight-export.log" build/ios/TestFlight-export.log
-
           DIST_LOG=$(find /var/folders "$RUNNER_TEMP" -name '*.xcdistributionlogs' -type d -print 2>/dev/null | tail -1 || true)
           if [[ -n "$DIST_LOG" && -d "$DIST_LOG" ]]; then
-            echo "Distribution logs: $DIST_LOG"
             ditto -c -k --sequesterRsrc --keepParent "$DIST_LOG" build/ios/OneMoreFloor-xcdistributionlogs.zip
-          else
-            echo 'No xcdistributionlogs bundle found.'
           fi
-
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
-          if [[ "$STATUS" -ne 0 ]]; then
-            echo "TestFlight export/upload failed with exit code $STATUS; diagnostics were captured."
-          else
-            echo 'TestFlight export/upload completed successfully.'
-          fi
           exit 0
 
       - name: Upload TestFlight diagnostics
@@ -308,7 +275,7 @@ jobs:
         if: steps.asc.outputs.available == 'true' && steps.testflight.outputs.status != '0'
         shell: bash
         run: |
-          echo "TestFlight upload failed with exit code ${{ steps.testflight.outputs.status }}. See one-more-floor-testflight-diagnostics artifact."
+          echo "TestFlight upload failed with exit code ${{ steps.testflight.outputs.status }}."
           exit 1
 
       - name: Remove App Store Connect key
