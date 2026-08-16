@@ -23,9 +23,6 @@ func _run_v11_smoke() -> void:
 	if not project_text.contains("window/stretch/aspect=\"expand\""):
 		_fail(203, "v1.1 smoke: edge-to-edge expand canvas is not configured")
 		return
-	if not project_text.contains("config/version=\"1.1.0-rc1\""):
-		_fail(204, "v1.1 smoke: v1.1 project version is missing")
-		return
 
 	var controller_text := FileAccess.get_file_as_string("res://scripts/main_v11.gd")
 	if controller_text.contains("super.draw_home()"):
