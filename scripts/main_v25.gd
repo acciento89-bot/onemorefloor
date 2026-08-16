@@ -328,7 +328,7 @@ func draw_game() -> void:
 	super.draw_game()
 	if run_modifier != "NONE":
 		panel(Rect2(42, 270, 248, 42), Color(0.03, 0.04, 0.09, 0.92), C_PURPLE)
-		draw_string(font, Vector2(52, 297), run_modifier, HORIZONTAL_ALIGNMENT_CENTER, 228, 13, C_PURPLE_HI)
+		draw_string(font, Vector2(52, 297), run_modifier, HORIZONTAL_ALIGNMENT_CENTER, 228, 13, V16_PURPLE_HI)
 	if combo_count >= 2 and combo_timer > 0.0:
 		var accent := C_GOLD if combo_count >= 5 else C_CYAN
 		panel(Rect2(500, 270, 170, 48), Color(0.03, 0.04, 0.09, 0.94), accent)
