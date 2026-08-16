@@ -14,6 +14,7 @@ var tex_v22_skins: Texture2D
 var tex_v22_icons: Texture2D
 var tex_v22_medallion: Texture2D
 var tex_v22_wanderer: Texture2D
+var astral_intro := 0.0
 
 func _ready() -> void:
 	super._ready()
@@ -22,6 +23,10 @@ func _ready() -> void:
 	tex_v22_medallion = load(V22_MEDALLION_PATH) as Texture2D
 	tex_v22_wanderer = load(V22_WANDERER_PATH) as Texture2D
 	queue_redraw()
+
+func _process(delta: float) -> void:
+	super._process(delta)
+	astral_intro = maxf(0.0, astral_intro - delta)
 
 func _v22_color_distance(a: Color, b: Color) -> float:
 	return absf(a.r-b.r) + absf(a.g-b.g) + absf(a.b-b.b)
@@ -52,12 +57,10 @@ func _v22_nine_slice(r: Rect2, row: int) -> void:
 	var src_corner := 26.0
 	var dc := minf(26.0,minf(r.size.x*0.24,r.size.y*0.42))
 	var sy := float(row)*96.0
-	# corners
 	_v22_draw_skin_piece(Rect2(r.position,Vector2(dc,dc)),Rect2(0,sy,src_corner,src_corner))
 	_v22_draw_skin_piece(Rect2(Vector2(r.end.x-dc,r.position.y),Vector2(dc,dc)),Rect2(sw-src_corner,sy,src_corner,src_corner))
 	_v22_draw_skin_piece(Rect2(Vector2(r.position.x,r.end.y-dc),Vector2(dc,dc)),Rect2(0,sy+sh-src_corner,src_corner,src_corner))
 	_v22_draw_skin_piece(Rect2(r.end-Vector2(dc,dc),Vector2(dc,dc)),Rect2(sw-src_corner,sy+sh-src_corner,src_corner,src_corner))
-	# edges
 	var mid_w := maxf(0.0,r.size.x-dc*2.0)
 	var mid_h := maxf(0.0,r.size.y-dc*2.0)
 	if mid_w > 0.0:
@@ -66,13 +69,10 @@ func _v22_nine_slice(r: Rect2, row: int) -> void:
 	if mid_h > 0.0:
 		_v22_draw_skin_piece(Rect2(Vector2(r.position.x,r.position.y+dc),Vector2(dc,mid_h)),Rect2(0,sy+src_corner,src_corner,sh-src_corner*2.0))
 		_v22_draw_skin_piece(Rect2(Vector2(r.end.x-dc,r.position.y+dc),Vector2(dc,mid_h)),Rect2(sw-src_corner,sy+src_corner,src_corner,sh-src_corner*2.0))
-	# center
 	if mid_w > 0.0 and mid_h > 0.0:
 		_v22_draw_skin_piece(Rect2(r.position+Vector2(dc,dc),Vector2(mid_w,mid_h)),Rect2(src_corner,sy+src_corner,sw-src_corner*2.0,sh-src_corner*2.0))
 
 func _v16_frame(r: Rect2, accent: Color, fill: Color = V16_NAVY, glow: float = 0.15) -> void:
-	# Runtime shadow and energy halo stay live; the actual chrome/body comes from
-	# a reusable 9-slice component, not from a full-screen screenshot.
 	var shadow := Rect2(r.position+Vector2(7,9),r.size)
 	draw_colored_polygon(_v19_chamfer_points(shadow,11),Color(0,0,0,0.67))
 	if glow > 0.0:
@@ -80,7 +80,6 @@ func _v16_frame(r: Rect2, accent: Color, fill: Color = V16_NAVY, glow: float = 0
 			var gr := r.grow(grow)
 			draw_polyline(_v19_closed(_v19_chamfer_points(gr,12.0+grow)),Color(accent,0.025+glow*0.12),4.0)
 	_v22_nine_slice(r,_v22_skin_row(accent,true))
-	# Preserve caller-specific tone without flattening the component texture.
 	var inner := r.grow(-13.0)
 	if inner.size.x > 4.0 and inner.size.y > 4.0:
 		draw_rect(inner,Color(fill,0.20))
@@ -88,13 +87,13 @@ func _v16_frame(r: Rect2, accent: Color, fill: Color = V16_NAVY, glow: float = 0
 
 func _v22_atlas_tile_for_old(icon_index: int) -> int:
 	match icon_index:
-		0: return 4 # missions / vitality
-		1: return 2 # talents / precision
-		6: return 5 # sword / pass
-		7: return 1 # forge
-		9: return 7 # settings
-		10: return 3 # vault
-		11: return 6 # coin
+		0: return 4
+		1: return 2
+		6: return 5
+		7: return 1
+		9: return 7
+		10: return 3
+		11: return 6
 		_: return -1
 
 func _v22_atlas_tile_for_kind(kind: String) -> int:
@@ -128,7 +127,6 @@ func _v22_medallion_shell(center: Vector2, radius: float) -> void:
 
 func _v16_medallion(center: Vector2, radius: float, accent: Color, icon_index: int) -> void:
 	_v22_medallion_shell(center,radius)
-	# Accent halo is live and can change with state/rarity.
 	draw_arc(center,maxf(4.0,radius-5.0),0,TAU,64,Color(accent,0.92),2.0)
 	var tile := _v22_atlas_tile_for_old(icon_index)
 	if tile >= 0:
@@ -179,8 +177,6 @@ func _v21_home_tab(r: Rect2, label: String, kind: String, accent: Color) -> void
 	draw_string(v16_title_font,Vector2(r.position.x+6,r.end.y-17),label,HORIZONTAL_ALIGNMENT_CENTER,r.size.x-12,15,V17_IVORY)
 
 func draw_wanderer(pos: Vector2, scale: float, combat: bool) -> void:
-	# Use the high-detail character sheet everywhere instead of the old primitive
-	# circle/polygon placeholder. Keeping the same method preserves all gameplay.
 	if tex_v22_wanderer == null:
 		super.draw_wanderer(pos,scale,combat)
 		return
@@ -193,6 +189,251 @@ func draw_wanderer(pos: Vector2, scale: float, combat: bool) -> void:
 	draw_texture_rect(tex_v22_wanderer,Rect2(top_left,Vector2(w,h)),false,Color.WHITE)
 	if combat:
 		draw_arc(pos,31.0*scale,-0.7,0.9,18,Color(1.0,0.75,0.3,0.28),2.2*scale)
+
+# -----------------------------------------------------------------------------
+# Gameplay continuation — Deep Tower (Floor 31+) and run-build synergies.
+# This deliberately reuses the existing production actor art instead of starting
+# another graphics pass. The work here is enemy behavior, encounters and builds.
+# -----------------------------------------------------------------------------
+
+func spawn_floor() -> void:
+	if int(run.floor_no) != 40:
+		super.spawn_floor()
+		return
+	room_transition = 0.72
+	current_room = room_system.roll_room(int(run.floor_no), rng)
+	hazard_timer = 2.2
+	enemies.clear()
+	player_shots.clear()
+	enemy_shots.clear()
+	coin_orbs.clear()
+	player_pos = Vector2(360,700)
+	floor_banner = 1.25
+	boss_intro = 0.0
+	keeper_intro = 0.0
+	hollow_intro = 0.0
+	astral_intro = 2.0
+	enemies.append(EnemyFactory.make_enemy("astral_warden",int(run.floor_no),rng,player_pos))
+	for i: int in range(3):
+		var escort_kind := "void_knight" if i < 2 else "rift_mage"
+		enemies.append(EnemyFactory.make_enemy(escort_kind,int(run.floor_no),rng,player_pos))
+	_audio("warden")
+
+func update_room_hazard(delta: float) -> void:
+	if String(current_room.get("area","")) != "DEEP TOWER" or String(current_room.get("type","")) == "BOSS":
+		super.update_room_hazard(delta)
+		return
+	hazard_timer -= delta
+	if hazard_timer > 0.0:
+		return
+	var hazard := String(current_room.get("hazard","none"))
+	var damage_value := 10.0 + float(run.floor_no) * 0.34
+	if hazard == "void_lanes":
+		var lane_x: float = [145.0,360.0,575.0][rng.randi_range(0,2)]
+		for offset: float in [-34.0,0.0,34.0]:
+			var start := Vector2(lane_x+offset,ARENA.position.y+8.0)
+			enemy_shots.append({"pos":start,"vel":Vector2.DOWN*300.0,"damage":damage_value,"life":3.2,"color":C_PURPLE})
+		var lane_y: float = rng.randf_range(330.0,850.0)
+		var from_left := rng.randf() < 0.5
+		var x_start := ARENA.position.x+8.0 if from_left else ARENA.end.x-8.0
+		var direction := Vector2.RIGHT if from_left else Vector2.LEFT
+		for offset: float in [-28.0,28.0]:
+			enemy_shots.append({"pos":Vector2(x_start,lane_y+offset),"vel":direction*285.0,"damage":damage_value,"life":2.7,"color":C_CYAN})
+		hazard_timer = 4.4
+	else:
+		var center := ARENA.get_center()
+		var count := 12
+		var angle_offset := rng.randf_range(0.0,TAU)
+		for i: int in range(count):
+			var dir := Vector2.from_angle(angle_offset+TAU*float(i)/float(count))
+			enemy_shots.append({"pos":center+dir*34.0,"vel":dir*235.0,"damage":damage_value,"life":3.1,"color":C_PURPLE if i%2==0 else C_CYAN})
+		hazard_timer = 5.0
+
+func update_enemies(delta: float) -> void:
+	super.update_enemies(delta)
+	for i: int in range(enemies.size()):
+		var e: Dictionary = enemies[i]
+		var kind := String(e.get("type",""))
+		if not kind in ["void_knight","rift_mage","soul_reaver"]:
+			continue
+		var p: Vector2 = e["pos"]
+		var to_player := player_pos-p
+		var dist := to_player.length()
+		if kind == "void_knight":
+			e["dash_cd"] = maxf(0.0,float(e.get("dash_cd",0.0))-delta)
+			e["dash_time"] = maxf(0.0,float(e.get("dash_time",0.0))-delta)
+			if float(e["dash_cd"]) <= 0.0 and dist < 430.0:
+				e["dash_time"] = 0.42
+				e["dash_cd"] = 3.0
+				effects.append({"type":"slash","pos":p,"dir":to_player.normalized(),"age":0.0,"dur":0.20,"color":C_CYAN,"kind":""})
+			if dist > 1.0:
+				var speed_mult := 2.75 if float(e["dash_time"]) > 0.0 else 1.0
+				p += to_player.normalized()*float(e["speed"])*speed_mult*delta
+		elif kind == "rift_mage":
+			p = _ranged_enemy_step(e,p,to_player,dist,delta,250.0,430.0)
+			if float(e["attack_cd"]) <= 0.0 and dist < 560.0:
+				var aim := to_player.normalized()
+				for spread: float in [-0.22,0.0,0.22]:
+					var dir := aim.rotated(spread)
+					enemy_shots.append({"pos":p+dir*24.0,"vel":dir*285.0,"damage":15.0+float(run.floor_no)*0.62,"life":2.9,"color":C_CYAN if spread==0.0 else C_PURPLE})
+				e["attack_cd"] = 1.55
+			e["blink_cd"] = maxf(0.0,float(e.get("blink_cd",0.0))-delta)
+			if float(e["blink_cd"]) <= 0.0:
+				effects.append({"type":"phase2","pos":p,"age":0.0,"dur":0.30,"color":C_CYAN,"kind":""})
+				p = clamp_to_arena(p+Vector2(rng.randf_range(-175.0,175.0),rng.randf_range(-145.0,145.0)),float(e["radius"]))
+				e["blink_cd"] = 3.8
+		else:
+			var hp_ratio := clampf(float(e["hp"])/float(e["max_hp"]),0.0,1.0)
+			e["rage"] = 1.0 if hp_ratio <= 0.40 else 0.0
+			e["lunge_cd"] = maxf(0.0,float(e.get("lunge_cd",0.0))-delta)
+			e["lunge_time"] = maxf(0.0,float(e.get("lunge_time",0.0))-delta)
+			if float(e["lunge_cd"]) <= 0.0 and dist < 420.0:
+				e["lunge_time"] = 0.34
+				e["lunge_cd"] = 2.35
+				effects.append({"type":"slash","pos":p,"dir":to_player.normalized(),"age":0.0,"dur":0.18,"color":V16_PURPLE,"kind":""})
+			if dist > 1.0:
+				var rage_mult := 1.25 if float(e["rage"]) > 0.0 else 1.0
+				var lunge_mult := 2.45 if float(e["lunge_time"]) > 0.0 else 1.0
+				var side := Vector2(-to_player.y,to_player.x).normalized()*sin(elapsed*5.5+float(e.get("phase",0.0)))*0.16
+				p += (to_player.normalized()+side).normalized()*float(e["speed"])*rage_mult*lunge_mult*delta
+		e["pos"] = clamp_to_arena(p,float(e["radius"]))
+		var new_dist := player_pos.distance_to(e["pos"])
+		if new_dist < 34.0+float(e["radius"]) and float(e["touch_cd"]) <= 0.0:
+			damage_player(float(e["touch_damage"]),e["pos"])
+			e["touch_cd"] = 0.62
+		enemies[i] = e
+
+func apply_damage_to_enemy(index: int, amount: float, crit: bool, hit_pos: Vector2) -> void:
+	if index >= 0 and index < enemies.size() and String(enemies[index].get("type","")) == "void_knight":
+		amount *= 1.0-float(enemies[index].get("guard",0.18))
+	super.apply_damage_to_enemy(index,amount,crit,hit_pos)
+
+func update_warden(e: Dictionary, p: Vector2, to_player: Vector2, dist: float, delta: float) -> void:
+	if String(e.get("boss_variant","warden")) != "astral_warden":
+		super.update_warden(e,p,to_player,dist,delta)
+		return
+	var hp_ratio := clampf(float(e["hp"])/float(e["max_hp"]),0.0,1.0)
+	if hp_ratio <= 0.50 and not bool(e["phase2"]):
+		e["phase2"] = true
+		e["attack_cd"] = 0.22
+		effects.append({"type":"phase2","pos":p,"age":0.0,"dur":0.95,"color":C_CYAN,"kind":""})
+		screen_shake = 15.0
+		haptic(90)
+
+	e["teleport_cd"] = maxf(0.0,float(e.get("teleport_cd",0.0))-delta)
+	if float(e["teleport_cd"]) <= 0.0:
+		effects.append({"type":"keeper_cast","pos":p,"age":0.0,"dur":0.34,"color":C_PURPLE,"kind":""})
+		var spots := [Vector2(145,310),Vector2(575,310),Vector2(145,850),Vector2(575,850),Vector2(360,500)]
+		p = spots[rng.randi_range(0,spots.size()-1)]
+		e["pos"] = p
+		e["teleport_cd"] = 2.2 if bool(e["phase2"]) else 3.25
+		for i: int in range(8):
+			var dir := Vector2.from_angle(TAU*float(i)/8.0)
+			enemy_shots.append({"pos":p+dir*54.0,"vel":dir*240.0,"damage":19.0+float(run.floor_no)*0.68,"life":3.0,"color":C_CYAN if i%2==0 else C_PURPLE})
+
+	if float(e["cast_timer"]) > 0.0:
+		e["cast_timer"] = maxf(0.0,float(e["cast_timer"])-delta)
+		if float(e["cast_timer"]) <= 0.0:
+			execute_warden_cast(e)
+			e["cast_kind"] = ""
+			e["attack_cd"] = 0.72 if bool(e["phase2"]) else 1.05
+		return
+	if float(e["attack_cd"]) <= 0.0:
+		var attack_index := int(e["attack_index"])
+		e["cast_kind"] = "crossfire" if attack_index%2==0 else "rift_ring"
+		e["cast_timer"] = 0.34 if bool(e["phase2"]) else 0.48
+		e["attack_index"] = attack_index+1
+		effects.append({"type":"warden_telegraph","pos":p,"age":0.0,"dur":float(e["cast_timer"]),"color":C_CYAN if String(e["cast_kind"])=="crossfire" else C_PURPLE,"kind":String(e["cast_kind"])})
+		return
+	if dist > 175.0 and dist > 1.0:
+		p += to_player.normalized()*float(e["speed"])*delta
+	e["pos"] = clamp_to_arena(p,float(e["radius"]))
+
+func execute_warden_cast(e: Dictionary) -> void:
+	if String(e.get("boss_variant","warden")) != "astral_warden":
+		super.execute_warden_cast(e)
+		return
+	var p: Vector2 = e["pos"]
+	var phase2 := bool(e["phase2"])
+	if String(e["cast_kind"]) == "crossfire":
+		var aim := (player_pos-p).normalized()
+		var count := 13 if phase2 else 9
+		for i: int in range(count):
+			var spread := (float(i)-float(count-1)*0.5)*0.105
+			var dir := aim.rotated(spread)
+			enemy_shots.append({"pos":p+dir*58.0,"vel":dir*(385.0 if phase2 else 330.0),"damage":21.0+float(run.floor_no)*0.82,"life":2.8,"color":C_CYAN if i%2==0 else C_PURPLE})
+		if phase2:
+			for dir: Vector2 in [Vector2.RIGHT,Vector2.LEFT,Vector2.UP,Vector2.DOWN]:
+				enemy_shots.append({"pos":p+dir*60.0,"vel":dir*410.0,"damage":23.0+float(run.floor_no)*0.84,"life":2.5,"color":C_PURPLE})
+	else:
+		var count := 26 if phase2 else 18
+		var offset := float(e["attack_index"])*0.13
+		for i: int in range(count):
+			var dir := Vector2.from_angle(offset+TAU*float(i)/float(count))
+			enemy_shots.append({"pos":p+dir*58.0,"vel":dir*(345.0 if phase2 else 275.0),"damage":20.0+float(run.floor_no)*0.78,"life":3.25,"color":C_PURPLE if i%2==0 else C_CYAN})
+	effects.append({"type":"keeper_cast","pos":p,"age":0.0,"dur":0.40,"color":C_CYAN,"kind":""})
+	screen_shake = maxf(screen_shake,10.0 if phase2 else 6.0)
+	haptic(36)
+
+func apply_upgrade(index: int) -> void:
+	super.apply_upgrade(index)
+	if run == null or not run.has_method("consume_synergy_notice"):
+		return
+	var unlocked := String(run.consume_synergy_notice())
+	if unlocked.is_empty():
+		return
+	loot_notice = "SYNERGY UNLOCKED — %s" % unlocked
+	loot_notice_color = C_CYAN
+	loot_notice_time = 2.6
+	_audio("claim")
+
+func _v12_actor_index(kind: String, variant: String) -> int:
+	match kind:
+		"void_knight": return 9
+		"rift_mage": return 10
+		"soul_reaver": return 5
+		"warden":
+			if variant == "astral_warden": return 11
+	return super._v12_actor_index(kind,variant)
+
+func _motion_row(kind: String, variant: String = "warden") -> int:
+	match kind:
+		"void_knight": return 9
+		"rift_mage": return 10
+		"soul_reaver": return 5
+		"warden":
+			if variant == "astral_warden": return 11
+	return super._motion_row(kind,variant)
+
+func enemy_color(kind: String) -> Color:
+	match kind:
+		"void_knight": return Color("6b78d6")
+		"rift_mage": return Color("63d8ff")
+		"soul_reaver": return Color("aa5cff")
+	return super.enemy_color(kind)
+
+func _draw_boss_ui() -> void:
+	var boss: Dictionary = {}
+	for e: Dictionary in enemies:
+		if String(e.get("type","")) == "warden" and String(e.get("boss_variant","")) == "astral_warden":
+			boss = e
+			break
+	if boss.is_empty():
+		super._draw_boss_ui()
+		return
+	var ratio := clampf(float(boss["hp"])/float(boss["max_hp"]),0.0,1.0)
+	var accent := C_PURPLE if bool(boss["phase2"]) else C_CYAN
+	panel(Rect2(88,156,544,60),Color("090e1b"),accent)
+	text("THE ASTRAL WARDEN",Vector2(108,181),15,C_TEXT)
+	draw_rect(Rect2(270,178,334,14),Color("172038"))
+	draw_rect(Rect2(270,178,334*ratio,14),accent)
+	if astral_intro > 0.0:
+		var alpha := clampf(astral_intro,0.0,1.0)
+		draw_rect(Rect2(44,468,632,184),Color(0.01,0.015,0.04,0.91*alpha))
+		var title_color := C_CYAN
+		title_color.a = alpha
+		draw_string(font,Vector2(68,542),"THE ASTRAL WARDEN",HORIZONTAL_ALIGNMENT_CENTER,584,42,title_color)
+		draw_string(font,Vector2(68,590),"FLOOR 40  •  HEART OF THE DEEP TOWER",HORIZONTAL_ALIGNMENT_CENTER,584,16,C_TEXT)
 
 func _v22_runtime_component_ready() -> bool:
 	return tex_v22_skins != null and tex_v22_icons != null and tex_v22_medallion != null and tex_v22_wanderer != null

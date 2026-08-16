@@ -35,6 +35,27 @@ static func make_enemy(kind: String, floor_no: int, rng: RandomNumberGenerator, 
 		hexer["attack_cd"] = rng.randf_range(0.35, 0.9)
 		hexer["blink_cd"] = rng.randf_range(2.6, 4.2)
 		return hexer
+
+	# Floors 31+ — Deep Tower roster.
+	if kind == "void_knight":
+		var knight: Dictionary = _base_enemy("void_knight", pos, base_hp * 1.92, 56.0 + floor_no * 0.78, 30.0, 15.0 + floor_no * 0.68, 18 + floor_no, rng)
+		knight["guard"] = 0.18
+		knight["dash_cd"] = rng.randf_range(1.6, 2.7)
+		knight["dash_time"] = 0.0
+		return knight
+	if kind == "rift_mage":
+		var mage: Dictionary = _base_enemy("rift_mage", pos, base_hp * 0.96, 59.0 + floor_no * 0.86, 23.0, 11.0 + floor_no * 0.50, 19 + floor_no, rng)
+		mage["attack_cd"] = rng.randf_range(0.25, 0.8)
+		mage["blink_cd"] = rng.randf_range(2.2, 3.5)
+		mage["rift_angle"] = rng.randf_range(0.0, TAU)
+		return mage
+	if kind == "soul_reaver":
+		var reaver: Dictionary = _base_enemy("soul_reaver", pos, base_hp * 1.12, 116.0 + floor_no * 1.15, 24.0, 13.0 + floor_no * 0.60, 20 + floor_no, rng)
+		reaver["lunge_cd"] = rng.randf_range(1.2, 2.2)
+		reaver["lunge_time"] = 0.0
+		reaver["rage"] = 0.0
+		return reaver
+
 	if kind == "crypt_keeper":
 		var keeper_hp: float = 520.0 + float(floor_no) * 58.0
 		var keeper: Dictionary = _base_enemy("warden", pos, keeper_hp, 68.0 + floor_no * 0.48, 54.0, 26.0 + floor_no * 0.9, 120 + floor_no * 9, rng)
@@ -49,6 +70,15 @@ static func make_enemy(kind: String, floor_no: int, rng: RandomNumberGenerator, 
 		king["teleport_cd"] = 3.3
 		king["crown_angle"] = 0.0
 		return king
+	if kind == "astral_warden":
+		var astral_hp: float = 1180.0 + float(floor_no) * 88.0
+		var astral: Dictionary = _base_enemy("warden", pos, astral_hp, 80.0 + floor_no * 0.52, 62.0, 34.0 + floor_no * 1.08, 240 + floor_no * 13, rng)
+		astral["boss_variant"] = "astral_warden"
+		astral["attack_cd"] = 0.68
+		astral["teleport_cd"] = 2.8
+		astral["rift_angle"] = 0.0
+		return astral
+
 	var boss_hp: float = 310.0 + float(floor_no) * 48.0
 	var boss: Dictionary = _base_enemy("warden", pos, boss_hp, 62.0 + floor_no * 0.5, 48.0, 22.0 + floor_no * 0.8, 70 + floor_no * 7, rng)
 	boss["attack_cd"] = 1.15
