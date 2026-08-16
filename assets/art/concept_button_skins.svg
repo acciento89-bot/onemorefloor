@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="576" viewBox="0 0 360 576">
+<defs>
+ <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#7b4d13"/><stop offset=".22" stop-color="#f6d27a"/><stop offset=".48" stop-color="#9b681d"/><stop offset=".72" stop-color="#fff0a8"/><stop offset="1" stop-color="#6f410d"/></linearGradient>
+ <linearGradient id="face" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#151624"/><stop offset=".5" stop-color="#090b13"/><stop offset="1" stop-color="#03050a"/></linearGradient>
+ <linearGradient id="goldfill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#4b3518"/><stop offset=".45" stop-color="#2a1e10"/><stop offset="1" stop-color="#120d08"/></linearGradient>
+ <linearGradient id="purplefill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#3b1760"/><stop offset=".55" stop-color="#1b0d30"/><stop offset="1" stop-color="#090510"/></linearGradient>
+ <linearGradient id="bluefill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#103a54"/><stop offset=".55" stop-color="#0a1d2d"/><stop offset="1" stop-color="#050a10"/></linearGradient>
+ <linearGradient id="greenfill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0f462f"/><stop offset=".55" stop-color="#09261b"/><stop offset="1" stop-color="#04110c"/></linearGradient>
+ <linearGradient id="orangefill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#512611"/><stop offset=".55" stop-color="#28140c"/><stop offset="1" stop-color="#100805"/></linearGradient>
+ <linearGradient id="steelfill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#282d3c"/><stop offset=".55" stop-color="#151925"/><stop offset="1" stop-color="#090b12"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <g id="orn"><path d="M2 20V2h18M340 2h18v18M2 76v18h18M340 94h18V76" fill="none" stroke="url(#metal)" stroke-width="3"/><path d="M9 9l10 0-10 10zM351 9l-10 0 10 10zM9 87l10 0-10-10zM351 87l-10 0 10-10z" fill="#e5bc5a"/></g>
+ <g id="gem"><path d="M180 2l10 10-10 10-10-10z" fill="#8e3fe3" stroke="#e6c6ff" stroke-width="1"/><path d="M180 6l5 6-5 6-5-6z" fill="#d99dff"/></g>
+</defs>
+<!-- gold -->
+<g transform="translate(0 0)"><rect x="3" y="5" width="354" height="88" rx="2" fill="#000" opacity=".8"/><rect x="1" y="1" width="358" height="94" rx="2" fill="url(#goldfill)" stroke="url(#metal)" stroke-width="3"/><rect x="7" y="7" width="346" height="82" fill="none" stroke="#8f6623" stroke-width="1.5"/><rect x="12" y="12" width="336" height="72" fill="none" stroke="#f3d77f" stroke-opacity=".22"/><use href="#orn"/><use href="#gem"/><path d="M24 18h312M24 78h312" stroke="#f6d27a" stroke-opacity=".22"/></g>
+<!-- purple -->
+<g transform="translate(0 96)" filter="url(#glow)"><rect x="3" y="5" width="354" height="88" fill="#000" opacity=".8"/><rect x="1" y="1" width="358" height="94" fill="url(#purplefill)" stroke="url(#metal)" stroke-width="3"/><rect x="7" y="7" width="346" height="82" fill="none" stroke="#a54cff" stroke-width="2"/><rect x="12" y="12" width="336" height="72" fill="none" stroke="#da9cff" stroke-opacity=".35"/><use href="#orn"/><use href="#gem"/></g>
+<!-- blue -->
+<g transform="translate(0 192)"><rect x="3" y="5" width="354" height="88" fill="#000" opacity=".8"/><rect x="1" y="1" width="358" height="94" fill="url(#bluefill)" stroke="url(#metal)" stroke-width="3"/><rect x="7" y="7" width="346" height="82" fill="none" stroke="#4cc9ff" stroke-width="2"/><rect x="12" y="12" width="336" height="72" fill="none" stroke="#9de6ff" stroke-opacity=".3"/><use href="#orn"/><use href="#gem"/></g>
+<!-- green -->
+<g transform="translate(0 288)"><rect x="3" y="5" width="354" height="88" fill="#000" opacity=".8"/><rect x="1" y="1" width="358" height="94" fill="url(#greenfill)" stroke="url(#metal)" stroke-width="3"/><rect x="7" y="7" width="346" height="82" fill="none" stroke="#53ed90" stroke-width="2"/><rect x="12" y="12" width="336" height="72" fill="none" stroke="#a0ffc0" stroke-opacity=".26"/><use href="#orn"/><use href="#gem"/></g>
+<!-- orange -->
+<g transform="translate(0 384)"><rect x="3" y="5" width="354" height="88" fill="#000" opacity=".8"/><rect x="1" y="1" width="358" height="94" fill="url(#orangefill)" stroke="url(#metal)" stroke-width="3"/><rect x="7" y="7" width="346" height="82" fill="none" stroke="#f49b52" stroke-width="2"/><rect x="12" y="12" width="336" height="72" fill="none" stroke="#ffd0a3" stroke-opacity=".25"/><use href="#orn"/><use href="#gem"/></g>
+<!-- steel/disabled -->
+<g transform="translate(0 480)"><rect x="3" y="5" width="354" height="88" fill="#000" opacity=".8"/><rect x="1" y="1" width="358" height="94" fill="url(#steelfill)" stroke="#8c93a8" stroke-width="2"/><rect x="7" y="7" width="346" height="82" fill="none" stroke="#545c73"/><rect x="12" y="12" width="336" height="72" fill="none" stroke="#b3b8c8" stroke-opacity=".12"/><use href="#orn"/></g>
+</svg>
