@@ -54,7 +54,9 @@ func _v19_chamfer_points(r: Rect2, cut: float = 10.0) -> PackedVector2Array:
 	])
 
 func _v19_closed(points: PackedVector2Array) -> PackedVector2Array:
-	var out := PackedVector2Array(points)
+	var out := PackedVector2Array()
+	for p: Vector2 in points:
+		out.append(p)
 	if points.size() > 0:
 		out.append(points[0])
 	return out
@@ -348,7 +350,11 @@ func draw_pass_screen() -> void:
 	draw_line(bar.position+Vector2(4,3),Vector2(bar.position.x+maxf(4,fillw-4),bar.position.y+3),Color("e2acff"),2)
 	_v16_center("%d / %d XP" % [int(progress["current"]),int(progress["needed"])],530,14,V17_IVORY)
 	_v16_center("REWARD TRACK",606,27,V16_MUTED,true)
-	var levels: Array[int] = [maxi(1,level_no-1),maxi(1,level_no)]
+	var levels: Array[int] = []
+	if level_no <= 1:
+		levels = [1, mini(2,max_level)]
+	else:
+		levels = [maxi(1,level_no-1),maxi(1,level_no)]
 	for i: int in range(2):
 		var l:=levels[i]
 		var rr:Dictionary=tower_pass.reward_for(l)
@@ -361,7 +367,8 @@ func draw_pass_screen() -> void:
 		var badge:=Vector2(105,row.get_center().y)
 		draw_colored_polygon(PackedVector2Array([badge+Vector2(0,-42),badge+Vector2(42,0),badge+Vector2(0,42),badge+Vector2(-42,0)]),Color("090716"))
 		draw_polyline(_v19_closed(PackedVector2Array([badge+Vector2(0,-42),badge+Vector2(42,0),badge+Vector2(0,42),badge+Vector2(-42,0)])),V16_PURPLE_HI,2.5)
-		draw_string(v16_title_font,Vector2(72,row.get_center().y+8),"LV\n%d" % l,HORIZONTAL_ALIGNMENT_CENTER,66,18,V17_IVORY)
+		draw_string(v16_title_font,Vector2(72,row.get_center().y-5),"LV",HORIZONTAL_ALIGNMENT_CENTER,66,13,V16_MUTED)
+		draw_string(v16_title_font,Vector2(72,row.get_center().y+20),str(l),HORIZONTAL_ALIGNMENT_CENTER,66,22,V17_IVORY)
 		if String(rr.get("label","")) == "BIG COIN CACHE":
 			_v18_reward_chest(Vector2(row.position.x+84,row.get_center().y),0.34)
 			_v16_text("BIG COIN CACHE",row.position+Vector2(160,51),21,V17_GOLD_HI,true)
@@ -387,7 +394,7 @@ func draw_pass_screen() -> void:
 # -----------------------------------------------------------------------------
 
 func vault_v08_item_rect(local_index: int) -> Rect2:
-	return Rect2(34,372 + local_index*111,652,98)
+	return Rect2(34,350 + local_index*100,652,90)
 
 func draw_vault_screen() -> void:
 	_v16_header("VAULT","Compare, lock, equip, dismantle and craft gear",V16_GOLD,10,"arcane")
@@ -416,7 +423,7 @@ func draw_vault_screen() -> void:
 		_v19_vault_item(item,local_index,String(item.get("id",""))==selected_vault_id)
 	_v16_vault_comparison(selected)
 	_v16_button(V8_EQUIP,"EQUIP",V16_BLUE,13,8,not selected.is_empty())
-	var can_dismantle:=not selected.is_empty() and not loot.is_locked(selected) and not loot.is_equipped(selected)
+	var can_dismantle: bool = not selected.is_empty() and bool(loot.is_locked(selected)) == false and bool(loot.is_equipped(selected)) == false
 	_v16_button(V8_DISMANTLE,"DISMANTLE",Color("777b89"),12,7,can_dismantle)
 	_v16_button(V8_PREV,"‹",Color("555b6b"),20,-1,vault_page>0)
 	_v16_button(V8_NEXT,"›",V16_PURPLE,20,-1,vault_page<_vault_max_page())
@@ -436,15 +443,15 @@ func _v19_vault_item(item:Dictionary,local_index:int,selected_now:bool)->void:
 	_v16_frame(r,accent,Color("050b14"),0.14)
 	var slot:=String(item["slot"])
 	var icon_index:=6 if slot=="weapon" else (8 if slot=="armor" else 10)
-	_v16_medallion(Vector2(r.position.x+52,r.get_center().y),31,accent,icon_index)
-	_v16_text(String(item["name"]),r.position+Vector2(102,31),19,V17_IVORY,true)
-	_v16_text("%s • %s • Lv.%d • SCORE %d" % [rarity,slot.to_upper(),int(item["level"]),int(loot.item_score(item))],r.position+Vector2(102,55),11,rarity_accent)
-	_v16_text(loot.stat_line(item),r.position+Vector2(102,81),13,V16_MUTED)
-	var tags:=loot.trait_line(item)
+	_v16_medallion(Vector2(r.position.x+52,r.get_center().y),29,accent,icon_index)
+	_v16_text(String(item["name"]),r.position+Vector2(102,29),18,V17_IVORY,true)
+	_v16_text("%s • %s • Lv.%d • SCORE %d" % [rarity,slot.to_upper(),int(item["level"]),int(loot.item_score(item))],r.position+Vector2(102,52),10,rarity_accent)
+	_v16_text(loot.stat_line(item),r.position+Vector2(102,76),12,V16_MUTED)
+	var tags: String = String(loot.trait_line(item))
 	if tags!="":
-		draw_string(v16_body_font,Vector2(r.position.x+365,r.position.y+81),tags,HORIZONTAL_ALIGNMENT_LEFT,190,10,V16_PURPLE_HI)
-	var status:="EQUIPPED" if loot.is_equipped(item) else ("SELECTED" if selected_now else "TAP  ›")
-	draw_string(v16_title_font,Vector2(r.end.x-108,r.position.y+57),status,HORIZONTAL_ALIGNMENT_CENTER,92,12,V16_GREEN if loot.is_equipped(item) else V16_GOLD)
+		draw_string(v16_body_font,Vector2(r.position.x+365,r.position.y+76),tags,HORIZONTAL_ALIGNMENT_LEFT,190,10,V16_PURPLE_HI)
+	var status: String = "EQUIPPED" if loot.is_equipped(item) else ("SELECTED" if selected_now else "TAP  ›")
+	draw_string(v16_title_font,Vector2(r.end.x-108,r.position.y+54),status,HORIZONTAL_ALIGNMENT_CENTER,92,12,V16_GREEN if loot.is_equipped(item) else V16_GOLD)
 
 # -----------------------------------------------------------------------------
 # Settings modal — same live settings, approved visual hierarchy
@@ -454,8 +461,8 @@ func _draw_settings_overlay() -> void:
 	draw_rect(Rect2(Vector2.ZERO,SIZE),Color(0,0,0,0.76))
 	var modal:=Rect2(64,205,592,850)
 	_v16_frame(modal,V16_BLUE,Color("07101e"),0.26)
-	_v16_title("SETTINGS",294,44,V16_GOLD)
-	_v16_center("Playtest controls & privacy",336,17,V16_MUTED)
+	_v16_title("SETTINGS",270,44,V16_GOLD)
+	_v16_center("Playtest controls & privacy",304,17,V16_MUTED)
 	_v19_setting_row(V10_SET_MUSIC,"MUSIC",bool(settings.music_enabled),int(float(settings.music_volume)*100.0),2,V16_GREEN)
 	_v19_setting_row(V10_SET_SFX,"SFX",bool(settings.sfx_enabled),int(float(settings.sfx_volume)*100.0),3,V16_GREEN)
 	_v19_setting_row(V10_SET_HAPTICS,"HAPTICS",bool(settings.haptics_enabled),-1,4,V16_GREEN)
