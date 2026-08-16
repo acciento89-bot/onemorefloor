@@ -23,6 +23,13 @@ func _run() -> void:
 		_fail(2703, "v1.14: checkpoint setback API is missing")
 		return
 
+	# This smoke test intentionally manipulates persistent progression. Preserve the
+	# state it inherited so later smoke tests do not accidentally start at a deep
+	# checkpoint and test a different biome than they were written for.
+	var original_best_floor := int(game.meta.best_floor)
+	var original_checkpoint_floor := int(game.meta.checkpoint_floor)
+	var original_coins := int(game.meta.coins)
+
 	game.tutorial_active = false
 	game.meta.best_floor = 100
 	game.meta.checkpoint_floor = 100
@@ -65,6 +72,11 @@ func _run() -> void:
 	if lost != 15 or int(game.meta.checkpoint_floor) != 185:
 		_fail(2711, "v1.14: Floor 200 death setback should be 15 floors")
 		return
+
+	game.meta.best_floor = original_best_floor
+	game.meta.checkpoint_floor = original_checkpoint_floor
+	game.meta.coins = original_coins
+	game.meta.save_data()
 
 	print("ONE MORE FLOOR v1.14 endless ascension smoke test passed")
 	quit(0)
