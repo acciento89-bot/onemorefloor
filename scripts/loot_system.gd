@@ -4,9 +4,12 @@ const SAVE_PATH := "user://save.cfg"
 const RARITIES := ["COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY"]
 const RARITY_MULT := [1.0, 1.35, 1.85, 2.6, 3.8]
 const SETS := ["EMBER", "CRYPT", "WARDEN"]
+const DISMANTLE_VALUES := [5, 12, 30, 70, 160]
+const CRAFT_COST := 120
 
 var inventory: Array = []
 var equipped := {"weapon": "", "armor": "", "relic": ""}
+var shards: int = 0
 
 func load_data() -> void:
 	var cfg := ConfigFile.new()
@@ -16,12 +19,14 @@ func load_data() -> void:
 	var saved_equipped = cfg.get_value("loot", "equipped", equipped)
 	if saved_equipped is Dictionary:
 		equipped = saved_equipped
+	shards = int(cfg.get_value("loot", "shards", 0))
 
 func save_data() -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(SAVE_PATH)
 	cfg.set_value("loot", "inventory", inventory)
 	cfg.set_value("loot", "equipped", equipped)
+	cfg.set_value("loot", "shards", shards)
 	cfg.save(SAVE_PATH)
 
 func roll_drop(enemy_type: String, floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
@@ -34,11 +39,51 @@ func roll_drop(enemy_type: String, floor_no: int, rng: RandomNumberGenerator) ->
 	var slot_roll: int = rng.randi_range(0, 2)
 	var slot: String = String(["weapon", "armor", "relic"][slot_roll])
 	var item: Dictionary = _make_item(slot, rarity_index, floor_no, rng)
+	_store_item(item)
+	save_data()
+	return item
+
+func craft_item(slot: String, floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
+	if not slot in ["weapon", "armor", "relic"]:
+		return {}
+	if shards < CRAFT_COST:
+		return {}
+	shards -= CRAFT_COST
+	var roll: float = rng.randf()
+	var rarity_index: int = 2
+	if roll < 0.035:
+		rarity_index = 4
+	elif roll < 0.22:
+		rarity_index = 3
+	var item: Dictionary = _make_item(slot, rarity_index, maxi(5, floor_no), rng)
+	_store_item(item)
+	save_data()
+	return item
+
+func dismantle_index(index: int) -> int:
+	if index < 0 or index >= inventory.size():
+		return 0
+	var item: Dictionary = inventory[index]
+	if is_equipped(item):
+		return 0
+	var rarity_index: int = clampi(int(item.get("rarity_index", 0)), 0, DISMANTLE_VALUES.size() - 1)
+	var gained: int = int(DISMANTLE_VALUES[rarity_index])
+	inventory.remove_at(index)
+	shards += gained
+	save_data()
+	return gained
+
+func dismantle_value(item: Dictionary) -> int:
+	var rarity_index: int = clampi(int(item.get("rarity_index", 0)), 0, DISMANTLE_VALUES.size() - 1)
+	return int(DISMANTLE_VALUES[rarity_index])
+
+func craft_cost() -> int:
+	return CRAFT_COST
+
+func _store_item(item: Dictionary) -> void:
 	inventory.push_front(item)
 	if inventory.size() > 60:
 		inventory.resize(60)
-	save_data()
-	return item
 
 func _roll_rarity(warden: bool, floor_no: int, rng: RandomNumberGenerator) -> int:
 	var roll: float = rng.randf()
