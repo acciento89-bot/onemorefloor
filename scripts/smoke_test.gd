@@ -137,7 +137,8 @@ func _run_smoke() -> void:
 
 	var anim_enemy: Dictionary = enemy_factory.make_enemy("goblin", 2, game.rng, game.player_pos)
 	anim_enemy["pos"] = game.player_pos + Vector2(60, 0)
-	game.enemies = [anim_enemy]
+	game.enemies.clear()
+	game.enemies.append(anim_enemy)
 	game.fire_auto_attack()
 	if String(game.player_anim_state) != "attack":
 		_fail(29, "Smoke test: player attack animation state did not trigger")
