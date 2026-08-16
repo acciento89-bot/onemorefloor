@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280">
+<defs>
+ <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#03040c"/><stop offset=".34" stop-color="#08081b"/><stop offset=".69" stop-color="#101128"/><stop offset="1" stop-color="#03050b"/></linearGradient>
+ <linearGradient id="stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#27304a"/><stop offset=".25" stop-color="#151b2c"/><stop offset=".55" stop-color="#303a59"/><stop offset="1" stop-color="#0a0e19"/></linearGradient>
+ <linearGradient id="stoneHi" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#46516f"/><stop offset="1" stop-color="#121827"/></linearGradient>
+ <linearGradient id="banner" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#35132c"/><stop offset=".5" stop-color="#741a45"/><stop offset="1" stop-color="#2b1028"/></linearGradient>
+ <radialGradient id="violet"><stop stop-color="#c46cff" stop-opacity=".76"/><stop offset=".26" stop-color="#7838d4" stop-opacity=".33"/><stop offset="1" stop-color="#30125c" stop-opacity="0"/></radialGradient>
+ <radialGradient id="fire"><stop stop-color="#ffe28a"/><stop offset=".28" stop-color="#f9a52e"/><stop offset=".65" stop-color="#953518" stop-opacity=".45"/><stop offset="1" stop-color="#3b1709" stop-opacity="0"/></radialGradient>
+ <linearGradient id="window" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff1a0"/><stop offset=".5" stop-color="#f4ad3b"/><stop offset="1" stop-color="#9d4f19"/></linearGradient>
+ <linearGradient id="crystal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#efe1ff"/><stop offset=".18" stop-color="#bd76ff"/><stop offset=".53" stop-color="#7133dd"/><stop offset=".78" stop-color="#c58aff"/><stop offset="1" stop-color="#4e1ca4"/></linearGradient>
+ <pattern id="blocks" width="54" height="34" patternUnits="userSpaceOnUse"><path d="M0 0h54v34H0z" fill="none" stroke="#66708d" stroke-opacity=".12"/><path d="M27 0v7M8 34v-7M46 34v-7" stroke="#78819b" stroke-opacity=".08"/></pattern>
+</defs>
+<rect width="720" height="1280" fill="url(#sky)"/>
+<!-- stars -->
+<g fill="#a66cff" opacity=".55"><circle cx="70" cy="75" r="1.4"/><circle cx="156" cy="128" r="1"/><circle cx="251" cy="61" r="1.2"/><circle cx="466" cy="84" r="1"/><circle cx="648" cy="144" r="1.4"/><circle cx="592" cy="240" r="1"/><circle cx="91" cy="233" r="1.3"/><circle cx="525" cy="185" r=".8"/><circle cx="333" cy="106" r="1.2"/></g>
+<!-- mountain silhouettes -->
+<path d="M0 650L88 516l71 76 59-112 72 121 89-181 88 153 64-94 78 123 56-96 55 79v291H0z" fill="#070a14"/>
+<path d="M0 708L104 567l74 80 91-112 68 122 79-107 82 98 77-73 75 94 70-60v269H0z" fill="#0c1020" opacity=".9"/>
+<!-- enormous rune circle like reference -->
+<g transform="translate(360 410)" fill="none" stroke="#7330bb">
+ <circle r="250" stroke-width="3" opacity=".38"/><circle r="226" stroke-width="1.5" opacity=".28"/><circle r="191" stroke-width="2" opacity=".18"/><circle r="157" stroke-width="1" opacity=".15"/>
+ <path d="M0-247v30M0 217v30M-247 0h30M217 0h30M-176-176l21 21M155 155l21 21M176-176l-21 21M-176 176l21-21" opacity=".42"/>
+ <g stroke-width="1" opacity=".28"><path d="M0-208l18 16-18 16-18-16zM145-145l20 2 2 20-20-2zM205 0l-16 18-16-18 16-18zM145 145l2-20 20-2-2 20zM0 208l-18-16 18-16 18 16zM-145 145l-20-2-2-20 20 2zM-205 0l16-18 16 18-16 18zM-145-145l-2 20-20 2 2-20z"/></g>
+</g>
+<ellipse cx="360" cy="475" rx="300" ry="286" fill="url(#violet)" opacity=".42"/>
+<!-- distant side towers -->
+<g fill="url(#stone)"><path d="M24 504h76v341H24zM11 536h102v35H11zM34 470h56l-10-47H44z"/><path d="M620 504h76v341h-76zM607 536h102v35H607zM630 470h56l-10-47h-36z"/></g>
+<!-- central citadel: exact reference hierarchy -->
+<g>
+ <path d="M174 526h372v332H174z" fill="url(#stone)" stroke="#5a6480" stroke-width="3"/>
+ <path d="M174 526h372v332H174z" fill="url(#blocks)"/>
+ <!-- side wings -->
+ <path d="M98 595h113v263H98zM509 595h113v263H509z" fill="url(#stone)" stroke="#525d79" stroke-width="3"/>
+ <path d="M83 595l71-92 72 92zM494 595l72-92 71 92z" fill="url(#stoneHi)" stroke="#59647f" stroke-width="3"/>
+ <!-- four towers -->
+ <path d="M122 474h70v384h-70zM528 474h70v384h-70z" fill="url(#stone)"/>
+ <path d="M111 474h92l-14-56h-64zM517 474h92l-14-56h-64z" fill="#20283d" stroke="#5f6984" stroke-width="2"/>
+ <!-- keep top -->
+ <path d="M236 438h248v420H236z" fill="url(#stone)" stroke="#606a86" stroke-width="3"/>
+ <path d="M220 438h280v54H220z" fill="#2e3852" stroke="#68728d" stroke-width="3"/>
+ <path d="M236 438v-54h38v26h30v-26h38v26h36v-26h38v26h30v-26h38v54z" fill="#27324a" stroke="#626c89" stroke-width="2"/>
+ <path d="M236 438h248v420H236z" fill="url(#blocks)"/>
+ <!-- gothic entrance -->
+ <path d="M305 858V690q0-60 55-82 55 22 55 82v168z" fill="#050711" stroke="#66718f" stroke-width="4"/>
+ <path d="M326 858V700q0-38 34-55 34 17 34 55v158z" fill="#010207" stroke="#343c55" stroke-width="3"/>
+ <!-- crenellations side -->
+ <path d="M98 595v-48h24v22h25v-22h25v22h25v-22h14v48M509 595v-48h14v22h25v-22h25v22h25v-22h24v48" fill="#242e45"/>
+</g>
+<!-- glowing windows -->
+<g fill="url(#window)" stroke="#ffcf69" stroke-width="2"><path d="M278 548h24v56h-24zM418 548h24v56h-24zM278 630h24v56h-24zM418 630h24v56h-24zM132 650h20v48h-20zM568 650h20v48h-20z"/></g>
+<g fill="#fff3a8" opacity=".24"><ellipse cx="290" cy="575" rx="39" ry="52"/><ellipse cx="430" cy="575" rx="39" ry="52"/><ellipse cx="290" cy="656" rx="34" ry="48"/><ellipse cx="430" cy="656" rx="34" ry="48"/></g>
+<!-- banners -->
+<g><path d="M177 562h54v191l-27 31-27-31zM489 562h54v191l-27 31-27-31z" fill="url(#banner)" stroke="#b58b3c" stroke-width="3"/><path d="M204 631l14 20-14 20-14-20zM516 631l14 20-14 20-14-20z" fill="#d9ae49"/></g>
+<!-- bridge -->
+<path d="M145 878h430l-52 150H197z" fill="#11172a" stroke="#49536f" stroke-width="3"/><path d="M197 1028h326" stroke="#252d42" stroke-width="11"/><g stroke="#39445e" stroke-width="2" opacity=".65"><path d="M183 905h354M174 941h372M165 977h390M226 878l-19 150M300 878l-7 150M420 878l7 150M494 878l19 150"/></g>
+<!-- floating crystal -->
+<ellipse cx="360" cy="394" rx="110" ry="118" fill="url(#violet)"/>
+<path d="M360 320l44 83-44 102-44-102z" fill="url(#crystal)" stroke="#e8ceff" stroke-width="3"/><path d="M360 320v185M317 403h87M360 320l-43 83 43 102 44-102z" fill="none" stroke="#f2e2ff" stroke-opacity=".55"/><path d="M360 343l17 59-17 62-17-62z" fill="#e5c9ff" opacity=".43"/>
+<!-- fire braziers -->
+<g><ellipse cx="94" cy="872" rx="72" ry="70" fill="url(#fire)"/><ellipse cx="626" cy="872" rx="72" ry="70" fill="url(#fire)"/><path d="M61 895h66l-13 51H74zM593 895h66l-13 51h-40z" fill="#1d1720" stroke="#7a5d32" stroke-width="2"/><path d="M94 895c-31-39 6-43-1-76 30 24 40 50 1 76zM626 895c-31-39 6-43-1-76 30 24 40 50 1 76z" fill="#a74bff"/><path d="M94 891c-13-22 10-31 0-49 17 13 23 31 0 49zM626 891c-13-22 10-31 0-49 17 13 23 31 0 49z" fill="#e5a4ff"/></g>
+<!-- bottom vignette / floor -->
+<path d="M0 1020h720v260H0z" fill="#03050b"/><path d="M0 1020c150-56 262-65 360-57 133-11 230 14 360 63v254H0z" fill="#080b16"/>
+<g stroke="#40216e" stroke-opacity=".22"><path d="M40 1060h640M20 1110h680M0 1170h720M120 1020L45 1280M220 1000l-38 280M500 1000l38 280M600 1020l75 260"/></g>
+</svg>
