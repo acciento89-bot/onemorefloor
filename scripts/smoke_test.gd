@@ -16,6 +16,22 @@ func _run_smoke() -> void:
 	var game = packed.instantiate()
 	root.add_child(game)
 
+	var art_paths := [
+		"res://assets/art/wanderer.svg",
+		"res://assets/art/goblin.svg",
+		"res://assets/art/bat.svg",
+		"res://assets/art/skeleton.svg",
+		"res://assets/art/ghoul.svg",
+		"res://assets/art/necromancer.svg",
+		"res://assets/art/warden.svg",
+		"res://assets/art/crypt_keeper.svg"
+	]
+	for path in art_paths:
+		var texture = load(path)
+		if texture == null or not texture is Texture2D:
+			_fail(20, "Smoke test: production SVG asset failed to import: %s" % path)
+			return
+
 	game.meta.coins = 100000
 	game.buy_meta("hero")
 	game.buy_meta("forge")
@@ -26,6 +42,18 @@ func _run_smoke() -> void:
 	var forced_item: Dictionary = game.loot.roll_drop("warden", 5, game.rng)
 	if forced_item.is_empty() or game.loot.inventory.is_empty():
 		_fail(2, "Smoke test: guaranteed Warden loot did not drop")
+		return
+
+	game.loot.equipped = {"weapon":"", "armor":"", "relic":""}
+	game.loot.shards = 0
+	var dismantled: int = int(game.loot.dismantle_index(0))
+	if dismantled <= 0 or int(game.loot.shards) != dismantled:
+		_fail(21, "Smoke test: dismantling did not award Soul Shards")
+		return
+	game.loot.shards = int(game.loot.craft_cost())
+	var crafted: Dictionary = game.loot.craft_item("weapon", 12, game.rng)
+	if crafted.is_empty() or int(crafted.get("rarity_index", 0)) < 2 or int(game.loot.shards) != 0:
+		_fail(22, "Smoke test: Rare+ Soul Shard crafting failed")
 		return
 
 	game.loot.inventory = [
