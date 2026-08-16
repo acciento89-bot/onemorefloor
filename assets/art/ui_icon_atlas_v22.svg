@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="256" viewBox="0 0 512 256">
+<defs>
+  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff2a7"/><stop offset=".25" stop-color="#f0bd4b"/><stop offset=".55" stop-color="#9b5c14"/><stop offset=".78" stop-color="#e7ad34"/><stop offset="1" stop-color="#fff0a0"/></linearGradient>
+  <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f5fbff"/><stop offset=".28" stop-color="#a9bfd7"/><stop offset=".55" stop-color="#5e7088"/><stop offset=".8" stop-color="#d9e6f2"/><stop offset="1" stop-color="#778ba4"/></linearGradient>
+  <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c8efff"/><stop offset=".34" stop-color="#5bc7ff"/><stop offset=".72" stop-color="#1763bd"/><stop offset="1" stop-color="#72d7ff"/></linearGradient>
+  <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f0c9ff"/><stop offset=".3" stop-color="#c66cff"/><stop offset=".72" stop-color="#6f24c9"/><stop offset="1" stop-color="#e1a7ff"/></linearGradient>
+  <linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d8ffe6"/><stop offset=".28" stop-color="#69f3a0"/><stop offset=".68" stop-color="#179259"/><stop offset="1" stop-color="#93ffc1"/></linearGradient>
+  <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0c5"/><stop offset=".28" stop-color="#ffb85d"/><stop offset=".7" stop-color="#b74b18"/><stop offset="1" stop-color="#ffd08a"/></linearGradient>
+  <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="4"/><feOffset dx="0" dy="4" result="off"/><feColorMatrix in="off" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .75 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="glowp" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+
+<!-- tile 0 HERO helmet -->
+<g transform="translate(0 0)" filter="url(#shadow)">
+  <path d="M64 20C40 22 27 39 27 61v30l14 17 10-19h26l10 19 14-17V61c0-22-13-39-37-41Z" fill="url(#blue)" stroke="#e9f8ff" stroke-width="3"/>
+  <path d="M37 55 64 39l27 16-8 8H45Z" fill="#10233c" stroke="#8edcff" stroke-width="2"/>
+  <path d="M50 67h28v13H50z" fill="#06101d"/><path d="M64 67v25" stroke="#eefaff" stroke-width="3"/>
+  <path d="M44 83 52 97h24l8-14" fill="none" stroke="#d5eaff" stroke-width="3"/>
+</g>
+
+<!-- tile 1 FORGE anvil -->
+<g transform="translate(128 0)" filter="url(#shadow)">
+  <path d="M22 39h84c-6 15-18 24-36 28v16l20 17v10H38v-10l20-17V67C39 63 27 55 22 39Z" fill="url(#silver)" stroke="#fff" stroke-width="3"/>
+  <path d="M31 46h63" stroke="#7b8796" stroke-width="4"/><path d="M42 103h44" stroke="#3c4654" stroke-width="5"/>
+  <path d="M91 26 105 12l8 8-14 14Z" fill="url(#orange)" stroke="#ffe5bf" stroke-width="2"/>
+</g>
+
+<!-- tile 2 TALENTS compass/star -->
+<g transform="translate(256 0)" filter="url(#glowp)">
+  <circle cx="64" cy="64" r="38" fill="#0c0717" stroke="url(#gold)" stroke-width="4"/>
+  <circle cx="64" cy="64" r="29" fill="none" stroke="#7a38cf" stroke-width="3"/>
+  <path d="M64 20 75 53 108 64 75 75 64 108 53 75 20 64 53 53Z" fill="url(#purple)" stroke="#ffe7ff" stroke-width="2"/>
+  <circle cx="64" cy="64" r="8" fill="#fff3ff"/>
+</g>
+
+<!-- tile 3 VAULT chest -->
+<g transform="translate(384 0)" filter="url(#shadow)">
+  <path d="M25 54c0-19 16-34 39-34s39 15 39 34v13H25Z" fill="#6d3818" stroke="url(#gold)" stroke-width="4"/>
+  <rect x="23" y="55" width="82" height="50" rx="5" fill="#7d431c" stroke="url(#gold)" stroke-width="4"/>
+  <path d="M64 22v82M28 66h72" stroke="#d89a32" stroke-width="5"/>
+  <rect x="55" y="65" width="18" height="25" rx="3" fill="url(#gold)"/><circle cx="64" cy="75" r="4" fill="#3b2209"/>
+</g>
+
+<!-- tile 4 MISSIONS heart plus -->
+<g transform="translate(0 128)" filter="url(#glowp)">
+  <path d="M64 108 25 70C7 52 16 24 39 22c11-1 20 5 25 14 5-9 14-15 25-14 23 2 32 30 14 48Z" fill="url(#green)" stroke="#e9fff1" stroke-width="3"/>
+  <path d="M64 47v35M47 64h35" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+</g>
+
+<!-- tile 5 PASS sword -->
+<g transform="translate(128 128)" filter="url(#shadow)">
+  <path d="m90 21 17-8-8 17-49 56-10-10Z" fill="url(#silver)" stroke="#fff" stroke-width="2"/>
+  <path d="m42 68 18 18-8 8-18-18Z" fill="url(#gold)" stroke="#ffe6a2" stroke-width="2"/>
+  <path d="m35 84 9 9-14 15-10-10Z" fill="#6b2fb8" stroke="#e2b8ff" stroke-width="2"/>
+  <path d="m92 18 8-3-3 8Z" fill="url(#purple)"/>
+</g>
+
+<!-- tile 6 COIN star -->
+<g transform="translate(256 128)" filter="url(#shadow)">
+  <circle cx="64" cy="64" r="43" fill="#4c2c0c" stroke="url(#gold)" stroke-width="6"/>
+  <circle cx="64" cy="64" r="33" fill="#bd7a1f" stroke="#ffe48a" stroke-width="3"/>
+  <path d="m64 34 9 19 21 3-15 15 4 21-19-10-19 10 4-21-15-15 21-3Z" fill="#ffe979" stroke="#fff0b0" stroke-width="2"/>
+</g>
+
+<!-- tile 7 SETTINGS gear -->
+<g transform="translate(384 128)" filter="url(#shadow)">
+  <path d="M64 18 72 32l16-3 4 16 15 7-7 15 7 15-15 7-4 16-16-3-8 14-8-14-16 3-4-16-15-7 7-15-7-15 15-7 4-16 16 3Z" fill="url(#gold)" stroke="#fff1b2" stroke-width="3"/>
+  <circle cx="64" cy="67" r="23" fill="#18202c" stroke="#765016" stroke-width="4"/>
+  <circle cx="64" cy="67" r="9" fill="url(#blue)"/>
+</g>
+</svg>
