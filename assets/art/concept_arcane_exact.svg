@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#02030a"/><stop offset=".38" stop-color="#080718"/><stop offset=".72" stop-color="#10091d"/><stop offset="1" stop-color="#02040a"/></linearGradient>
+ <linearGradient id="pillar" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#070b12"/><stop offset=".2" stop-color="#252b3d"/><stop offset=".5" stop-color="#111525"/><stop offset=".8" stop-color="#30364b"/><stop offset="1" stop-color="#060910"/></linearGradient>
+ <linearGradient id="banner" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#1d092a"/><stop offset=".5" stop-color="#4d1768"/><stop offset="1" stop-color="#180720"/></linearGradient>
+ <radialGradient id="glow"><stop stop-color="#a64cff" stop-opacity=".55"/><stop offset=".38" stop-color="#6b23b7" stop-opacity=".22"/><stop offset="1" stop-color="#37105d" stop-opacity="0"/></radialGradient>
+ <radialGradient id="fire"><stop stop-color="#f0c7ff"/><stop offset=".25" stop-color="#b94bff"/><stop offset=".58" stop-color="#6a22bf" stop-opacity=".7"/><stop offset="1" stop-color="#30104f" stop-opacity="0"/></radialGradient>
+ <pattern id="floor" width="72" height="48" patternUnits="userSpaceOnUse"><path d="M0 0h72v48H0z" fill="none" stroke="#624594" stroke-opacity=".13"/><path d="M36 0v9M18 48v-9M54 48v-9" stroke="#8d65c0" stroke-opacity=".08"/></pattern>
+</defs>
+<rect width="720" height="1280" fill="url(#bg)"/>
+<!-- side architecture -->
+<g fill="url(#pillar)" stroke="#424962" stroke-width="2" opacity=".98"><path d="M0 356h70v734H0zM650 356h70v734h-70z"/><path d="M22 292h92v72H22zM606 292h92v72h-92z"/><path d="M9 260h118l-28-43H37zM593 260h118l-28-43h-62z"/></g>
+<!-- hanging banners -->
+<g><path d="M54 332h80v323l-40 56-40-56zM586 332h80v323l-40 56-40-56z" fill="url(#banner)" stroke="#8c6730" stroke-width="2"/><path d="M94 440l18 29-18 29-18-29zM626 440l18 29-18 29-18-29z" fill="#8d46d9"/><path d="M94 448l10 21-10 21-10-21zM626 448l10 21-10 21-10-21z" fill="#d594ff"/></g>
+<!-- central rune field -->
+<ellipse cx="360" cy="475" rx="310" ry="330" fill="url(#glow)" opacity=".7"/>
+<g transform="translate(360 490)" fill="none" stroke="#7431bd"><circle r="270" stroke-width="2" opacity=".45"/><circle r="232" stroke-width="1.5" opacity=".34"/><circle r="190" stroke-width="2" opacity=".25"/><circle r="147" opacity=".22"/><path d="M0-262v28M0 234v28M-262 0h28M234 0h28M-185-185l21 21M164 164l21 21M185-185l-21 21M-185 185l21-21" opacity=".6"/>
+<path d="M0-178l43 78 88 17-61 66 12 90-82-38-82 38 12-90-61-66 88-17z" opacity=".28"/><path d="M0-128l31 57 64 12-44 48 8 65-59-28-59 28 8-65-44-48 64-12z" opacity=".2"/></g>
+<!-- rune glyphs around circle -->
+<g fill="#a864ec" opacity=".45"><path d="M358 197l6 11-6 11-6-11zM510 255l12 2-4 11-12-2zM587 398l10 8-8 9-10-8zM589 576l9 9-10 8-9-9zM506 731l12-3 3 11-12 3zM352 773l6-11 6 11-6 11zM202 731l-12-3-3 11 12 3zM128 575l-9 9 10 8 9-9zM126 396l-10 8 8 9 10-8zM205 255l-12 2 4 11 12-2z"/></g>
+<!-- purple braziers -->
+<g><ellipse cx="74" cy="746" rx="76" ry="90" fill="url(#fire)"/><ellipse cx="646" cy="746" rx="76" ry="90" fill="url(#fire)"/><path d="M35 790h78l-14 72H49zM607 790h78l-14 72h-50z" fill="#15121c" stroke="#6a4f32" stroke-width="3"/><path d="M74 789c-36-48 12-60-3-105 40 32 48 69 3 105zM646 789c-36-48 12-60-3-105 40 32 48 69 3 105z" fill="#9d3dff"/><path d="M74 782c-15-27 8-40 2-64 23 19 28 44-2 64zM646 782c-15-27 8-40 2-64 23 19 28 44-2 64z" fill="#e8b3ff"/></g>
+<!-- throne platform / floor -->
+<path d="M0 845h720v435H0z" fill="#050711"/><path d="M0 845h720v435H0z" fill="url(#floor)"/>
+<path d="M94 903h532l-43 75H137z" fill="#121224" stroke="#5c3a87" stroke-width="3"/>
+<path d="M125 915h470" stroke="#a55cef" stroke-opacity=".4"/><path d="M360 905l17 17-17 17-17-17z" fill="#7d2bc8" stroke="#d69aff" stroke-width="2"/>
+<ellipse cx="360" cy="1090" rx="260" ry="82" fill="none" stroke="#7a32bc" stroke-opacity=".24" stroke-width="2"/><ellipse cx="360" cy="1090" rx="185" ry="57" fill="none" stroke="#a451e5" stroke-opacity=".17"/>
+<!-- stars -->
+<g fill="#a85aff" opacity=".55"><circle cx="190" cy="91" r="1.4"/><circle cx="555" cy="134" r="1.2"/><circle cx="310" cy="118" r=".9"/><circle cx="628" cy="231" r="1"/><circle cx="96" cy="183" r="1.2"/><circle cx="409" cy="62" r=".9"/></g>
+</svg>
