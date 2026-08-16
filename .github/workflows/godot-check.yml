@@ -28,6 +28,7 @@ jobs:
       - name: Check critical scripts
         run: |
           ./godot --headless --path . --script res://scripts/progression.gd --check-only
+          ./godot --headless --path . --script res://scripts/run_profile.gd --check-only
           ./godot --headless --path . --script res://scripts/loot_system.gd --check-only
           ./godot --headless --path . --script res://scripts/enemy_factory.gd --check-only
           ./godot --headless --path . --script res://scripts/room_system.gd --check-only
@@ -49,6 +50,8 @@ jobs:
           ./godot --headless --path . --script res://scripts/main_v15.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v16.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v17.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v22.gd --check-only
+          ./godot --headless --path . --script res://scripts/deep_tower_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v16_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v17_smoke_test.gd --check-only
 
@@ -75,6 +78,12 @@ jobs:
           set -o pipefail
           ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 120 | tee smoke.log
           grep -q "ONE MORE FLOOR gameplay smoke test passed" smoke.log
+
+      - name: Run Deep Tower gameplay smoke script
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/deep_tower_smoke_test.gd --quit-after 120 | tee deep-tower-smoke.log
+          grep -q "ONE MORE FLOOR Deep Tower gameplay smoke test passed" deep-tower-smoke.log
 
       - name: Run v1.0 release smoke script
         run: |
