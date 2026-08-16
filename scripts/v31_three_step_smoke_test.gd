@@ -68,10 +68,11 @@ func _run() -> void:
 	game.start_run()
 	game.run.floor_no = 57
 	game.current_room = {"type":"COMBAT", "area":"VOID CITADEL", "hazard":"none"}
-	game.enemies = [{
+	game.enemies.clear()
+	game.enemies.append({
 		"type":"void_lancer", "hp":100.0, "max_hp":100.0, "speed":80.0,
 		"touch_damage":10.0, "reward":10, "elite":false,
-	}]
+	})
 	game.rng.seed = 57
 	game._v31_prepare_floor_contract()
 	if not game.v31_challenge_active:
