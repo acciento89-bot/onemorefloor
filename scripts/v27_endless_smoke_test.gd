@@ -42,7 +42,8 @@ func _run() -> void:
 			return
 
 	var shot_damage := 10.0
-	game.enemy_shots = [{"pos":Vector2(100, 100), "vel":Vector2.ZERO, "damage":shot_damage, "life":2.0, "color":Color.WHITE}]
+	game.enemy_shots.clear()
+	game.enemy_shots.append({"pos":Vector2(100, 100), "vel":Vector2.ZERO, "damage":shot_damage, "life":2.0, "color":Color.WHITE})
 	game.update_enemy_shots(0.0)
 	if game.enemy_shots.is_empty() or float(game.enemy_shots[0].get("damage", 0.0)) <= shot_damage:
 		_fail(2708, "v1.14: projectile damage did not scale with ascension")
