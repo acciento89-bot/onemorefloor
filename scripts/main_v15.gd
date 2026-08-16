@@ -13,10 +13,6 @@ func _ready() -> void:
 	tex_v15_foreground = load(V15_FOREGROUND) as Texture2D
 	queue_redraw()
 
-# -----------------------------------------------------------------------------
-# v1.4 shared premium presentation language
-# -----------------------------------------------------------------------------
-
 func _v15_soft_glow(center: Vector2, radius: float, color: Color, strength: float = 1.0) -> void:
 	for i: int in range(5, 0, -1):
 		var f: float = float(i) / 5.0
@@ -78,10 +74,6 @@ func _v12_meta_header(title: String, subtitle: String, accent: Color, icon_index
 	if meta_notice_time > 0.0:
 		draw_string(font,Vector2(70,1088),meta_notice,HORIZONTAL_ALIGNMENT_CENTER,580,17,C_GREEN if meta_notice.begins_with("UPGRADE") else C_RED)
 
-# -----------------------------------------------------------------------------
-# Premium Home — same proven hitboxes, completely upgraded presentation
-# -----------------------------------------------------------------------------
-
 func draw_home() -> void:
 	if home_overlay == "missions":
 		draw_missions_screen()
@@ -89,40 +81,27 @@ func draw_home() -> void:
 	if home_overlay == "pass":
 		draw_pass_screen()
 		return
-
 	_v12_home_background()
-	# cinematic horizon / floor haze
 	for i: int in range(5):
 		var y: float = 615.0 + float(i)*28.0 + sin(elapsed*0.22+float(i))*6.0
 		draw_rect(Rect2(0,y,720,42),Color(V12_PURPLE,0.012+float(i)*0.004))
 	_v15_stat_badge(Rect2(34,40,170,84),"BEST FLOOR","%02d" % int(meta.best_floor),V12_PURPLE)
 	_v15_stat_badge(Rect2(516,40,170,64),"COINS",str(int(meta.coins)),V12_GOLD,11)
-
-	# restrained premium wordmark with room around it
 	_v15_soft_glow(Vector2(360,185),150,V12_PURPLE,0.7)
 	draw_string(font,Vector2(62,174),"ONE MORE",HORIZONTAL_ALIGNMENT_CENTER,596,42,Color("d7b6ff"))
 	draw_string(font,Vector2(62,240),"FLOOR",HORIZONTAL_ALIGNMENT_CENTER,596,68,V12_GOLD_LIGHT)
 	_v15_rule(257,V12_PURPLE,390)
 	draw_string(font,Vector2(70,285),"CLIMB  •  LOOT  •  RISK IT ALL",HORIZONTAL_ALIGNMENT_CENTER,580,12,C_MUTED)
-
-	# Actual production citadel asset replaces the code-block tower silhouette.
 	if tex_v15_citadel != null:
 		draw_texture_rect(tex_v15_citadel,Rect2(70,286,580,470),false,Color(0.90,0.92,1.0,1.0))
 	else:
 		_v12_home_tower(Vector2(360,515))
-
-	# Hero is grounded on the citadel approach and separated with a subtle halo.
 	_v15_soft_glow(Vector2(360,708),78,V12_PURPLE,1.0)
 	draw_wanderer(Vector2(360,704),0.72,false)
-
-	# Settings sits exactly on its proven touch target.
 	_v15_premium_button(V10_SETTINGS_HOME,"SETTINGS",C_BLUE,13)
-	# Primary CTA remains exactly aligned to PLAY hitbox.
 	_v15_premium_button(PLAY,"PLAY",V12_GOLD,31)
-	# Secondary progression row.
 	_v15_premium_button(MISSIONS_BTN,"MISSIONS",C_GREEN,16,0)
 	_v15_premium_button(PASS_BTN,"TOWER PASS",V12_PURPLE,16,6)
-	# Meta navigation keeps the existing hitboxes but looks like a single coherent premium system.
 	_v15_home_tab(HERO_TAB,"HERO",0,C_BLUE)
 	_v15_home_tab(FORGE_TAB,"FORGE",7,C_ORANGE)
 	_v15_home_tab(TALENTS_TAB,"TALENTS",1,V12_PURPLE)
@@ -130,7 +109,6 @@ func draw_home() -> void:
 	_v15_premium_panel(Rect2(38,1160,644,68),Color("343d63"),Color("060b14"),0.08)
 	text("POWER  %d" % int(meta.power_score()),Vector2(62,1201),15,V12_GOLD_LIGHT)
 	draw_string(font,Vector2(330,1201),"KAMILUNAVO GAMES",HORIZONTAL_ALIGNMENT_RIGHT,322,11,C_MUTED)
-
 	if settings_open:
 		_draw_settings_overlay()
 	elif tutorial_active and tutorial_step in [0,1]:
@@ -142,10 +120,6 @@ func _v15_home_tab(r: Rect2, label: String, icon_index: int, accent: Color) -> v
 	draw_string(font,Vector2(r.position.x+6,r.position.y+82),label,HORIZONTAL_ALIGNMENT_CENTER,r.size.x-12,13,V12_IVORY)
 	draw_line(Vector2(r.position.x+16,r.end.y-9),Vector2(r.end.x-16,r.end.y-9),Color(accent,0.32),2.0)
 
-# -----------------------------------------------------------------------------
-# Room depth — dedicated foreground layers per biome
-# -----------------------------------------------------------------------------
-
 func _draw_room_architecture() -> void:
 	super._draw_room_architecture()
 	if tex_v15_foreground == null:
@@ -153,15 +127,9 @@ func _draw_room_architecture() -> void:
 	var area: String = String(current_room.get("area","DUNGEON"))
 	var idx: int = _v14_room_index(area)
 	var source := Rect2(0.0,float(idx*840),720.0,840.0)
-	# Transparent side architecture and low foreground fog create real near/mid/far separation.
 	draw_texture_rect_region(tex_v15_foreground,Rect2(0,160,720,840),source,Color.WHITE)
 
-# -----------------------------------------------------------------------------
-# Combat HUD — dedicated status zone and dedicated controls zone
-# -----------------------------------------------------------------------------
-
 func _draw_combat_hud() -> void:
-	# top tactical bar
 	_v15_premium_panel(Rect2(28,22,664,112),Color("59667d"),Color("050a13"),0.08)
 	text("FLOOR",Vector2(49,52),10,C_MUTED)
 	text("%02d" % int(run.floor_no),Vector2(48,101),40,V12_IVORY)
@@ -172,8 +140,6 @@ func _draw_combat_hud() -> void:
 	_v12_coin_badge(Rect2(510,42,104,58),int(run.run_coins))
 	_v15_premium_panel(V10_PAUSE,C_MUTED,Color("090d16"),0.06)
 	center_rect("Ⅱ",V10_PAUSE,17,V12_IVORY)
-
-	# HP is now an isolated status rail ABOVE both controls. No joystick/HP collision.
 	var hp_box := Rect2(144,982,432,34)
 	_v15_premium_panel(hp_box,Color("743743"),Color("160b12"),0.09)
 	var ratio: float = clampf(run.hp/run.max_hp,0.0,1.0)
@@ -183,8 +149,6 @@ func _draw_combat_hud() -> void:
 	draw_line(inner.position+Vector2(1,2),Vector2(inner.position.x+inner.size.x*ratio-1,inner.position.y+2),Color(1.0,0.70,0.74,0.48),2.0)
 	_v14_ui_cell(4,Rect2(hp_box.position.x-28,hp_box.position.y-15,58,58))
 	center_rect("%d / %d HP" % [int(run.hp),int(run.max_hp)],hp_box,13,V12_IVORY)
-
-	# Controls sit in their own lower safe zone. Visual origin is clamped so a high touch can never collide with HP.
 	var base := Vector2(132,1138)
 	if joy_active:
 		base = Vector2(clampf(joy_origin.x,96.0,190.0),clampf(joy_origin.y,1102.0,1160.0))
@@ -199,7 +163,6 @@ func _draw_combat_hud() -> void:
 	draw_circle(knob+Vector2(-7,-8),5,Color(1,1,1,0.10))
 	draw_arc(knob,32,0,TAU,40,Color("cbd7e7"),1.8)
 	draw_string(font,Vector2(70,1225),"MOVE",HORIZONTAL_ALIGNMENT_CENTER,124,11,C_MUTED)
-
 	var skill_center: Vector2 = SKILL.get_center()
 	_v15_soft_glow(skill_center,75,C_CYAN,0.65)
 	draw_circle(skill_center,60,Color(0.006,0.025,0.06,0.98))
@@ -212,15 +175,10 @@ func _draw_combat_hud() -> void:
 	else:
 		_v14_ui_cell(7,Rect2(skill_center.x-36,skill_center.y-36,72,72),Color(0.38,0.42,0.5,0.48))
 		draw_string(font,Vector2(skill_center.x-38,skill_center.y+7),"%.1f" % run.skill_cd,HORIZONTAL_ALIGNMENT_CENTER,76,19,C_MUTED)
-
 	if floor_banner > 0.0:
 		var banner_color := V12_GOLD_LIGHT
 		banner_color.a = clampf(floor_banner,0.0,1.0)
 		draw_string(font,Vector2(80,610),"FLOOR %d" % int(run.floor_no),HORIZONTAL_ALIGNMENT_CENTER,560,45,banner_color)
-
-# -----------------------------------------------------------------------------
-# Premium reward decision screen — larger visual jump than another border pass
-# -----------------------------------------------------------------------------
 
 func draw_upgrade() -> void:
 	_v12_background(V12_PURPLE)
@@ -236,7 +194,7 @@ func draw_upgrade() -> void:
 		_v15_premium_panel(r,c,Color("080e1b"),0.16)
 		_v15_soft_glow(r.position+Vector2(64,69),42,c,0.55)
 		draw_circle(r.position+Vector2(64,69),31,Color(c,0.14))
-		_v12_upgrade_icon(String(u["kind"]),Rect2(r.position.x+31,r.position.y+36,66,66),c)
+		_v12_icon(_v12_upgrade_icon(String(u["kind"])),Rect2(r.position.x+31,r.position.y+36,66,66),Color(c,0.98))
 		text(String(u["name"]),r.position+Vector2(118,60),22,V12_IVORY)
 		text(String(u["desc"]),r.position+Vector2(118,97),16,C_MUTED)
 		draw_line(Vector2(r.position.x+118,r.end.y-18),Vector2(r.end.x-22,r.end.y-18),Color(c,0.16),1.0)
