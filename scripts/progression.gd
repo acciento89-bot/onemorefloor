@@ -1,7 +1,7 @@
 extends RefCounted
 
 const SAVE_PATH := "user://save.cfg"
-const CURRENT_SAVE_VERSION := 2
+const CURRENT_SAVE_VERSION := 3
 
 var best_floor := 1
 var checkpoint_floor := 1
@@ -25,7 +25,7 @@ func load_data() -> void:
 	if not cfg.has_section_key("progress", "checkpoint_floor"):
 		checkpoint_floor = 50 if best_floor >= 50 else 1
 		cfg.set_value("progress", "checkpoint_floor", checkpoint_floor)
-		cfg.set_value("system", "checkpoint_feature", "v1.12")
+		cfg.set_value("system", "checkpoint_feature", "v1.14-setback")
 		cfg.save(SAVE_PATH)
 	else:
 		checkpoint_floor = int(cfg.get_value("progress", "checkpoint_floor", 1))
@@ -39,12 +39,16 @@ func load_data() -> void:
 	fortune_level = int(cfg.get_value("meta", "fortune_level", 0))
 
 func _migrate(cfg: ConfigFile, from_version: int) -> void:
-	# Preserve every existing save section/key. Checkpoints are additive metadata,
-	# so the established v2 save format stays compatible with older builds/tests.
+	# Preserve all previous progress. v1.14 only changes the rules around how a
+	# deep checkpoint can move backwards after death; historical best floor never
+	# decreases.
 	if from_version < 1:
 		cfg.set_value("system", "created_with", "pre-v1.0")
 	if from_version < 2:
 		cfg.set_value("system", "last_migration", "v1.0-rc1")
+	if from_version < 3:
+		cfg.set_value("system", "last_migration", "v1.14-endless-ascension")
+		cfg.set_value("system", "checkpoint_feature", "v1.14-setback")
 	cfg.set_value("system", "save_version", CURRENT_SAVE_VERSION)
 	cfg.save(SAVE_PATH)
 
@@ -52,8 +56,8 @@ func save_data() -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(SAVE_PATH)
 	cfg.set_value("system", "save_version", CURRENT_SAVE_VERSION)
-	cfg.set_value("system", "game_version", "1.12-checkpoint-difficulty")
-	cfg.set_value("system", "checkpoint_feature", "v1.12")
+	cfg.set_value("system", "game_version", "1.14-endless-ascension")
+	cfg.set_value("system", "checkpoint_feature", "v1.14-setback")
 	cfg.set_value("progress", "best_floor", best_floor)
 	cfg.set_value("progress", "checkpoint_floor", checkpoint_floor)
 	cfg.set_value("progress", "coins", coins)
@@ -77,6 +81,30 @@ func unlock_checkpoint(floor_no: int) -> bool:
 	best_floor = maxi(best_floor, floor_no)
 	save_data()
 	return true
+
+func death_setback_amount(death_floor: int) -> int:
+	if checkpoint_floor < 50:
+		return 0
+	var depth := maxi(death_floor, checkpoint_floor)
+	if depth >= 200:
+		return 15
+	if depth >= 125:
+		return 10
+	if depth >= 75:
+		return 7
+	return 5
+
+func apply_death_setback(death_floor: int) -> int:
+	# Floor 50 is the permanent deep-tower foothold. Above that, dying costs real
+	# progress. Cashing out never applies this penalty, so pushing deeper remains a
+	# meaningful risk/reward decision.
+	if checkpoint_floor < 50:
+		return 0
+	var old_checkpoint := checkpoint_floor
+	checkpoint_floor = maxi(50, checkpoint_floor - death_setback_amount(death_floor))
+	best_floor = maxi(best_floor, death_floor)
+	save_data()
+	return old_checkpoint - checkpoint_floor
 
 func hero_cost() -> int:
 	return 90 + (hero_level - 1) * 70

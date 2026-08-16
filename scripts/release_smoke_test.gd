@@ -45,8 +45,9 @@ func _run_release_smoke() -> void:
 	if check_cfg.load("user://save.cfg") != OK:
 		_fail(105, "Release smoke: save file could not be reloaded")
 		return
-	if int(check_cfg.get_value("system", "save_version", 0)) != 2:
-		_fail(106, "Release smoke: save version migration did not reach v2")
+	var persisted_save_version := int(check_cfg.get_value("system", "save_version", 0))
+	if persisted_save_version < 2 or persisted_save_version != int(game.meta.save_version()):
+		_fail(106, "Release smoke: save version migration did not reach the current schema")
 		return
 	if int(check_cfg.get_value("smoke", "preserve_me", 0)) != 12345:
 		_fail(107, "Release smoke: meta save overwrote another save section")
