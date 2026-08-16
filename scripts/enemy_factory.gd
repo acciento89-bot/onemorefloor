@@ -56,8 +56,7 @@ static func make_enemy(kind: String, floor_no: int, rng: RandomNumberGenerator, 
 		reaver["rage"] = 0.0
 		return reaver
 
-	# Floors 41-50 — Starless Spire. These intentionally reuse existing actor
-	# art in the renderer; the differentiation is in behavior, pressure and stats.
+	# Floors 41-50 — Starless Spire.
 	if kind == "phase_stalker":
 		var stalker: Dictionary = _base_enemy("phase_stalker", pos, base_hp * 1.14, 126.0 + floor_no * 1.08, 23.0, 14.0 + floor_no * 0.62, 24 + floor_no, rng)
 		stalker["phase_cd"] = rng.randf_range(1.4, 2.5)
@@ -73,6 +72,101 @@ static func make_enemy(kind: String, floor_no: int, rng: RandomNumberGenerator, 
 		oath["guard"] = 0.22
 		oath["slam_cd"] = rng.randf_range(1.5, 2.8)
 		return oath
+
+	# Floors 51-99 — Void Citadel. Fast lancers and hounds force movement while
+	# Soul Cannons punish standing still at range.
+	if kind == "void_lancer":
+		var lancer: Dictionary = _base_enemy("void_lancer", pos, base_hp * 1.35, 112.0 + floor_no * 0.72, 26.0, 16.0 + floor_no * 0.65, 32 + floor_no, rng)
+		lancer["dash_cd"] = rng.randf_range(1.2, 2.0)
+		lancer["ability_cd"] = lancer["dash_cd"]
+		return lancer
+	if kind == "rift_hound":
+		var hound: Dictionary = _base_enemy("rift_hound", pos, base_hp * 1.55, 138.0 + floor_no * 0.78, 27.0, 17.0 + floor_no * 0.68, 34 + floor_no, rng)
+		hound["ability_cd"] = rng.randf_range(1.8, 2.8)
+		return hound
+	if kind == "soul_cannon":
+		var cannon: Dictionary = _base_enemy("soul_cannon", pos, base_hp * 1.10, 48.0 + floor_no * 0.30, 25.0, 12.0 + floor_no * 0.52, 38 + floor_no, rng)
+		cannon["attack_cd"] = rng.randf_range(0.45, 1.0)
+		cannon["ability_cd"] = rng.randf_range(2.3, 3.2)
+		return cannon
+
+	# Floors 100-149 — Eclipse Sanctum. The roster deliberately mixes ranged
+	# pattern pressure, agile duelists and a shielded frontline.
+	if kind == "eclipse_oracle":
+		var oracle: Dictionary = _base_enemy("eclipse_oracle", pos, base_hp * 1.25, 58.0 + floor_no * 0.34, 24.0, 13.0 + floor_no * 0.55, 46 + floor_no, rng)
+		oracle["attack_cd"] = rng.randf_range(0.35, 0.85)
+		oracle["ability_cd"] = rng.randf_range(2.0, 3.0)
+		return oracle
+	if kind == "shade_duelist":
+		var duelist: Dictionary = _base_enemy("shade_duelist", pos, base_hp * 1.35, 124.0 + floor_no * 0.62, 25.0, 18.0 + floor_no * 0.72, 48 + floor_no, rng)
+		duelist["ability_cd"] = rng.randf_range(1.25, 2.1)
+		return duelist
+	if kind == "sunless_guard":
+		var guard: Dictionary = _base_enemy("sunless_guard", pos, base_hp * 2.25, 52.0 + floor_no * 0.30, 32.0, 20.0 + floor_no * 0.78, 54 + floor_no, rng)
+		guard["guard"] = 0.26
+		guard["ability_cd"] = rng.randf_range(2.0, 3.0)
+		return guard
+
+	# Floors 150-199 — Bloodstar Keep. Damage spikes are sharper here: Seraphs
+	# dive, Titans create shockwaves and Hemomancers fill space with blood bolts.
+	if kind == "blood_seraph":
+		var seraph: Dictionary = _base_enemy("blood_seraph", pos, base_hp * 1.45, 135.0 + floor_no * 0.55, 26.0, 21.0 + floor_no * 0.80, 62 + floor_no, rng)
+		seraph["ability_cd"] = rng.randf_range(1.2, 2.0)
+		return seraph
+	if kind == "chain_titan":
+		var titan: Dictionary = _base_enemy("chain_titan", pos, base_hp * 2.80, 44.0 + floor_no * 0.24, 35.0, 24.0 + floor_no * 0.90, 70 + floor_no, rng)
+		titan["guard"] = 0.18
+		titan["ability_cd"] = rng.randf_range(1.8, 2.8)
+		return titan
+	if kind == "hemomancer":
+		var hemo: Dictionary = _base_enemy("hemomancer", pos, base_hp * 1.30, 58.0 + floor_no * 0.32, 24.0, 17.0 + floor_no * 0.65, 66 + floor_no, rng)
+		hemo["attack_cd"] = rng.randf_range(0.25, 0.75)
+		hemo["ability_cd"] = rng.randf_range(1.8, 2.7)
+		return hemo
+
+	# Floor 200+ — Celestial Grave. These enemies are intentionally extreme;
+	# reaching this realm means the permanent and run build are already mature.
+	if kind == "star_devourer":
+		var devourer: Dictionary = _base_enemy("star_devourer", pos, base_hp * 3.00, 52.0 + floor_no * 0.24, 36.0, 27.0 + floor_no * 1.00, 86 + floor_no, rng)
+		devourer["guard"] = 0.16
+		devourer["ability_cd"] = rng.randf_range(1.6, 2.5)
+		return devourer
+	if kind == "crownless":
+		var crownless: Dictionary = _base_enemy("crownless", pos, base_hp * 1.65, 145.0 + floor_no * 0.50, 27.0, 24.0 + floor_no * 0.90, 82 + floor_no, rng)
+		crownless["ability_cd"] = rng.randf_range(1.0, 1.8)
+		return crownless
+	if kind == "cosmic_eye":
+		var eye: Dictionary = _base_enemy("cosmic_eye", pos, base_hp * 1.40, 60.0 + floor_no * 0.28, 24.0, 19.0 + floor_no * 0.72, 84 + floor_no, rng)
+		eye["attack_cd"] = rng.randf_range(0.20, 0.65)
+		eye["ability_cd"] = rng.randf_range(1.4, 2.3)
+		return eye
+
+	# Named realm bosses. They keep type=warden so existing mission, loot and boss
+	# UI logic remains compatible while boss_variant selects the new mechanics.
+	if kind == "void_archon":
+		var archon: Dictionary = _base_enemy("warden", pos, 1900.0 + float(floor_no) * 130.0, 88.0 + floor_no * 0.34, 70.0, 45.0 + floor_no * 1.25, 480 + floor_no * 18, rng)
+		archon["boss_variant"] = "void_archon"
+		archon["attack_cd"] = 0.62
+		archon["ability_cd"] = 1.8
+		return archon
+	if kind == "eclipse_regent":
+		var regent: Dictionary = _base_enemy("warden", pos, 2700.0 + float(floor_no) * 165.0, 92.0 + floor_no * 0.30, 73.0, 52.0 + floor_no * 1.35, 720 + floor_no * 21, rng)
+		regent["boss_variant"] = "eclipse_regent"
+		regent["attack_cd"] = 0.54
+		regent["ability_cd"] = 1.6
+		return regent
+	if kind == "bloodstar_tyrant":
+		var tyrant: Dictionary = _base_enemy("warden", pos, 3800.0 + float(floor_no) * 210.0, 96.0 + floor_no * 0.28, 77.0, 60.0 + floor_no * 1.48, 980 + floor_no * 24, rng)
+		tyrant["boss_variant"] = "bloodstar_tyrant"
+		tyrant["attack_cd"] = 0.48
+		tyrant["ability_cd"] = 1.45
+		return tyrant
+	if kind == "world_eater":
+		var eater: Dictionary = _base_enemy("warden", pos, 5200.0 + float(floor_no) * 260.0, 100.0 + floor_no * 0.24, 82.0, 70.0 + floor_no * 1.60, 1400 + floor_no * 28, rng)
+		eater["boss_variant"] = "world_eater"
+		eater["attack_cd"] = 0.42
+		eater["ability_cd"] = 1.25
+		return eater
 
 	if kind == "crypt_keeper":
 		var keeper_hp: float = 520.0 + float(floor_no) * 58.0
@@ -122,6 +216,7 @@ static func _base_enemy(kind: String, pos: Vector2, hp: float, speed: float, rad
 		"reward": reward,
 		"touch_cd": 0.0,
 		"attack_cd": 0.0,
+		"ability_cd": 0.0,
 		"phase": rng.randf_range(0.0, TAU),
 		"cast_timer": 0.0,
 		"cast_kind": "",
