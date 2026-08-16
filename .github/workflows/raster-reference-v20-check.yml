@@ -1,14 +1,14 @@
-name: Runtime UI v1.9 Check
+name: Premium Component UI v1.10 Check
 
 on:
   push:
     branches:
-      - agent/v1.9-runtime-ui-rebuild
+      - agent/v1.10-premium-component-ui
       - main
   pull_request:
 
 jobs:
-  runtime-ui:
+  premium-components:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -22,29 +22,40 @@ jobs:
           mv Godot_v4.7.1-stable_linux.x86_64 godot
           chmod +x godot
 
-      - name: Parse v1.9 runtime UI renderer
+      - name: Parse premium component renderers
         run: |
           ./godot --headless --path . --script res://scripts/main_v21.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v22.gd --check-only
           ./godot --headless --path . --script res://scripts/v21_smoke_test.gd --check-only
+          ./godot --headless --path . --script res://scripts/v22_smoke_test.gd --check-only
 
-      - name: Assert full-screen raster UI is not active
+      - name: Assert no full-screen screenshot UI
         run: |
           set -euo pipefail
-          grep -q 'main_v21.gd' scenes/main.tscn
+          grep -q 'main_v22.gd' scenes/main.tscn
           ! grep -q 'main_v20.gd' scenes/main.tscn
           ! grep -q 'include_filter="assets/art/reference/\*.b64"' export_presets.cfg
-          ! grep -q '_v20_load_chunked_webp' scripts/main_v21.gd
+          ! grep -q '_v20_load_chunked_webp' scripts/main_v22.gd
+          grep -q 'concept_button_skins.svg' scripts/main_v22.gd
+          grep -q 'ui_icon_atlas_v22.svg' scripts/main_v22.gd
+          grep -q 'ui_medallion_shell_v22.svg' scripts/main_v22.gd
 
       - name: Import project
         run: |
           set -o pipefail
-          ./godot --headless --editor --path . --quit 2>&1 | tee runtime-ui-import.log
-          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script" runtime-ui-import.log; then
+          ./godot --headless --editor --path . --quit 2>&1 | tee component-ui-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Error.*SVG" component-ui-import.log; then
             exit 1
           fi
 
-      - name: Run v1.9 runtime UI regression
+      - name: Run retained v1.9 navigation regression
         run: |
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v21_smoke_test.gd --quit-after 120 | tee runtime-ui-v21.log
           grep -q "ONE MORE FLOOR v1.9 runtime UI smoke test passed" runtime-ui-v21.log
+
+      - name: Run v1.10 premium component regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v22_smoke_test.gd --quit-after 120 | tee component-ui-v22.log
+          grep -q "ONE MORE FLOOR v1.10 premium component UI smoke test passed" component-ui-v22.log

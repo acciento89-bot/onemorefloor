@@ -17,12 +17,13 @@ func _run() -> void:
 	await process_frame
 
 	if not game.has_method("_v21_runtime_ui_ready") or not game._v21_runtime_ui_ready():
-		_fail(1002,"v1.9 runtime UI renderer is not active")
+		_fail(1002,"v1.9 runtime UI renderer compatibility is not active")
 		return
 
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	if not scene_text.contains("main_v21.gd") or scene_text.contains("main_v20.gd"):
-		_fail(1003,"v1.9 main scene is not using the live UI renderer")
+	var live_renderer := scene_text.contains("main_v21.gd") or scene_text.contains("main_v22.gd")
+	if not live_renderer or scene_text.contains("main_v20.gd"):
+		_fail(1003,"v1.9+ main scene is not using the live UI renderer")
 		return
 
 	var renderer := FileAccess.get_file_as_string("res://scripts/main_v21.gd")
@@ -36,20 +37,20 @@ func _run() -> void:
 			return
 
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	if not project_text.contains("config/version=\"1.9.0-runtime-ui\""):
-		_fail(1006,"v1.9 project version missing")
+	var version_ok := project_text.contains("config/version=\"1.9.0-runtime-ui\"") or project_text.contains("config/version=\"1.10.0-premium-components\"")
+	if not version_ok:
+		_fail(1006,"v1.9+ project version missing")
 		return
 
 	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not export_text.contains("application/short_version=\"1.9.0\"") or not export_text.contains("application/version=\"14\""):
-		_fail(1007,"v1.9 iOS version/build missing")
+	var ios_ok := (export_text.contains("application/short_version=\"1.9.0\"") and export_text.contains("application/version=\"14\"")) or (export_text.contains("application/short_version=\"1.10.0\"") and export_text.contains("application/version=\"15\""))
+	if not ios_ok:
+		_fail(1007,"v1.9+ iOS version/build missing")
 		return
 	if export_text.contains("include_filter=\"assets/art/reference/*.b64\""):
-		_fail(1008,"v1.9 raster reference payload is still included in mobile export")
+		_fail(1008,"v1.9+ raster reference payload is still included in mobile export")
 		return
 
-	# Exact reported navigation regression: Missions and Tower Pass must be full
-	# sub-screens with a working BACK path to Home.
 	game.tutorial_active = false
 	game.settings_open = false
 	game.state = game.State.HOME
@@ -73,7 +74,6 @@ func _run() -> void:
 		_fail(1012,"v1.9 Tower Pass BACK does not return Home")
 		return
 
-	# Bottom navigation remains live and aligned with the rendered tabs.
 	for rect in [game.HERO_TAB,game.FORGE_TAB,game.TALENTS_TAB,game.VAULT_TAB]:
 		if not rect.has_point(rect.get_center()):
 			_fail(1013,"v1.9 bottom tab hitbox regression")
