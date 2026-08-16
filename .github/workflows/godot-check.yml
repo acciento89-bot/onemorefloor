@@ -56,10 +56,12 @@ jobs:
           ./godot --headless --path . --script res://scripts/main_v25.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v26.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v27.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v28.gd --check-only
           ./godot --headless --path . --script res://scripts/deep_tower_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v23_gameplay_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v25_gameplay_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v27_endless_smoke_test.gd --check-only
+          ./godot --headless --path . --script res://scripts/v28_endgame_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v16_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v17_smoke_test.gd --check-only
 
@@ -110,6 +112,12 @@ jobs:
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v27_endless_smoke_test.gd --quit-after 120 | tee v27-endless-smoke.log
           grep -q "ONE MORE FLOOR v1.14 endless ascension smoke test passed" v27-endless-smoke.log
+
+      - name: Run v1.15 endgame realms smoke script
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v28_endgame_smoke_test.gd --quit-after 120 | tee v28-endgame-smoke.log
+          grep -q "ONE MORE FLOOR v1.15 endgame realms smoke test passed" v28-endgame-smoke.log
 
       - name: Run v1.0 release smoke script
         run: |
