@@ -1,0 +1,42 @@
+name: Reference Menu v1.7 Check
+
+on:
+  push:
+    branches:
+      - agent/v1.7-reference-menu-runtime
+      - main
+  pull_request:
+
+jobs:
+  reference-menu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+
+      - name: Parse v1.7 renderer
+        run: |
+          ./godot --headless --path . --script res://scripts/main_v19.gd --check-only
+          ./godot --headless --path . --script res://scripts/v19_smoke_test.gd --check-only
+
+      - name: Import premium menu assets
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee menu-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Error.*SVG" menu-import.log; then
+            exit 1
+          fi
+
+      - name: Run v1.7 menu regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v19_smoke_test.gd --quit-after 120 | tee menu-v19.log
+          grep -q "ONE MORE FLOOR v1.7 reference menu smoke test passed" menu-v19.log
