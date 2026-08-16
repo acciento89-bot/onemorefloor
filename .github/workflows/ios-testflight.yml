@@ -36,7 +36,7 @@ jobs:
     timeout-minutes: 55
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Xcode version
         run: |
@@ -85,7 +85,7 @@ jobs:
           set -euo pipefail
           mkdir -p build/ios
           rm -rf build/ios/OneMoreFloor build/ios/OneMoreFloor.xcodeproj build/ios/OneMoreFloor.xcframework build/ios/MoltenVK.xcframework build/ios/PrivacyInfo.xcprivacy
-          rm -f build/ios/OneMoreFloor-Xcode.zip
+          rm -f build/ios/OneMoreFloor-Xcode.zip build/ios/OneMoreFloor-Unsigned-iOS.app.zip
           "$GODOT" --headless --path . --export-release "iOS Playtest" build/ios/OneMoreFloor.zip
           test -d build/ios/OneMoreFloor.xcodeproj
           test -d build/ios/OneMoreFloor
@@ -122,37 +122,41 @@ jobs:
           echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
           echo "Selected scheme/target: $SCHEME"
 
-      - name: Compile iOS Simulator build without signing
+      - name: Compile unsigned iPhone/iPad device build
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf "$RUNNER_TEMP/DerivedData"
           xcodebuild \
             -project "$XCODE_PROJECT" \
             -scheme "$SCHEME" \
             -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
             build
-          APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -name '*.app' -type d -print -quit)
-          test -n "$APP"
-          echo "SIMULATOR_APP=$APP" >> "$GITHUB_ENV"
-          echo "Simulator app built: $APP"
+          APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphoneos" -maxdepth 1 -name '*.app' -type d -print -quit)
+          test -n "$APP" -a -d "$APP"
+          echo "DEVICE_APP=$APP" >> "$GITHUB_ENV"
+          echo "Unsigned device app built: $APP"
 
-      - name: Package simulator app
+      - name: Package unsigned device app
         shell: bash
         run: |
           set -euo pipefail
-          ditto -c -k --sequesterRsrc --keepParent "$SIMULATOR_APP" build/ios/OneMoreFloor-Simulator.app.zip
+          ditto -c -k --sequesterRsrc --keepParent "$DEVICE_APP" build/ios/OneMoreFloor-Unsigned-iOS.app.zip
+          test -s build/ios/OneMoreFloor-Unsigned-iOS.app.zip
 
-      - name: Upload Xcode and Simulator artifacts
+      - name: Upload Xcode and unsigned iOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: one-more-floor-ios-playtest
           path: |
             build/ios/OneMoreFloor-Xcode.zip
-            build/ios/OneMoreFloor-Simulator.app.zip
+            build/ios/OneMoreFloor-Unsigned-iOS.app.zip
           if-no-files-found: error
           retention-days: 14
 
@@ -170,7 +174,7 @@ jobs:
             echo 'App Store Connect signing secrets are available; TestFlight stage enabled.'
           else
             echo 'available=false' >> "$GITHUB_OUTPUT"
-            echo 'ASC_ISSUER_ID / ASC_KEY_ID / ASC_PRIVATE_KEY_B64 are not all available in this repository. Xcode + Simulator artifacts are valid; TestFlight upload is skipped.'
+            echo 'ASC_ISSUER_ID / ASC_KEY_ID / ASC_PRIVATE_KEY_B64 are not all available in this repository. Xcode + unsigned device artifacts are valid; TestFlight upload is skipped.'
           fi
 
       - name: Prepare App Store Connect API key
