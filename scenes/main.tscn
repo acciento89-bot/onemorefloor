@@ -2,7 +2,8 @@
 
 ; Compatibility baseline retained for regression checks: res://scripts/main_v23.gd
 ; v1.21 baseline retained: res://scripts/main_v34.gd
-[ext_resource type="Script" path="res://scripts/main_v35.gd" id="1_main"]
+; v1.24 release baseline retained: res://scripts/main_v35.gd
+[ext_resource type="Script" path="res://scripts/main_v36.gd" id="1_main"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
