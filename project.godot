@@ -7,7 +7,7 @@ config_version=5
 
 config/name="ONE MORE FLOOR"
 config/description="Portrait roguelite tower crawler by Kamilunavo Games"
-config/version="1.2.0-rc2"
+config/version="1.2.0-rc3"
 config/icon="res://assets/art/wanderer.svg"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
@@ -24,6 +24,10 @@ window/handheld/orientation=1
 window/ios/hide_status_bar=true
 window/ios/hide_home_indicator=true
 window/ios/suppress_ui_gesture=true
+
+[input_devices]
+
+pointing/emulate_mouse_from_touch=false
 
 [rendering]
 
