@@ -1,0 +1,60 @@
+name: ONE MORE FLOOR Exact Concept Check
+
+on:
+  push:
+    branches:
+      - agent/v1.6-concept-exact
+    paths:
+      - 'assets/art/concept_*.svg'
+      - 'scripts/main_v17.gd'
+      - 'scripts/v17_concept_smoke.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/concept-exact-check.yml'
+  pull_request:
+    paths:
+      - 'assets/art/concept_*.svg'
+      - 'scripts/main_v17.gd'
+      - 'scripts/v17_concept_smoke.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/concept-exact-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  exact-concept:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/godot.zip" \
+            "https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          GODOT=$(find "$RUNNER_TEMP/godot" -maxdepth 1 -type f -name 'Godot*' -print -quit)
+          chmod +x "$GODOT"
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+          "$GODOT" --version
+      - name: Import exact-concept assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --editor --path . --quit
+      - name: Start exact-concept main scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 12s "$GODOT" --headless --path . scenes/main.tscn >/tmp/main.log 2>&1 || code=$?
+          code=${code:-0}
+          cat /tmp/main.log
+          if [[ "$code" -ne 0 && "$code" -ne 124 ]]; then exit "$code"; fi
+          if grep -E 'SCRIPT ERROR|Parse Error|ERROR: Failed to load script' /tmp/main.log; then exit 1; fi
+      - name: Run v1.6 exact-concept smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --path . --script res://scripts/v17_concept_smoke.gd 2>&1 | tee /tmp/v17.log
+          grep -q 'V1.6 exact concept smoke passed' /tmp/v17.log
