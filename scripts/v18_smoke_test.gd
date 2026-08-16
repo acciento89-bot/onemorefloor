@@ -58,10 +58,16 @@ func _run_v18_smoke() -> void:
 		_fail(810, "v1.6.2 premium reference: Settings BACK regression returned")
 		return
 
-	# Successor renderers inherit the v1.6 premium layer. Keep this compatibility
-	# regression focused on retained behaviour/assets instead of pinning the active version.
+	# Successor renderers inherit the v1.6 premium layer. This regression protects
+	# retained behaviour/assets, not one particular active renderer generation.
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	var compatible_renderer := scene_text.contains("main_v18.gd") or scene_text.contains("main_v19.gd") or scene_text.contains("main_v20.gd") or scene_text.contains("main_v21.gd")
+	var compatible_renderer := (
+		scene_text.contains("main_v18.gd")
+		or scene_text.contains("main_v19.gd")
+		or scene_text.contains("main_v20.gd")
+		or scene_text.contains("main_v21.gd")
+		or scene_text.contains("main_v22.gd")
+	)
 	if not compatible_renderer:
 		_fail(811, "v1.6.2 premium reference: compatible main renderer is not active")
 		return
@@ -71,6 +77,7 @@ func _run_v18_smoke() -> void:
 		or project_text.contains("config/version=\"1.7.0-reference-menus\"")
 		or project_text.contains("config/version=\"1.8.0-raster-reference\"")
 		or project_text.contains("config/version=\"1.9.0-runtime-ui\"")
+		or project_text.contains("config/version=\"1.10.0-premium-components\"")
 	)
 	if not compatible_version:
 		_fail(812, "v1.6.2 premium reference: compatible project version missing")
@@ -84,6 +91,7 @@ func _run_v18_smoke() -> void:
 		or (export_text.contains("application/short_version=\"1.7.0\"") and export_text.contains("version/name=\"1.7.0\""))
 		or (export_text.contains("application/short_version=\"1.8.0\"") and export_text.contains("version/name=\"1.8.0\""))
 		or (export_text.contains("application/short_version=\"1.9.0\"") and export_text.contains("version/name=\"1.9.0\""))
+		or (export_text.contains("application/short_version=\"1.10.0\"") and export_text.contains("version/name=\"1.10.0\""))
 	)
 	if not compatible_mobile:
 		_fail(814, "v1.6.2 premium reference: compatible mobile version missing")
@@ -93,6 +101,7 @@ func _run_v18_smoke() -> void:
 		or (export_text.contains("application/version=\"12\"") and export_text.contains("version/code=12"))
 		or (export_text.contains("application/version=\"13\"") and export_text.contains("version/code=13"))
 		or (export_text.contains("application/version=\"14\"") and export_text.contains("version/code=14"))
+		or (export_text.contains("application/version=\"15\"") and export_text.contains("version/code=15"))
 	)
 	if not compatible_build:
 		_fail(815, "v1.6.2 premium reference: compatible build missing")
