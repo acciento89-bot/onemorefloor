@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#020309"/><stop offset=".38" stop-color="#070612"/><stop offset=".75" stop-color="#090a15"/><stop offset="1" stop-color="#020309"/></linearGradient>
+ <linearGradient id="stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#24273a"/><stop offset=".42" stop-color="#0e111d"/><stop offset=".7" stop-color="#35394e"/><stop offset="1" stop-color="#070911"/></linearGradient>
+ <radialGradient id="glow"><stop stop-color="#9b4be8" stop-opacity=".48"/><stop offset=".42" stop-color="#5e259b" stop-opacity=".17"/><stop offset="1" stop-color="#2d104c" stop-opacity="0"/></radialGradient>
+ <pattern id="floor" width="84" height="52" patternUnits="userSpaceOnUse"><path d="M0 0h84v52H0z" fill="none" stroke="#524173" stroke-opacity=".12"/><path d="M42 0v10M21 52v-10M63 52v-10" stroke="#8b61b6" stroke-opacity=".08"/></pattern>
+</defs>
+<rect width="720" height="1280" fill="url(#bg)"/>
+<ellipse cx="360" cy="420" rx="305" ry="340" fill="url(#glow)"/>
+<!-- vaulted arch -->
+<path d="M65 790V370q0-290 295-335 295 45 295 335v420h-56V378q0-231-239-279-239 48-239 279v412z" fill="url(#stone)" stroke="#34394e" stroke-width="3"/>
+<path d="M105 790V390q0-250 255-294 255 44 255 294v400" fill="none" stroke="#663395" stroke-width="2" opacity=".36"/>
+<!-- rune circle -->
+<g transform="translate(360 390)" fill="none" stroke="#6930a1"><circle r="257" opacity=".35"/><circle r="217" opacity=".25"/><circle r="172" opacity=".18"/><path d="M0-248v28M0 220v28M-248 0h28M220 0h28M-175-175l20 20M155 155l20 20M175-175l-20 20M-175 175l20-20" opacity=".4"/></g>
+<!-- statues -->
+<g fill="#0a0c14" stroke="#282d3e" stroke-width="2"><path d="M47 706h107v250H47zM566 706h107v250H566z"/><path d="M64 665h73l-12-67H76zM583 665h73l-12-67h-49z"/><path d="M72 598l28-49 28 49-9 61H81zM591 598l28-49 28 49-9 61h-38z"/></g>
+<g fill="#3f2460" opacity=".72"><circle cx="92" cy="589" r="3"/><circle cx="108" cy="589" r="3"/><circle cx="611" cy="589" r="3"/><circle cx="627" cy="589" r="3"/></g>
+<!-- banners -->
+<path d="M53 325h75v256l-37 51-38-51zM592 325h75v256l-37 51-38-51z" fill="#190923" stroke="#6f4b2a" stroke-width="2" opacity=".82"/><path d="M91 408l15 23-15 23-15-23zM630 408l15 23-15 23-15-23z" fill="#742db0"/>
+<!-- altar -->
+<ellipse cx="360" cy="720" rx="198" ry="92" fill="#0b0c16" stroke="#4c3069" stroke-width="3"/><ellipse cx="360" cy="720" rx="151" ry="67" fill="none" stroke="#7b3aa6" stroke-opacity=".38"/><ellipse cx="360" cy="720" rx="92" ry="40" fill="url(#glow)" opacity=".8"/><path d="M360 633l23 43-23 54-23-54z" fill="#7d34cc" stroke="#d6adff" stroke-width="3"/><path d="M360 641v80M340 676h40" stroke="#fff" stroke-opacity=".38"/>
+<!-- floor -->
+<rect y="790" width="720" height="490" fill="#04060c"/><rect y="790" width="720" height="490" fill="url(#floor)"/>
+<g stroke="#63348a" stroke-opacity=".2"><ellipse cx="360" cy="1084" rx="274" ry="80" fill="none"/><ellipse cx="360" cy="1084" rx="191" ry="55" fill="none"/><path d="M360 790v490M170 790L76 1280M550 790l94 490"/></g>
+</svg>
