@@ -31,6 +31,10 @@ func _run_smoke() -> void:
 		if texture == null or not texture is Texture2D:
 			_fail(20, "Smoke test: production SVG asset failed to import: %s" % path)
 			return
+	var atlas := load("res://assets/art/combat_atlas.svg") as Texture2D
+	if atlas == null or atlas.get_width() < 500 or atlas.get_height() < 800 or game.tex_combat_atlas == null:
+		_fail(23, "Smoke test: v0.8 combat animation atlas failed to import")
+		return
 
 	game.meta.coins = 100000
 	game.buy_meta("hero")
@@ -46,6 +50,13 @@ func _run_smoke() -> void:
 
 	game.loot.equipped = {"weapon":"", "armor":"", "relic":""}
 	game.loot.shards = 0
+	if not bool(game.loot.toggle_lock_index(0)):
+		_fail(24, "Smoke test: item lock did not activate")
+		return
+	if int(game.loot.dismantle_index(0)) != 0:
+		_fail(25, "Smoke test: locked item was dismantled")
+		return
+	game.loot.toggle_lock_index(0)
 	var dismantled: int = int(game.loot.dismantle_index(0))
 	if dismantled <= 0 or int(game.loot.shards) != dismantled:
 		_fail(21, "Smoke test: dismantling did not award Soul Shards")
@@ -57,11 +68,19 @@ func _run_smoke() -> void:
 		return
 
 	game.loot.inventory = [
-		{"id":"set-w","slot":"weapon","name":"Crypt Blade","rarity":"EPIC","rarity_index":3,"level":12,"damage_pct":0.12,"hp":0.0,"crit_pct":0.0,"coin_pct":0.0,"trait":"EXECUTIONER","set":"CRYPT"},
-		{"id":"set-a","slot":"armor","name":"Crypt Plate","rarity":"EPIC","rarity_index":3,"level":12,"damage_pct":0.0,"hp":30.0,"crit_pct":0.0,"coin_pct":0.0,"trait":"BULWARK","set":"CRYPT"},
-		{"id":"set-r","slot":"relic","name":"Crypt Eye","rarity":"EPIC","rarity_index":3,"level":12,"damage_pct":0.0,"hp":0.0,"crit_pct":0.03,"coin_pct":0.0,"trait":"VAMPIRIC","set":"CRYPT"}
+		{"id":"set-w","slot":"weapon","name":"Crypt Blade","rarity":"EPIC","rarity_index":3,"level":12,"damage_pct":0.12,"hp":0.0,"crit_pct":0.0,"coin_pct":0.0,"trait":"EXECUTIONER","set":"CRYPT","locked":false},
+		{"id":"set-a","slot":"armor","name":"Crypt Plate","rarity":"EPIC","rarity_index":3,"level":12,"damage_pct":0.0,"hp":30.0,"crit_pct":0.0,"coin_pct":0.0,"trait":"BULWARK","set":"CRYPT","locked":false},
+		{"id":"set-r","slot":"relic","name":"Crypt Eye","rarity":"EPIC","rarity_index":3,"level":12,"damage_pct":0.0,"hp":0.0,"crit_pct":0.03,"coin_pct":0.0,"trait":"VAMPIRIC","set":"CRYPT","locked":false}
 	]
 	game.loot.equipped = {"weapon":"", "armor":"", "relic":""}
+	var weapon_filter: Array[int] = game.loot.matching_indices("weapon")
+	if weapon_filter.size() != 1 or String(game.loot.inventory[weapon_filter[0]]["slot"]) != "weapon":
+		_fail(26, "Smoke test: Vault slot filtering failed")
+		return
+	game.loot.sort_inventory("score")
+	if game.loot.inventory.size() >= 2 and int(game.loot.item_score(game.loot.inventory[0])) < int(game.loot.item_score(game.loot.inventory[1])):
+		_fail(27, "Smoke test: Vault score sorting failed")
+		return
 	for i in range(3):
 		if not game.loot.equip_index(i):
 			_fail(3, "Smoke test: set item could not be equipped")
@@ -69,6 +88,10 @@ func _run_smoke() -> void:
 	var gear_bonus: Dictionary = game.loot.equipped_bonuses()
 	if float(gear_bonus["damage_pct"]) <= 0.15 or float(gear_bonus["hp"]) < 55.0 or float(gear_bonus["lifesteal"]) < 0.05:
 		_fail(4, "Smoke test: traits or three-piece Crypt set bonus missing")
+		return
+	var equipped_weapon: Dictionary = game.loot.equipped_item_for_slot("weapon")
+	if equipped_weapon.is_empty() or int(game.loot.comparison_delta(equipped_weapon)) != 0:
+		_fail(28, "Smoke test: selected-vs-equipped comparison failed")
 		return
 
 	var crypt_pool: Array[String] = game.room_system.enemy_pool("CRYPT", 13)
@@ -112,6 +135,38 @@ func _run_smoke() -> void:
 		_fail(12, "Smoke test: equipped traits/set bonuses were not applied to run")
 		return
 
+	var anim_enemy: Dictionary = enemy_factory.make_enemy("goblin", 2, game.rng, game.player_pos)
+	anim_enemy["pos"] = game.player_pos + Vector2(60, 0)
+	game.enemies = [anim_enemy]
+	game.fire_auto_attack()
+	if String(game.player_anim_state) != "attack":
+		_fail(29, "Smoke test: player attack animation state did not trigger")
+		return
+	game.apply_damage_to_enemy(0, 1.0, false, game.enemies[0]["pos"])
+	if float(game.enemies[0].get("anim_hit", 0.0)) <= 0.0:
+		_fail(30, "Smoke test: enemy hit animation state did not trigger")
+		return
+	game.damage_player(1.0, game.player_pos + Vector2(-20, 0))
+	if String(game.player_anim_state) != "hit":
+		_fail(31, "Smoke test: player hit animation state did not trigger")
+		return
+	game.run.skill_cd = 0.0
+	game.use_skill()
+	if String(game.player_anim_state) != "nova":
+		_fail(32, "Smoke test: NOVA animation state did not trigger")
+		return
+	game.enemies[0]["hp"] = 0.0
+	game.remove_dead()
+	var found_death_fx: bool = false
+	for fx in game.effects:
+		if String(fx.get("type", "")) == "actor_death":
+			found_death_fx = true
+			break
+	if not found_death_fx:
+		_fail(33, "Smoke test: enemy death animation effect was not created")
+		return
+	game.spawn_floor()
+
 	game.current_room = {"area":"DUNGEON","type":"TREASURE","reward_bonus":50,"hazard":"none"}
 	game.rewarded_floor = 0
 	var coins_before_room: int = int(game.run.run_coins)
@@ -121,7 +176,6 @@ func _run_smoke() -> void:
 		return
 	game.apply_upgrade(0)
 	game.continue_run()
-	game.use_skill()
 
 	game.run.floor_no = 11
 	game.spawn_floor()
