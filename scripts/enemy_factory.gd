@@ -20,6 +20,12 @@ static func make_enemy(kind: String, floor_no: int, rng: RandomNumberGenerator, 
 		necro["attack_cd"] = rng.randf_range(0.4, 1.0)
 		necro["summon_cd"] = rng.randf_range(2.8, 4.2)
 		return necro
+	if kind == "crypt_keeper":
+		var keeper_hp: float = 520.0 + float(floor_no) * 58.0
+		var keeper: Dictionary = _base_enemy("warden", pos, keeper_hp, 68.0 + floor_no * 0.48, 54.0, 26.0 + floor_no * 0.9, 120 + floor_no * 9, rng)
+		keeper["boss_variant"] = "crypt_keeper"
+		keeper["attack_cd"] = 0.95
+		return keeper
 	var boss_hp: float = 310.0 + float(floor_no) * 48.0
 	var boss: Dictionary = _base_enemy("warden", pos, boss_hp, 62.0 + floor_no * 0.5, 48.0, 22.0 + floor_no * 0.8, 70 + floor_no * 7, rng)
 	boss["attack_cd"] = 1.15
@@ -44,7 +50,8 @@ static func _base_enemy(kind: String, pos: Vector2, hp: float, speed: float, rad
 		"attack_index": 0,
 		"elite": false,
 		"summon_cd": 0.0,
-		"rage": 0.0
+		"rage": 0.0,
+		"boss_variant": "warden"
 	}
 
 static func empower_elite(enemy: Dictionary) -> Dictionary:
