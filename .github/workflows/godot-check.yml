@@ -10,7 +10,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 7
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -43,6 +43,8 @@ jobs:
           ./godot --headless --path . --script res://scripts/main_v09.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v10.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v11.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v12.gd --check-only
+          ./godot --headless --path . --script res://scripts/v12_smoke_test.gd --check-only
 
       - name: Parse project headlessly
         run: |
@@ -79,3 +81,9 @@ jobs:
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v11_smoke_test.gd --quit-after 120 | tee v11-smoke.log
           grep -q "ONE MORE FLOOR v1.1 visual/audio smoke test passed" v11-smoke.log
+
+      - name: Run v1.2 production art smoke script
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v12_smoke_test.gd --quit-after 120 | tee v12-smoke.log
+          grep -q "ONE MORE FLOOR v1.2 production art smoke test passed" v12-smoke.log
