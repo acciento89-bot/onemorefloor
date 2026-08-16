@@ -7,7 +7,7 @@ config_version=5
 
 config/name="ONE MORE FLOOR"
 config/description="Portrait roguelite tower crawler by Kamilunavo Games"
-config/version="1.10.0-premium-components"
+config/version="1.15.0-endgame-realms"
 config/icon="res://assets/art/wanderer.svg"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
