@@ -40,7 +40,8 @@ func _run() -> void:
 	var EnemyFactory = load("res://scripts/enemy_factory.gd")
 	var elite: Dictionary = EnemyFactory.make_enemy("goblin", 16, game.rng, Vector2(360, 700))
 	elite["elite"] = true
-	game.enemies = [elite]
+	game.enemies.clear()
+	game.enemies.append(elite)
 	game.run.floor_no = 16
 	game._v25_apply_elite_affixes()
 	if String(game.enemies[0].get("affix", "")) == "":
@@ -65,5 +66,5 @@ func _run() -> void:
 		_fail(2509, "v1.13: treasure room did not grant shards and coins")
 		return
 
-	print("ONE MORE FLOOR v1.13 gameplay depth smoke test passed")	
+	print("ONE MORE FLOOR v1.13 gameplay depth smoke test passed")
 	quit(0)
