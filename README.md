@@ -43,6 +43,7 @@ The current roster includes Goblin, Bat, Skeleton, Ghoul, Necromancer, Gargoyle,
 - First external **WAV playtest audio** set and looping tower theme
 - Release balance profile for Floors 1–30
 - Project version metadata: `1.0.0-rc1`
+- Committed iOS + Android playtest export presets
 
 The active controller is `scripts/main_v10.gd`.
 
@@ -118,7 +119,7 @@ Godot 4.7.1 CI now validates:
 
 See [`docs/playtest-release.md`](docs/playtest-release.md) for the device/export checklist.
 
-The repository is prepared for the first physical-device pass, but a signed iOS/TestFlight build still requires the real Apple Team ID, signing identity/provisioning and a macOS/Xcode export environment. Android release export likewise needs the Android SDK/JDK and release-keystore configuration.
+`export_presets.cfg` now contains an **iOS Playtest** preset for iPhone + iPad and an **Android Playtest** preset, both using `de.kamilunavo.onemorefloor`. The iOS preset is configured with the existing Apple Team ID and arm64 target. A signed TestFlight build still requires the signing identity/provisioning and a macOS/Xcode export environment; Android device/release builds require the Android SDK/JDK and appropriate keystore configuration.
 
 ## Roadmap
 
@@ -146,6 +147,7 @@ The repository is prepared for the first physical-device pass, but a signed iOS/
 - [x] Local opt-in playtest analytics
 - [x] Local crash-session recovery hook
 - [x] 30-floor release balance profile
+- [x] iOS / Android export preset preparation
 - [ ] Production analytics / crash backend
 - [ ] Signed TestFlight build
 - [ ] Android device build
@@ -169,6 +171,7 @@ assets/art/                  SVG actors + combat/motion atlases
 assets/audio/                v1.0 playtest WAV music and SFX
 docs/art-direction.md        visual production rules
 docs/playtest-release.md     RC/device export checklist
+export_presets.cfg           iOS + Android playtest export presets
 scripts/main_v03.gd          combat/meta controller
 scripts/main_v04.gd          Loot/Missions/Tower Pass/audio feedback
 scripts/main_v05.gd          Crypt/rooms/traits
