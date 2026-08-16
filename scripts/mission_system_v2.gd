@@ -81,17 +81,15 @@ func _eligible(pool: Array[Dictionary]) -> Array[Dictionary]:
 			out.append(mission)
 	return out
 
-func _rotated(pool: Array[Dictionary], key: String, count: int, step: int) -> Array:
+func _rotated(pool: Array[Dictionary], key: String, count: int, _step: int) -> Array:
 	var out: Array = []
 	if pool.is_empty():
 		return out
 	var start := absi(key.hash()) % pool.size()
-	var cursor := start
-	while out.size() < mini(count, pool.size()):
-		var candidate: Dictionary = pool[cursor]
-		if not candidate in out:
-			out.append(candidate)
-		cursor = (cursor + step) % pool.size()
+	for offset in range(pool.size()):
+		out.append(pool[(start + offset) % pool.size()])
+		if out.size() >= mini(count, pool.size()):
+			break
 	return out
 
 func all_daily() -> Array:
