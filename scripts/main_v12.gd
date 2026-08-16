@@ -472,7 +472,7 @@ func _draw_combat_hud() -> void:
 	var knob: Vector2 = joy_pos if joy_active else base
 	draw_circle(base,86,Color(0.02,0.03,0.06,0.80)); draw_arc(base,86,0,TAU,64,Color(C_GOLD,0.48),3); draw_arc(base,75,0,TAU,64,Color(C_PURPLE,0.22),2)
 	for dir in [Vector2.UP,Vector2.DOWN,Vector2.LEFT,Vector2.RIGHT]:
-		var q := base+dir*61.0
+		var q: Vector2 = base + dir * 61.0
 		draw_colored_polygon(PackedVector2Array([q+dir*5.0,q+dir.rotated(2.2)*7.0,q+dir.rotated(-2.2)*7.0]),Color(C_TEXT,0.25))
 	draw_circle(knob,39,Color("30384c")); draw_arc(knob,39,0,TAU,40,Color(C_TEXT,0.20),2); draw_circle(knob-Vector2(8,9),8,Color(1,1,1,0.06)); text("MOVE",Vector2(111,1218),11,C_MUTED)
 	# Nova
@@ -512,7 +512,9 @@ func draw_enemy(e: Dictionary) -> void:
 	var p: Vector2 = e["pos"]; var radius: float = float(e["radius"]); var state_name: String = _enemy_anim_state(e); var frame: int = _motion_frame(state_name,float(e.get("anim_hit",0.0)),true)
 	var facing: int = 1 if player_pos.x>=p.x else -1
 	var bob: float = sin(elapsed*(9.0 if kind=="bat" else 4.2)+float(e.get("phase",0.0)))*(5.0 if kind=="bat" else 1.6)
-	var size_px: float = maxf(68.0,radius*2.9); if kind=="warden": size_px = radius*2.85
+	var size_px: float = maxf(68.0, radius * 2.9)
+	if kind == "warden":
+		size_px = radius * 2.85
 	draw_ellipse_shadow(p+Vector2(0,radius*0.72),radius*0.86,maxf(5.0,radius*0.24))
 	var rect := Rect2(p.x-size_px*0.5,p.y-size_px*0.62+bob,size_px,size_px)
 	var modulate := Color.WHITE
