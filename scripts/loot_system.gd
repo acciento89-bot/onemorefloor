@@ -10,6 +10,7 @@ const CRAFT_COST := 120
 var inventory: Array = []
 var equipped := {"weapon": "", "armor": "", "relic": ""}
 var shards: int = 0
+var active_sort_mode: String = "rarity"
 
 func load_data() -> void:
 	var cfg := ConfigFile.new()
@@ -20,6 +21,7 @@ func load_data() -> void:
 	if saved_equipped is Dictionary:
 		equipped = saved_equipped
 	shards = int(cfg.get_value("loot", "shards", 0))
+	active_sort_mode = String(cfg.get_value("loot", "sort_mode", "rarity"))
 
 func save_data() -> void:
 	var cfg := ConfigFile.new()
@@ -27,6 +29,7 @@ func save_data() -> void:
 	cfg.set_value("loot", "inventory", inventory)
 	cfg.set_value("loot", "equipped", equipped)
 	cfg.set_value("loot", "shards", shards)
+	cfg.set_value("loot", "sort_mode", active_sort_mode)
 	cfg.save(SAVE_PATH)
 
 func roll_drop(enemy_type: String, floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
@@ -64,7 +67,7 @@ func dismantle_index(index: int) -> int:
 	if index < 0 or index >= inventory.size():
 		return 0
 	var item: Dictionary = inventory[index]
-	if is_equipped(item):
+	if is_equipped(item) or is_locked(item):
 		return 0
 	var rarity_index: int = clampi(int(item.get("rarity_index", 0)), 0, DISMANTLE_VALUES.size() - 1)
 	var gained: int = int(DISMANTLE_VALUES[rarity_index])
@@ -114,7 +117,7 @@ func _make_item(slot: String, rarity_index: int, floor_no: int, rng: RandomNumbe
 		"name": names[slot][rng.randi_range(0, names[slot].size() - 1)],
 		"rarity": rarity, "rarity_index": rarity_index, "level": level,
 		"damage_pct": 0.0, "hp": 0.0, "crit_pct": 0.0, "coin_pct": 0.0,
-		"trait": "", "set": ""
+		"trait": "", "set": "", "locked": false
 	}
 	if slot == "weapon":
 		item["damage_pct"] = (0.025 + float(level) * 0.0022) * mult
@@ -150,6 +153,77 @@ func equip_index(index: int) -> bool:
 
 func is_equipped(item: Dictionary) -> bool:
 	return String(equipped.get(String(item["slot"]), "")) == String(item["id"])
+
+func is_locked(item: Dictionary) -> bool:
+	return bool(item.get("locked", false))
+
+func toggle_lock_index(index: int) -> bool:
+	if index < 0 or index >= inventory.size():
+		return false
+	var item: Dictionary = inventory[index]
+	item["locked"] = not bool(item.get("locked", false))
+	inventory[index] = item
+	save_data()
+	return bool(item["locked"])
+
+func find_index_by_id(item_id: String) -> int:
+	for i in range(inventory.size()):
+		if String(inventory[i].get("id", "")) == item_id:
+			return i
+	return -1
+
+func equipped_item_for_slot(slot: String) -> Dictionary:
+	var wanted_id: String = String(equipped.get(slot, ""))
+	if wanted_id == "":
+		return {}
+	var index: int = find_index_by_id(wanted_id)
+	if index < 0:
+		return {}
+	return inventory[index]
+
+func matching_indices(slot_filter: String = "all") -> Array[int]:
+	var result: Array[int] = []
+	for i in range(inventory.size()):
+		var item: Dictionary = inventory[i]
+		if slot_filter == "all" or String(item.get("slot", "")) == slot_filter:
+			result.append(i)
+	return result
+
+func sort_inventory(mode: String) -> void:
+	if not mode in ["rarity", "level", "score", "newest"]:
+		mode = "rarity"
+	active_sort_mode = mode
+	if mode != "newest":
+		inventory.sort_custom(Callable(self, "_sort_items"))
+	save_data()
+
+func _sort_items(a: Dictionary, b: Dictionary) -> bool:
+	if active_sort_mode == "level":
+		if int(a.get("level", 0)) != int(b.get("level", 0)):
+			return int(a.get("level", 0)) > int(b.get("level", 0))
+	elif active_sort_mode == "score":
+		if item_score(a) != item_score(b):
+			return item_score(a) > item_score(b)
+	else:
+		if int(a.get("rarity_index", 0)) != int(b.get("rarity_index", 0)):
+			return int(a.get("rarity_index", 0)) > int(b.get("rarity_index", 0))
+	return int(a.get("level", 0)) > int(b.get("level", 0))
+
+func item_score(item: Dictionary) -> int:
+	var score: float = float(item.get("rarity_index", 0)) * 1000.0 + float(item.get("level", 0)) * 10.0
+	score += float(item.get("damage_pct", 0.0)) * 5000.0
+	score += float(item.get("hp", 0.0)) * 5.0
+	score += float(item.get("crit_pct", 0.0)) * 4500.0
+	score += float(item.get("coin_pct", 0.0)) * 2200.0
+	if String(item.get("trait", "")) != "": score += 180.0
+	if String(item.get("set", "")) != "": score += 120.0
+	return int(round(score))
+
+func comparison_delta(item: Dictionary) -> int:
+	var equipped_item: Dictionary = equipped_item_for_slot(String(item.get("slot", "")))
+	if equipped_item.is_empty():
+		return item_score(item)
+	return item_score(item) - item_score(equipped_item)
 
 func equipped_items() -> Array:
 	var result: Array = []
