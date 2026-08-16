@@ -1,8 +1,10 @@
 extends RefCounted
 
-const ROOM_TYPES := ["COMBAT", "AMBUSH", "ELITE", "TREASURE"]
+const ROOM_TYPES := ["COMBAT", "AMBUSH", "ELITE", "TREASURE", "MINIBOSS"]
 
 func area_for_floor(floor_no: int) -> String:
+	if floor_no >= 41:
+		return "STARLESS SPIRE"
 	if floor_no >= 31:
 		return "DEEP TOWER"
 	if floor_no >= 21:
@@ -24,12 +26,14 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 
 	var roll: float = rng.randf()
 	var room_type := "COMBAT"
-	if roll < 0.18:
+	if roll < 0.14:
 		room_type = "TREASURE"
-	elif roll < 0.38:
+	elif roll < 0.32:
 		room_type = "AMBUSH"
-	elif roll < 0.53:
+	elif roll < 0.46:
 		room_type = "ELITE"
+	elif roll < 0.54 and floor_no >= 6:
+		room_type = "MINIBOSS"
 
 	var reward_bonus := 0
 	var enemy_bonus := 0
@@ -43,6 +47,9 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 	elif room_type == "ELITE":
 		enemy_bonus = -1
 		reward_bonus = 18 + floor_no * 2
+	elif room_type == "MINIBOSS":
+		enemy_bonus = -2
+		reward_bonus = 28 + floor_no * 3
 
 	var area: String = area_for_floor(floor_no)
 	if area == "CRYPT":
@@ -50,10 +57,9 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 	elif area == "FORGOTTEN CASTLE":
 		hazard = "falling_masonry" if rng.randf() < 0.52 else "cursed_banners"
 	elif area == "DEEP TOWER":
-		# The Deep Tower finally has its own gameplay identity instead of falling
-		# back to the Dungeon rules. Void lanes punish standing still while arcane
-		# pulses force the player to keep repositioning between attack windows.
 		hazard = "void_lanes" if rng.randf() < 0.52 else "arcane_pulse"
+	elif area == "STARLESS SPIRE":
+		hazard = "gravity_well" if rng.randf() < 0.50 else "starfall"
 
 	return {
 		"area": area,
@@ -65,6 +71,13 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 	}
 
 func enemy_pool(area: String, floor_no: int) -> Array[String]:
+	if area == "STARLESS SPIRE":
+		var spire_pool: Array[String] = ["phase_stalker", "oathbreaker", "rift_mage"]
+		if floor_no >= 43:
+			spire_pool.append("orb_weaver")
+		if floor_no >= 47:
+			spire_pool.append("soul_reaver")
+		return spire_pool
 	if area == "DEEP TOWER":
 		var deep_pool: Array[String] = ["void_knight", "soul_reaver", "sentinel"]
 		if floor_no >= 33:
