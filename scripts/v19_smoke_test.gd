@@ -28,7 +28,13 @@ func _run() -> void:
 			_fail(905,"v1.7 menus: premium menu art undersized")
 			return
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	if not scene_text.contains("main_v19.gd") and not scene_text.contains("main_v20.gd") and not scene_text.contains("main_v21.gd"):
+	var compatible_renderer := (
+		scene_text.contains("main_v19.gd")
+		or scene_text.contains("main_v20.gd")
+		or scene_text.contains("main_v21.gd")
+		or scene_text.contains("main_v22.gd")
+	)
+	if not compatible_renderer:
 		_fail(906,"v1.7 menus: compatible v19+ main renderer is not active")
 		return
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
@@ -36,6 +42,7 @@ func _run() -> void:
 		project_text.contains("config/version=\"1.7.0-reference-menus\"")
 		or project_text.contains("config/version=\"1.8.0-raster-reference\"")
 		or project_text.contains("config/version=\"1.9.0-runtime-ui\"")
+		or project_text.contains("config/version=\"1.10.0-premium-components\"")
 	)
 	if not compatible_version:
 		_fail(907,"v1.7 menus: compatible project version missing")
@@ -48,6 +55,7 @@ func _run() -> void:
 		(export_text.contains("application/short_version=\"1.7.0\"") and export_text.contains("application/version=\"12\""))
 		or (export_text.contains("application/short_version=\"1.8.0\"") and export_text.contains("application/version=\"13\""))
 		or (export_text.contains("application/short_version=\"1.9.0\"") and export_text.contains("application/version=\"14\""))
+		or (export_text.contains("application/short_version=\"1.10.0\"") and export_text.contains("application/version=\"15\""))
 	)
 	if not ios_ok:
 		_fail(909,"v1.7 menus: compatible iOS version/build missing")
@@ -56,6 +64,7 @@ func _run() -> void:
 		(export_text.contains("version/name=\"1.7.0\"") and export_text.contains("version/code=12"))
 		or (export_text.contains("version/name=\"1.8.0\"") and export_text.contains("version/code=13"))
 		or (export_text.contains("version/name=\"1.9.0\"") and export_text.contains("version/code=14"))
+		or (export_text.contains("version/name=\"1.10.0\"") and export_text.contains("version/code=15"))
 	)
 	if not android_ok:
 		_fail(910,"v1.7 menus: compatible Android version/build missing")
