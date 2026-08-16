@@ -5,16 +5,15 @@ func multipliers(floor_no: int, boss: bool) -> Dictionary:
 	var damage_mult := 1.0
 	var speed_mult := 1.0
 
-	# The old release curve flattened almost completely after Floor 25. That made
-	# later runs collapse into ten-second rooms once a build stacked attack speed,
-	# multishot and damage. This curve keeps the opening readable, then ramps hard
-	# enough to keep pace with accumulated run upgrades.
+	# The first three floors remain onboarding-friendly. From Floor 4 onward the
+	# curve rises aggressively so stacked damage/haste/multishot can no longer
+	# erase later rooms in a few seconds.
 	if floor_no <= 3:
-		hp_mult = 1.15
+		hp_mult = 0.90
 		damage_mult = 0.82
 		speed_mult = 0.96
 	elif floor_no <= 5:
-		hp_mult = 1.45
+		hp_mult = 1.30
 		damage_mult = 0.92
 		speed_mult = 0.98
 	elif floor_no <= 10:
