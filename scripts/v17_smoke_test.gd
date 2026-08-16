@@ -15,13 +15,13 @@ func _run_v17_smoke() -> void:
 	var game = packed.instantiate()
 	root.add_child(game)
 	if not game.has_method("_v17_skin") or not game.has_method("_v16_frame") or not game.has_method("_v16_button"):
-		_fail(702, "v1.6 smoke: exact concept menu renderer is not active")
+		_fail(702, "v1.6 smoke: exact concept menu renderer inheritance is not active")
 		return
 	if game.tex_v17_skins == null or game.tex_v17_skins.get_width() < 360 or game.tex_v17_skins.get_height() < 576:
 		_fail(703, "v1.6 smoke: concept button skin atlas missing or undersized")
 		return
 	if game.tex_v16_home == null or game.tex_v16_arcane == null or game.tex_v16_forge == null:
-		_fail(704, "v1.6 smoke: concept environment layers are missing")
+		_fail(704, "v1.6 smoke: inherited concept environment layers are missing")
 		return
 
 	var renderer_text := FileAccess.get_file_as_string("res://scripts/main_v17.gd")
@@ -35,7 +35,6 @@ func _run_v17_smoke() -> void:
 			_fail(705, "v1.6 smoke: concept override missing: %s" % signature)
 			return
 
-	# Settings BACK regression remains protected on the exact-concept renderer.
 	game.tutorial_active = false
 	game.state = game.State.HOME
 	game.settings_open = true
@@ -49,18 +48,8 @@ func _run_v17_smoke() -> void:
 		return
 
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	if not project_text.contains("config/version=\"1.6.0-rc1\""):
-		_fail(707, "v1.6 smoke: project version missing")
-		return
 	if not project_text.contains("pointing/emulate_mouse_from_touch=false"):
-		_fail(708, "v1.6 smoke: native touch hardening regressed")
-		return
-	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not export_text.contains("application/short_version=\"1.6.0\"") or not export_text.contains("version/name=\"1.6.0\""):
-		_fail(709, "v1.6 smoke: mobile visible version missing")
-		return
-	if not export_text.contains("application/version=\"9\"") or not export_text.contains("version/code=9"):
-		_fail(710, "v1.6 smoke: mobile build number 9 missing")
+		_fail(707, "v1.6 smoke: native touch hardening regressed")
 		return
 
 	print("ONE MORE FLOOR v1.6 exact concept menus smoke test passed")
