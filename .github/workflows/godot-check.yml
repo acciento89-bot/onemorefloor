@@ -35,6 +35,7 @@ jobs:
           ./godot --headless --path . --script res://scripts/main_v06.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v07.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v08.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v09.gd --check-only
 
       - name: Parse project headlessly
         run: |
