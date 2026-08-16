@@ -3,12 +3,12 @@ extends RefCounted
 const ROOM_TYPES := ["COMBAT", "AMBUSH", "ELITE", "TREASURE"]
 
 func area_for_floor(floor_no: int) -> String:
-	if floor_no >= 21 and floor_no <= 30:
-		return "FORGOTTEN CASTLE"
-	if floor_no >= 11 and floor_no <= 20:
-		return "CRYPT"
 	if floor_no >= 31:
 		return "DEEP TOWER"
+	if floor_no >= 21:
+		return "FORGOTTEN CASTLE"
+	if floor_no >= 11:
+		return "CRYPT"
 	return "DUNGEON"
 
 func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
@@ -21,6 +21,7 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 			"elite": false,
 			"hazard": "none"
 		}
+
 	var roll: float = rng.randf()
 	var room_type := "COMBAT"
 	if roll < 0.18:
@@ -29,6 +30,7 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 		room_type = "AMBUSH"
 	elif roll < 0.53:
 		room_type = "ELITE"
+
 	var reward_bonus := 0
 	var enemy_bonus := 0
 	var hazard := "none"
@@ -41,11 +43,18 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 	elif room_type == "ELITE":
 		enemy_bonus = -1
 		reward_bonus = 18 + floor_no * 2
+
 	var area: String = area_for_floor(floor_no)
 	if area == "CRYPT":
 		hazard = "soul_mist" if rng.randf() < 0.55 else "bone_runes"
 	elif area == "FORGOTTEN CASTLE":
 		hazard = "falling_masonry" if rng.randf() < 0.52 else "cursed_banners"
+	elif area == "DEEP TOWER":
+		# The Deep Tower finally has its own gameplay identity instead of falling
+		# back to the Dungeon rules. Void lanes punish standing still while arcane
+		# pulses force the player to keep repositioning between attack windows.
+		hazard = "void_lanes" if rng.randf() < 0.52 else "arcane_pulse"
+
 	return {
 		"area": area,
 		"type": room_type,
@@ -56,6 +65,13 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 	}
 
 func enemy_pool(area: String, floor_no: int) -> Array[String]:
+	if area == "DEEP TOWER":
+		var deep_pool: Array[String] = ["void_knight", "soul_reaver", "sentinel"]
+		if floor_no >= 33:
+			deep_pool.append("rift_mage")
+		if floor_no >= 36:
+			deep_pool.append("hexer")
+		return deep_pool
 	if area == "FORGOTTEN CASTLE":
 		var castle_pool: Array[String] = ["gargoyle", "sentinel", "skeleton"]
 		if floor_no >= 23:
