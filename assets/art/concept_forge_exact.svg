@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#050405"/><stop offset=".38" stop-color="#140a07"/><stop offset=".68" stop-color="#211007"/><stop offset="1" stop-color="#040304"/></linearGradient>
+ <linearGradient id="brick" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#3b2118"/><stop offset=".42" stop-color="#180d0b"/><stop offset=".7" stop-color="#5c2e16"/><stop offset="1" stop-color="#100908"/></linearGradient>
+ <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4f2d0d"/><stop offset=".22" stop-color="#f0b44d"/><stop offset=".48" stop-color="#8a4d19"/><stop offset=".71" stop-color="#ffe09a"/><stop offset="1" stop-color="#4b270c"/></linearGradient>
+ <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#333b48"/><stop offset=".28" stop-color="#f1f3f5"/><stop offset=".52" stop-color="#9da7b3"/><stop offset=".76" stop-color="#fff"/><stop offset="1" stop-color="#535c67"/></linearGradient>
+ <radialGradient id="fire"><stop stop-color="#fff0a3"/><stop offset=".2" stop-color="#ffb33d"/><stop offset=".5" stop-color="#e05216" stop-opacity=".83"/><stop offset="1" stop-color="#6d1608" stop-opacity="0"/></radialGradient>
+ <radialGradient id="heat"><stop stop-color="#ff8b22" stop-opacity=".52"/><stop offset=".42" stop-color="#b63313" stop-opacity=".19"/><stop offset="1" stop-color="#4b1307" stop-opacity="0"/></radialGradient>
+ <pattern id="brickPattern" width="72" height="38" patternUnits="userSpaceOnUse"><path d="M0 0h72v38H0z" fill="none" stroke="#c06d38" stroke-opacity=".12"/><path d="M36 0v8M18 38v-8M54 38v-8" stroke="#e28a4c" stroke-opacity=".09"/></pattern>
+</defs>
+<rect width="720" height="1280" fill="url(#bg)"/>
+<!-- chains exactly as concept -->
+<g fill="none" stroke="#2d2d36" stroke-width="9" opacity=".82"><path d="M38-20c45 42 6 77 43 117s-4 72 36 111-1 74 35 113"/><path d="M682-20c-45 42-6 77-43 117s4 72-36 111 1 74-35 113"/></g>
+<g fill="none" stroke="#7c4923" stroke-width="2" opacity=".45"><path d="M38-20c45 42 6 77 43 117s-4 72 36 111-1 74 35 113"/><path d="M682-20c-45 42-6 77-43 117s4 72-36 111 1 74-35 113"/></g>
+<!-- giant forge arch -->
+<ellipse cx="360" cy="490" rx="310" ry="340" fill="url(#heat)"/>
+<path d="M104 754V438q0-232 256-270 256 38 256 270v316h-79V446q0-162-177-201-177 39-177 201v308z" fill="url(#brick)" stroke="#6f3a1d" stroke-width="4"/>
+<path d="M104 754V438q0-232 256-270 256 38 256 270v316h-79V446q0-162-177-201-177 39-177 201v308z" fill="url(#brickPattern)"/>
+<path d="M165 455q0-174 195-218 195 44 195 218" fill="none" stroke="#9a5227" stroke-width="5" opacity=".6"/><path d="M197 455q0-140 163-183 163 43 163 183" fill="none" stroke="#f39843" stroke-width="2" opacity=".36"/>
+<!-- central hot forge -->
+<ellipse cx="360" cy="602" rx="240" ry="210" fill="url(#heat)"/>
+<rect x="124" y="628" width="472" height="72" fill="#100908" stroke="#663417" stroke-width="3"/><path d="M132 687h456" stroke="#d66d25" stroke-opacity=".55"/>
+<ellipse cx="360" cy="658" rx="135" ry="68" fill="url(#fire)" opacity=".85"/>
+<!-- central emblem ring -->
+<circle cx="360" cy="454" r="118" fill="#05060a" stroke="url(#metal)" stroke-width="16"/><circle cx="360" cy="454" r="96" fill="#090b13" stroke="#5b317e" stroke-width="4"/><circle cx="360" cy="454" r="81" fill="#070911" stroke="#c88837" stroke-opacity=".42" stroke-width="2"/>
+<!-- anvil -->
+<path d="M278 414h170l-22 30-33 11-6 33 31 26h-116l31-26-6-33-27-11z" fill="url(#silver)" stroke="#e8e9e8" stroke-width="2"/>
+<path d="M283 420h154" stroke="#fff" stroke-opacity=".6" stroke-width="3"/>
+<!-- hammer medallion -->
+<circle cx="398" cy="545" r="57" fill="#080914" stroke="url(#metal)" stroke-width="7"/><circle cx="398" cy="545" r="47" fill="#0b0b18" stroke="#8e46cc" stroke-width="3"/><path d="M365 572l61-61 12 12-61 61z" fill="url(#silver)"/><path d="M414 508l32 5-27 27z" fill="#e5edf7"/>
+<!-- purple gems -->
+<path d="M360 304l17 27-17 28-17-28zM398 481l13 21-13 21-13-21z" fill="#9a43ef" stroke="#e3c2ff" stroke-width="2"/>
+<!-- side braziers -->
+<g><ellipse cx="78" cy="684" rx="78" ry="92" fill="url(#fire)"/><ellipse cx="642" cy="684" rx="78" ry="92" fill="url(#fire)"/><path d="M40 718h76l-14 68H54zM604 718h76l-14 68h-48z" fill="#151012" stroke="#765020" stroke-width="3"/><path d="M78 716c-37-48 13-62-4-111 42 35 52 74 4 111zM642 716c-37-48 13-62-4-111 42 35 52 74 4 111z" fill="#ed661e"/><path d="M78 707c-17-29 8-44 2-69 25 19 30 47-2 69zM642 707c-17-29 8-44 2-69 25 19 30 47-2 69z" fill="#ffd46a"/></g>
+<!-- floor -->
+<path d="M0 770h720v510H0z" fill="#080606"/><path d="M0 770h720v510H0z" fill="url(#brickPattern)" opacity=".7"/>
+<g stroke="#703615" stroke-opacity=".25"><path d="M0 850h720M0 935h720M0 1025h720M0 1120h720M360 770v510M170 770L70 1280M550 770l100 510"/></g>
+<!-- embers -->
+<g fill="#f2842c" opacity=".7"><circle cx="122" cy="852" r="2"/><circle cx="167" cy="1077" r="1.5"/><circle cx="591" cy="908" r="2"/><circle cx="528" cy="1136" r="1.7"/><circle cx="328" cy="836" r="1.5"/><circle cx="405" cy="1021" r="1.7"/></g>
+</svg>
