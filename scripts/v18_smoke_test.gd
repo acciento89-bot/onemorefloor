@@ -46,7 +46,6 @@ func _run_v18_smoke() -> void:
 		_fail(809, "v1.6.2 premium reference: Vault title is not exact")
 		return
 
-	# Keep the proven iPhone Settings -> Back fix intact.
 	game.tutorial_active = false
 	game.state = game.State.HOME
 	game.settings_open = true
@@ -59,14 +58,19 @@ func _run_v18_smoke() -> void:
 		_fail(810, "v1.6.2 premium reference: Settings BACK regression returned")
 		return
 
-	# v1.7 intentionally layers on top of v1.6; either renderer is a valid
-	# consumer of this compatibility test as long as the v1.6 assets/behaviour remain.
+	# Successor renderers inherit the v1.6 premium layer. Keep this compatibility
+	# regression focused on retained behaviour/assets instead of pinning the active version.
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	if not scene_text.contains("main_v18.gd") and not scene_text.contains("main_v19.gd"):
+	var compatible_renderer := scene_text.contains("main_v18.gd") or scene_text.contains("main_v19.gd") or scene_text.contains("main_v20.gd")
+	if not compatible_renderer:
 		_fail(811, "v1.6.2 premium reference: compatible main renderer is not active")
 		return
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	var compatible_version := project_text.contains("config/version=\"1.6.2-premium-reference\"") or project_text.contains("config/version=\"1.7.0-reference-menus\"")
+	var compatible_version := (
+		project_text.contains("config/version=\"1.6.2-premium-reference\"")
+		or project_text.contains("config/version=\"1.7.0-reference-menus\"")
+		or project_text.contains("config/version=\"1.8.0-raster-reference\"")
+	)
 	if not compatible_version:
 		_fail(812, "v1.6.2 premium reference: compatible project version missing")
 		return
@@ -74,11 +78,19 @@ func _run_v18_smoke() -> void:
 		_fail(813, "v1.6.2 premium reference: native touch hardening regressed")
 		return
 	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	var compatible_mobile := (export_text.contains("application/short_version=\"1.6.2\"") and export_text.contains("version/name=\"1.6.2\"")) or (export_text.contains("application/short_version=\"1.7.0\"") and export_text.contains("version/name=\"1.7.0\""))
+	var compatible_mobile := (
+		(export_text.contains("application/short_version=\"1.6.2\"") and export_text.contains("version/name=\"1.6.2\""))
+		or (export_text.contains("application/short_version=\"1.7.0\"") and export_text.contains("version/name=\"1.7.0\""))
+		or (export_text.contains("application/short_version=\"1.8.0\"") and export_text.contains("version/name=\"1.8.0\""))
+	)
 	if not compatible_mobile:
 		_fail(814, "v1.6.2 premium reference: compatible mobile version missing")
 		return
-	var compatible_build := (export_text.contains("application/version=\"11\"") and export_text.contains("version/code=11")) or (export_text.contains("application/version=\"12\"") and export_text.contains("version/code=12"))
+	var compatible_build := (
+		(export_text.contains("application/version=\"11\"") and export_text.contains("version/code=11"))
+		or (export_text.contains("application/version=\"12\"") and export_text.contains("version/code=12"))
+		or (export_text.contains("application/version=\"13\"") and export_text.contains("version/code=13"))
+	)
 	if not compatible_build:
 		_fail(815, "v1.6.2 premium reference: compatible build missing")
 		return

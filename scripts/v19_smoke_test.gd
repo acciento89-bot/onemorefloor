@@ -28,22 +28,25 @@ func _run() -> void:
 			_fail(905,"v1.7 menus: premium menu art undersized")
 			return
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	if not scene_text.contains("main_v19.gd"):
-		_fail(906,"v1.7 menus: main scene does not use v19")
+	if not scene_text.contains("main_v19.gd") and not scene_text.contains("main_v20.gd"):
+		_fail(906,"v1.7 menus: compatible v19+ main renderer is not active")
 		return
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	if not project_text.contains("config/version=\"1.7.0-reference-menus\""):
-		_fail(907,"v1.7 menus: project version missing")
+	var compatible_version := project_text.contains("config/version=\"1.7.0-reference-menus\"") or project_text.contains("config/version=\"1.8.0-raster-reference\"")
+	if not compatible_version:
+		_fail(907,"v1.7 menus: compatible project version missing")
 		return
 	if not project_text.contains("pointing/emulate_mouse_from_touch=false"):
 		_fail(908,"v1.7 menus: touch hardening regressed")
 		return
 	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not export_text.contains("application/short_version=\"1.7.0\"") or not export_text.contains("application/version=\"12\""):
-		_fail(909,"v1.7 menus: iOS version/build missing")
+	var ios_ok := (export_text.contains("application/short_version=\"1.7.0\"") and export_text.contains("application/version=\"12\"")) or (export_text.contains("application/short_version=\"1.8.0\"") and export_text.contains("application/version=\"13\""))
+	if not ios_ok:
+		_fail(909,"v1.7 menus: compatible iOS version/build missing")
 		return
-	if not export_text.contains("version/name=\"1.7.0\"") or not export_text.contains("version/code=12"):
-		_fail(910,"v1.7 menus: Android version/build missing")
+	var android_ok := (export_text.contains("version/name=\"1.7.0\"") and export_text.contains("version/code=12")) or (export_text.contains("version/name=\"1.8.0\"") and export_text.contains("version/code=13"))
+	if not android_ok:
+		_fail(910,"v1.7 menus: compatible Android version/build missing")
 		return
 	# Prove the moved Hero and Forge buttons still reach the real progression system.
 	game.tutorial_active = false
