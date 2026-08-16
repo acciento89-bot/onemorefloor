@@ -1,36 +1,40 @@
 extends "res://scripts/mission_system.gd"
 
 # v1.19 — Missions 2.0
-# The screen still shows three Daily + three Weekly contracts, but the contracts
-# rotate deterministically each period instead of repeating the same six forever.
-# Completing a whole set also unlocks a completion chest.
+# Three Daily + three Weekly contracts rotate each period. Advanced objectives are
+# gated by the player's progression so a new account never rolls an impossible
+# Awaken/Enchant mission. Completing the whole set unlocks a completion chest.
 
 const DAILY_POOL: Array[Dictionary] = [
-	{"id":"d_kills_30","title":"Tower Cleanup","event":"kills","goal":30,"coins":95,"xp":48},
-	{"id":"d_floors_8","title":"Keep Climbing","event":"floors","goal":8,"coins":105,"xp":52},
-	{"id":"d_cash_220","title":"Bring It Home","event":"cash","goal":220,"coins":125,"xp":62},
-	{"id":"d_wardens_1","title":"Break the Gatekeeper","event":"wardens","goal":1,"coins":145,"xp":70},
-	{"id":"d_contracts_2","title":"Contract Killer","event":"contracts","goal":2,"coins":135,"xp":68},
-	{"id":"d_enhance_2","title":"Sharpen the Edge","event":"enhance","goal":2,"coins":115,"xp":58},
-	{"id":"d_enchant_1","title":"Change Fate","event":"enchant","goal":1,"coins":130,"xp":66},
-	{"id":"d_awaken_1","title":"Wake the Relic","event":"awaken","goal":1,"coins":180,"xp":90},
+	{"id":"d_kills_30","title":"Tower Cleanup","event":"kills","goal":30,"coins":95,"xp":48,"min_floor":1},
+	{"id":"d_floors_8","title":"Keep Climbing","event":"floors","goal":8,"coins":105,"xp":52,"min_floor":1},
+	{"id":"d_cash_220","title":"Bring It Home","event":"cash","goal":220,"coins":125,"xp":62,"min_floor":1},
+	{"id":"d_wardens_1","title":"Break the Gatekeeper","event":"wardens","goal":1,"coins":145,"xp":70,"min_floor":1},
+	{"id":"d_contracts_2","title":"Contract Killer","event":"contracts","goal":2,"coins":135,"xp":68,"min_floor":6},
+	{"id":"d_enhance_2","title":"Sharpen the Edge","event":"enhance","goal":2,"coins":115,"xp":58,"min_floor":8},
+	{"id":"d_enchant_1","title":"Change Fate","event":"enchant","goal":1,"coins":130,"xp":66,"min_floor":20},
+	{"id":"d_awaken_1","title":"Wake the Relic","event":"awaken","goal":1,"coins":180,"xp":90,"min_floor":50},
 ]
 
 const WEEKLY_POOL: Array[Dictionary] = [
-	{"id":"w_kills_240","title":"Purge the Tower","event":"kills","goal":240,"coins":620,"xp":310},
-	{"id":"w_floors_55","title":"Tower Veteran","event":"floors","goal":55,"coins":700,"xp":340},
-	{"id":"w_cash_2500","title":"Treasure Runner","event":"cash","goal":2500,"coins":820,"xp":390},
-	{"id":"w_wardens_6","title":"Warden Hunter","event":"wardens","goal":6,"coins":780,"xp":380},
-	{"id":"w_contracts_10","title":"Bounty Board","event":"contracts","goal":10,"coins":760,"xp":370},
-	{"id":"w_enhance_12","title":"Master Smith","event":"enhance","goal":12,"coins":690,"xp":345},
-	{"id":"w_enchant_5","title":"Fate Weaver","event":"enchant","goal":5,"coins":760,"xp":375},
-	{"id":"w_awaken_2","title":"Ascendant Arsenal","event":"awaken","goal":2,"coins":980,"xp":470},
+	{"id":"w_kills_240","title":"Purge the Tower","event":"kills","goal":240,"coins":620,"xp":310,"min_floor":1},
+	{"id":"w_floors_55","title":"Tower Veteran","event":"floors","goal":55,"coins":700,"xp":340,"min_floor":1},
+	{"id":"w_cash_2500","title":"Treasure Runner","event":"cash","goal":2500,"coins":820,"xp":390,"min_floor":1},
+	{"id":"w_wardens_6","title":"Warden Hunter","event":"wardens","goal":6,"coins":780,"xp":380,"min_floor":5},
+	{"id":"w_contracts_10","title":"Bounty Board","event":"contracts","goal":10,"coins":760,"xp":370,"min_floor":10},
+	{"id":"w_enhance_12","title":"Master Smith","event":"enhance","goal":12,"coins":690,"xp":345,"min_floor":12},
+	{"id":"w_enchant_5","title":"Fate Weaver","event":"enchant","goal":5,"coins":760,"xp":375,"min_floor":25},
+	{"id":"w_awaken_2","title":"Ascendant Arsenal","event":"awaken","goal":2,"coins":980,"xp":470,"min_floor":60},
 ]
 
 var daily_bonus_claimed := false
 var weekly_bonus_claimed := false
 var daily_bonus_key := ""
 var weekly_bonus_key := ""
+var progress_floor_context := 1
+
+func set_progress_context(best_floor: int) -> void:
+	progress_floor_context = maxi(1, best_floor)
 
 func load_data() -> void:
 	super.load_data()
@@ -70,22 +74,33 @@ func _refresh_completion_periods() -> void:
 	if changed and daily_key != "":
 		save_data()
 
+func _eligible(pool: Array[Dictionary]) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for mission in pool:
+		if progress_floor_context >= int(mission.get("min_floor", 1)):
+			out.append(mission)
+	return out
+
 func _rotated(pool: Array[Dictionary], key: String, count: int, step: int) -> Array:
 	var out: Array = []
 	if pool.is_empty():
 		return out
 	var start := absi(key.hash()) % pool.size()
-	for i in range(mini(count, pool.size())):
-		out.append(pool[(start + i * step) % pool.size()])
+	var cursor := start
+	while out.size() < mini(count, pool.size()):
+		var candidate: Dictionary = pool[cursor]
+		if not candidate in out:
+			out.append(candidate)
+		cursor = (cursor + step) % pool.size()
 	return out
 
 func all_daily() -> Array:
 	_refresh_periods()
-	return _rotated(DAILY_POOL, daily_key, 3, 5)
+	return _rotated(_eligible(DAILY_POOL), daily_key, 3, 5)
 
 func all_weekly() -> Array:
 	_refresh_periods()
-	return _rotated(WEEKLY_POOL, weekly_key, 3, 3)
+	return _rotated(_eligible(WEEKLY_POOL), weekly_key, 3, 3)
 
 func record(event: String, amount: int = 1) -> void:
 	_refresh_periods()
