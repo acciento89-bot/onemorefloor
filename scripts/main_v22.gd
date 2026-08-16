@@ -8,16 +8,19 @@ const V22_VERSION := "1.10.0-premium-components"
 const V22_SKINS_PATH := "res://assets/art/concept_button_skins.svg"
 const V22_ICON_ATLAS_PATH := "res://assets/art/ui_icon_atlas_v22.svg"
 const V22_MEDALLION_PATH := "res://assets/art/ui_medallion_shell_v22.svg"
+const V22_WANDERER_PATH := "res://assets/art/wanderer.svg"
 
 var tex_v22_skins: Texture2D
 var tex_v22_icons: Texture2D
 var tex_v22_medallion: Texture2D
+var tex_v22_wanderer: Texture2D
 
 func _ready() -> void:
 	super._ready()
 	tex_v22_skins = load(V22_SKINS_PATH) as Texture2D
 	tex_v22_icons = load(V22_ICON_ATLAS_PATH) as Texture2D
 	tex_v22_medallion = load(V22_MEDALLION_PATH) as Texture2D
+	tex_v22_wanderer = load(V22_WANDERER_PATH) as Texture2D
 	queue_redraw()
 
 func _v22_color_distance(a: Color, b: Color) -> float:
@@ -175,5 +178,21 @@ func _v21_home_tab(r: Rect2, label: String, kind: String, accent: Color) -> void
 	_v21_live_medallion(Vector2(r.get_center().x,r.position.y+37),23,accent,kind)
 	draw_string(v16_title_font,Vector2(r.position.x+6,r.end.y-17),label,HORIZONTAL_ALIGNMENT_CENTER,r.size.x-12,15,V17_IVORY)
 
+func draw_wanderer(pos: Vector2, scale: float, combat: bool) -> void:
+	# Use the high-detail character sheet everywhere instead of the old primitive
+	# circle/polygon placeholder. Keeping the same method preserves all gameplay.
+	if tex_v22_wanderer == null:
+		super.draw_wanderer(pos,scale,combat)
+		return
+	var h := (98.0 if combat else 104.0) * scale
+	var w := h * (2.0 / 3.0)
+	var top_left := Vector2(pos.x-w*0.5,pos.y-h*0.78)
+	if not combat:
+		draw_circle(pos+Vector2(0,7.0*scale),34.0*scale,Color(V16_PURPLE,0.10))
+		draw_arc(pos+Vector2(0,-10.0*scale),42.0*scale,-2.7,-0.45,40,Color(V17_PURPLE_HI,0.18),2.0)
+	draw_texture_rect(tex_v22_wanderer,Rect2(top_left,Vector2(w,h)),false,Color.WHITE)
+	if combat:
+		draw_arc(pos,31.0*scale,-0.7,0.9,18,Color(1.0,0.75,0.3,0.28),2.2*scale)
+
 func _v22_runtime_component_ready() -> bool:
-	return tex_v22_skins != null and tex_v22_icons != null and tex_v22_medallion != null
+	return tex_v22_skins != null and tex_v22_icons != null and tex_v22_medallion != null and tex_v22_wanderer != null

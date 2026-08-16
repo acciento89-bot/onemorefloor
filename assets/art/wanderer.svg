@@ -1,35 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="320" height="480" viewBox="0 0 320 480">
 <defs>
- <linearGradient id="cloak" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#7c2f55"/><stop offset=".45" stop-color="#4c203d"/><stop offset="1" stop-color="#21162f"/></linearGradient>
- <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e8edf5"/><stop offset=".18" stop-color="#9aa9bc"/><stop offset=".55" stop-color="#4b596c"/><stop offset="1" stop-color="#171d28"/></linearGradient>
- <linearGradient id="leather" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8d5d35"/><stop offset="1" stop-color="#39261d"/></linearGradient>
- <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#efc296"/><stop offset=".5" stop-color="#c98d63"/><stop offset="1" stop-color="#81563f"/></linearGradient>
- <linearGradient id="blade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset=".18" stop-color="#d6f2ff"/><stop offset=".48" stop-color="#8e76ff"/><stop offset=".78" stop-color="#6a2ac9"/><stop offset="1" stop-color="#2d124f"/></linearGradient>
- <radialGradient id="aura"><stop stop-color="#8f52ff" stop-opacity=".25"/><stop offset="1" stop-color="#8f52ff" stop-opacity="0"/></radialGradient>
+  <linearGradient id="cloak" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9c3d68"/><stop offset=".34" stop-color="#63284d"/><stop offset=".7" stop-color="#311a39"/><stop offset="1" stop-color="#161120"/></linearGradient>
+  <linearGradient id="cloakHi" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d35a82"/><stop offset=".5" stop-color="#7a2f57"/><stop offset="1" stop-color="#35172f"/></linearGradient>
+  <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f7fbff"/><stop offset=".18" stop-color="#b8c9d9"/><stop offset=".45" stop-color="#65778d"/><stop offset=".74" stop-color="#303a4b"/><stop offset="1" stop-color="#121822"/></linearGradient>
+  <linearGradient id="steelDark" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#53657b"/><stop offset=".5" stop-color="#263244"/><stop offset="1" stop-color="#111722"/></linearGradient>
+  <linearGradient id="leather" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9e6a3e"/><stop offset=".45" stop-color="#604027"/><stop offset="1" stop-color="#281b15"/></linearGradient>
+  <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f4cda7"/><stop offset=".5" stop-color="#d49a72"/><stop offset="1" stop-color="#8d5f48"/></linearGradient>
+  <linearGradient id="blade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset=".20" stop-color="#d7f3ff"/><stop offset=".48" stop-color="#a98cff"/><stop offset=".74" stop-color="#6b35d4"/><stop offset="1" stop-color="#2b1154"/></linearGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0a5"/><stop offset=".35" stop-color="#d5a441"/><stop offset=".75" stop-color="#7c4912"/><stop offset="1" stop-color="#e7bd58"/></linearGradient>
+  <radialGradient id="aura"><stop stop-color="#a360ff" stop-opacity=".28"/><stop offset=".55" stop-color="#6332b8" stop-opacity=".10"/><stop offset="1" stop-color="#2f125c" stop-opacity="0"/></radialGradient>
 </defs>
-<ellipse cx="160" cy="421" rx="92" ry="24" fill="#02050b" opacity=".72"/>
-<ellipse cx="160" cy="244" rx="130" ry="165" fill="url(#aura)"/>
-<path d="M88 358 103 184 157 148 218 184 239 359 199 424 122 424Z" fill="url(#cloak)" stroke="#181020" stroke-width="10"/>
-<path d="M112 200 146 171 175 172 210 199 196 286 127 286Z" fill="#273a59" stroke="#6a7d95" stroke-width="7"/>
-<path d="M128 212 157 194 189 210 180 253 139 253Z" fill="url(#steel)" stroke="#1b2431" stroke-width="5"/>
-<path d="M114 246 88 343 126 370 148 280Z" fill="#9e3a5d" opacity=".78"/>
-<path d="M205 246 235 344 201 372 176 280Z" fill="#3a1836"/>
-<path d="M123 177 133 112 159 76 191 105 210 178 189 203 144 202Z" fill="#151d2d" stroke="#0a0e18" stroke-width="9"/>
-<path d="M133 128c8-34 49-40 63-6l-6 48c-11 26-42 30-58 5Z" fill="url(#skin)"/>
-<path d="M126 130 139 91 160 66 184 82 207 125 184 116 160 127 139 117Z" fill="#111725"/>
-<path d="M133 112 153 93 172 99 194 119 181 104 158 101 139 122Z" fill="#30384d" opacity=".7"/>
-<path d="M145 140q10-8 20 0M172 139q10-8 19 0" fill="none" stroke="#191820" stroke-width="5" stroke-linecap="round"/>
-<circle cx="155" cy="142" r="3.5" fill="#eef7ff"/><circle cx="182" cy="141" r="3.5" fill="#eef7ff"/>
-<path d="M158 162q13 9 25-2" fill="none" stroke="#704836" stroke-width="4" stroke-linecap="round"/>
-<path d="M141 204 126 190 118 210 132 230Z" fill="url(#steel)"/><path d="M196 205 211 190 220 212 204 232Z" fill="url(#steel)"/>
-<path d="M136 285 123 408h38l9-120M184 286l12 122h38l-18-126" fill="#242b39" stroke="#111723" stroke-width="9"/>
-<path d="M119 408h48l-10 31h-51Z" fill="url(#leather)"/><path d="M190 408h49l12 31h-52Z" fill="url(#leather)"/>
-<path d="M204 214 251 151" stroke="#5d3a24" stroke-width="15" stroke-linecap="round"/>
-<path d="M206 207 271 112" stroke="url(#blade)" stroke-width="11" stroke-linecap="round"/>
-<path d="M245 151 273 171" stroke="#d8aa48" stroke-width="10" stroke-linecap="round"/>
-<path d="M266 118 279 98" stroke="#f9fbff" stroke-width="6" stroke-linecap="round"/>
-<path d="M93 249 65 280 82 305 116 277" fill="url(#leather)" stroke="#281a16" stroke-width="5"/>
-<path d="M227 247 252 276 236 302 207 276" fill="url(#leather)" stroke="#281a16" stroke-width="5"/>
-<circle cx="157" cy="240" r="9" fill="#d9ad49" stroke="#624015" stroke-width="4"/>
-<path d="M153 236 157 228 161 236 169 240 161 244 157 252 153 244 145 240Z" fill="#fff2a7" opacity=".8"/>
+<ellipse cx="160" cy="426" rx="98" ry="25" fill="#010307" opacity=".76"/><ellipse cx="160" cy="246" rx="139" ry="176" fill="url(#aura)"/>
+<path d="M87 354 103 186 148 150 160 144 177 151 220 187 240 356 210 425 116 425Z" fill="url(#cloak)" stroke="#17101f" stroke-width="9"/><path d="M100 207 118 190 126 369 105 404 90 351Z" fill="url(#cloakHi)" opacity=".82"/><path d="M219 204 235 349 216 399 194 361 198 188Z" fill="#23142d" opacity=".82"/>
+<path d="M111 199 145 169 177 169 211 199 199 290 124 290Z" fill="#243550" stroke="#71849c" stroke-width="6"/><path d="M126 206 160 188 194 207 184 261 137 261Z" fill="url(#steel)" stroke="#1a2230" stroke-width="5"/><path d="M137 219 160 205 183 220 177 247 143 247Z" fill="url(#steelDark)"/><path d="M129 266h62l12 39h-86Z" fill="#202b3d" stroke="#4b5b71" stroke-width="4"/><path d="M145 183 160 176 176 184 160 202Z" fill="url(#gold)" stroke="#5f3b13" stroke-width="3"/>
+<path d="M105 203 132 183 146 204 128 229 101 220Z" fill="url(#steel)" stroke="#1b2431" stroke-width="4"/><path d="M214 204 189 184 175 205 191 231 219 221Z" fill="url(#steel)" stroke="#1b2431" stroke-width="4"/><path d="M108 201 127 189" stroke="#f4fbff" stroke-opacity=".45" stroke-width="2"/><path d="M211 202 192 189" stroke="#f4fbff" stroke-opacity=".45" stroke-width="2"/>
+<path d="M120 183 128 114 158 72 191 101 211 182 190 208 142 206Z" fill="#121a2a" stroke="#070b12" stroke-width="9"/><path d="M132 130c5-32 45-47 64-8l-5 50c-9 29-45 34-61 3Z" fill="url(#skin)"/><path d="M126 132 138 94 160 66 184 82 208 126 188 113 160 125 139 115Z" fill="#0d1320"/><path d="M130 119 153 90 178 94 198 116 180 104 158 104 140 124Z" fill="#36435a" opacity=".70"/>
+<path d="M143 141q10-7 20 0M171 140q10-7 20 0" fill="none" stroke="#17171e" stroke-width="4" stroke-linecap="round"/><circle cx="154" cy="142" r="3.1" fill="#eaf7ff"/><circle cx="182" cy="141" r="3.1" fill="#eaf7ff"/><circle cx="154" cy="142" r="1.4" fill="#33445c"/><circle cx="182" cy="141" r="1.4" fill="#33445c"/><path d="M165 145 161 158 169 160" fill="none" stroke="#9f6a51" stroke-width="2.5" stroke-linecap="round"/><path d="M153 169q14 8 29-1" fill="none" stroke="#744a38" stroke-width="3.5" stroke-linecap="round"/><path d="M137 126c13-9 34-15 55-4" fill="none" stroke="#151a25" stroke-width="8" stroke-linecap="round"/>
+<path d="M112 238 76 282 91 317 130 279Z" fill="url(#leather)" stroke="#281a16" stroke-width="5"/><path d="M207 239 246 280 231 316 190 278Z" fill="url(#leather)" stroke="#281a16" stroke-width="5"/><path d="M79 283 92 309 106 296 94 271Z" fill="url(#steelDark)" stroke="#1b2431" stroke-width="3"/><path d="M242 281 229 309 216 296 228 270Z" fill="url(#steelDark)" stroke="#1b2431" stroke-width="3"/>
+<path d="M121 285h79v21h-79Z" fill="#38271f" stroke="#6c4931" stroke-width="3"/><circle cx="160" cy="296" r="11" fill="url(#gold)" stroke="#6a4314" stroke-width="3"/><path d="M154 296h12M160 290v12" stroke="#fff2aa" stroke-opacity=".55" stroke-width="2"/>
+<path d="M127 303 119 410h43l8-104M187 303l11 107h43l-18-111" fill="#252f40" stroke="#101621" stroke-width="8"/><path d="M122 336h38M194 336h37" stroke="#57667d" stroke-opacity=".42" stroke-width="3"/><path d="M117 409h49l-12 33h-51Z" fill="url(#leather)" stroke="#1d1512" stroke-width="4"/><path d="M195 409h49l12 33h-53Z" fill="url(#leather)" stroke="#1d1512" stroke-width="4"/>
+<path d="M202 223 244 169" stroke="#51331f" stroke-width="16" stroke-linecap="round"/><path d="M205 215 275 111" stroke="url(#blade)" stroke-width="12" stroke-linecap="round"/><path d="M239 165 271 187" stroke="url(#gold)" stroke-width="11" stroke-linecap="round"/><path d="M268 117 281 98" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/><path d="M222 193 263 131" stroke="#f7f0ff" stroke-opacity=".38" stroke-width="2.5"/>
+<path d="M160 217 169 234 160 251 151 234Z" fill="#f6d575" stroke="#8c5b18" stroke-width="2"/><path d="M160 220v27M153 234h14" stroke="#fff7c7" stroke-opacity=".7" stroke-width="2"/>
 </svg>
