@@ -1,6 +1,7 @@
 extends RefCounted
 
 const SAVE_PATH := "user://save.cfg"
+const CURRENT_SAVE_VERSION := 2
 
 var best_floor := 1
 var coins := 0
@@ -12,8 +13,13 @@ var fortune_level := 0
 
 func load_data() -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load(SAVE_PATH) != OK:
+	var status: Error = cfg.load(SAVE_PATH)
+	if status != OK:
+		save_data()
 		return
+	var from_version: int = int(cfg.get_value("system", "save_version", 0))
+	if from_version < CURRENT_SAVE_VERSION:
+		_migrate(cfg, from_version)
 	best_floor = int(cfg.get_value("progress", "best_floor", 1))
 	coins = int(cfg.get_value("progress", "coins", 0))
 	hero_level = int(cfg.get_value("meta", "hero_level", 1))
@@ -22,8 +28,21 @@ func load_data() -> void:
 	precision_level = int(cfg.get_value("meta", "precision_level", 0))
 	fortune_level = int(cfg.get_value("meta", "fortune_level", 0))
 
+func _migrate(cfg: ConfigFile, from_version: int) -> void:
+	# v1/v2 intentionally keep every existing section and key. The migration
+	# only adds release metadata so older Loot/Missions/Tower Pass saves survive.
+	if from_version < 1:
+		cfg.set_value("system", "created_with", "pre-v1.0")
+	if from_version < 2:
+		cfg.set_value("system", "save_version", CURRENT_SAVE_VERSION)
+		cfg.set_value("system", "last_migration", "v1.0-rc1")
+	cfg.save(SAVE_PATH)
+
 func save_data() -> void:
 	var cfg := ConfigFile.new()
+	cfg.load(SAVE_PATH)
+	cfg.set_value("system", "save_version", CURRENT_SAVE_VERSION)
+	cfg.set_value("system", "game_version", "1.0.0-rc1")
 	cfg.set_value("progress", "best_floor", best_floor)
 	cfg.set_value("progress", "coins", coins)
 	cfg.set_value("meta", "hero_level", hero_level)
@@ -33,6 +52,9 @@ func save_data() -> void:
 	cfg.set_value("meta", "fortune_level", fortune_level)
 	cfg.save(SAVE_PATH)
 
+func save_version() -> int:
+	return CURRENT_SAVE_VERSION
+
 func hero_cost() -> int:
 	return 90 + (hero_level - 1) * 70
 
@@ -40,7 +62,7 @@ func forge_cost() -> int:
 	return 130 + forge_level * 105
 
 func talent_cost(kind: String) -> int:
-	var level := talent_level(kind)
+	var level: int = talent_level(kind)
 	return 160 + level * 130
 
 func talent_level(kind: String) -> int:
@@ -51,7 +73,7 @@ func talent_level(kind: String) -> int:
 	return 0
 
 func buy_hero() -> bool:
-	var cost := hero_cost()
+	var cost: int = hero_cost()
 	if coins < cost:
 		return false
 	coins -= cost
@@ -60,7 +82,7 @@ func buy_hero() -> bool:
 	return true
 
 func buy_forge() -> bool:
-	var cost := forge_cost()
+	var cost: int = forge_cost()
 	if coins < cost:
 		return false
 	coins -= cost
@@ -69,7 +91,7 @@ func buy_forge() -> bool:
 	return true
 
 func buy_talent(kind: String) -> bool:
-	var cost := talent_cost(kind)
+	var cost: int = talent_cost(kind)
 	if coins < cost:
 		return false
 	coins -= cost

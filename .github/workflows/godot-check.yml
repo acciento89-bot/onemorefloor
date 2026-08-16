@@ -27,22 +27,28 @@ jobs:
 
       - name: Check critical scripts
         run: |
+          ./godot --headless --path . --script res://scripts/progression.gd --check-only
           ./godot --headless --path . --script res://scripts/loot_system.gd --check-only
           ./godot --headless --path . --script res://scripts/enemy_factory.gd --check-only
           ./godot --headless --path . --script res://scripts/room_system.gd --check-only
+          ./godot --headless --path . --script res://scripts/settings_manager.gd --check-only
+          ./godot --headless --path . --script res://scripts/telemetry.gd --check-only
+          ./godot --headless --path . --script res://scripts/balance_profile.gd --check-only
+          ./godot --headless --path . --script res://scripts/release_audio.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v04.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v05.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v06.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v07.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v08.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v09.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v10.gd --check-only
 
       - name: Parse project headlessly
         run: |
           set -o pipefail
           ./godot --headless --editor --path . --quit 2>&1 | tee parse.log
-          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script" parse.log; then
-            echo "Godot reported script errors during project parse"
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|ERROR:.*audio" parse.log; then
+            echo "Godot reported script/resource errors during project parse"
             exit 1
           fi
 
@@ -60,3 +66,9 @@ jobs:
           set -o pipefail
           ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 120 | tee smoke.log
           grep -q "ONE MORE FLOOR gameplay smoke test passed" smoke.log
+
+      - name: Run v1.0 release smoke script
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/release_smoke_test.gd --quit-after 120 | tee release-smoke.log
+          grep -q "ONE MORE FLOOR v1.0 release smoke test passed" release-smoke.log
