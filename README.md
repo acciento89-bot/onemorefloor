@@ -21,75 +21,94 @@ Mobile hybrid-casual roguelite by **Kamilunavo Games**.
 - iOS / iPadOS and Android targets
 - GitHub Actions validation with direct script checks, headless import, main-scene launch and gameplay smoke test
 
-## Current playable slice — v0.8
+## Current playable slice — v0.9
 
-v0.8 turns the v0.7 external art pipeline into an authored combat-animation layer and upgrades the Vault from a simple equipment list into a practical build-management screen.
+v0.9 expands ONE MORE FLOOR to a third authored area and upgrades combat presentation from state snapshots to multi-frame directional motion.
 
-### Combat animation atlas
+### Directional motion atlas
 
-`assets/art/combat_atlas.svg` is a 500 × 800 external texture containing 40 authored combat cells:
+`assets/art/motion_atlas.svg` is a **1600 × 1200** external texture with 12 actor rows and mirrored directional frames.
 
-- 8 actor rows: Wanderer, Goblin, Bat, Skeleton, Ghoul, Necromancer, Warden and Crypt Keeper
-- 5 states per actor: **Idle, Move, Attack, Hit and Death**
+Each actor now has:
 
-`main_v08.gd` selects atlas regions at runtime using gameplay state instead of relying only on static textures.
+- Idle
+- Walk 1
+- Walk 2
+- Walk 3
+- Attack 1
+- Attack 2
+- Hit
+- Death
+- Right-facing and mirrored left-facing variants
 
-Animation events now react to actual combat:
+Current rows cover:
 
-- Player movement switches between Idle / Move.
-- Auto-attack triggers Attack.
-- NOVA uses the attack frame plus its own cyan skill treatment.
-- Player damage triggers Hit.
-- Enemy damage triggers Hit.
-- Recent contact/ranged/boss casts trigger Attack.
-- Enemy death creates a short Death-frame actor effect before disappearing.
-- The Game Over screen uses the Wanderer Death frame.
-- Elite, rage and boss Phase-II effects remain layered over the animated actors.
+- Wanderer
+- Goblin
+- Bat
+- Skeleton
+- Ghoul
+- Necromancer
+- The Warden
+- The Crypt Keeper
+- Gargoyle
+- Royal Sentinel
+- Hexer
+- The Hollow King
 
-The original v0.7 standalone SVGs and v0.6 procedural drawing remain available as fallback paths.
+Gameplay events select real sequence frames: movement cycles through three walk frames, attacks alternate two attack frames, incoming damage uses Hit, and death uses a dedicated Death frame. Player facing follows movement and auto-attack target direction.
 
-### Areas and bosses
+The v0.8 combat atlas, v0.7 standalone SVGs and v0.6 procedural drawing remain fallback layers.
+
+### Areas
 
 - **Dungeon** — Floors 1–10
 - **Crypt** — Floors 11–20
-- **Deep Tower** — reserved routing for Floor 21+
+- **Forgotten Castle** — Floors 21–30
+- **Deep Tower** — reserved for Floor 31+
 
-Current bosses:
+### Forgotten Castle
 
-- **The Warden** — recurring milestone boss with telegraphs and Phase II
-- **The Crypt Keeper** — dedicated Floor-20 boss with cyan-purple radial and fan patterns
+The Castle is not only a visual reskin. It adds its own room treatment, hazards and enemy behaviors.
+
+Hazards:
+
+- **Falling Masonry** — vertical debris salvos across the arena
+- **Cursed Banners** — paired red/purple projectile pressure from both walls
+
+Enemy roster:
+
+- **Gargoyle** — closes distance normally, then performs timed high-speed dives
+- **Royal Sentinel** — slow armored melee unit with 30% incoming-damage guard
+- **Hexer** — ranged triple-shot caster with periodic battlefield blinks
+- Skeletons remain as part of the ruined-castle population
+
+### Bosses
+
+- **The Warden** — recurring milestone boss
+- **The Crypt Keeper** — dedicated Floor-20 boss
+- **The Hollow King** — dedicated Floor-30 boss
+
+The Hollow King has:
+
+- custom gold/red boss presentation
+- teleport bursts around the arena
+- alternating Crown radial and aimed Fan casts
+- denser Phase-II projectile patterns
+- Phase II below 55% HP
+- dedicated intro and motion-atlas row
 
 ### Advanced Vault + Forge
 
-v0.8 adds safer and faster gear management:
-
-- Item **Lock / Unlock**
+- Item Lock / Unlock
 - Locked gear cannot be dismantled
-- Filters: **All / Weapon / Armor / Relic**
-- Sort modes: **Rarity / Level / Score**
-- Persistent chosen sort mode
-- Item score derived from rarity, level, primary stats, trait and set presence
-- Selected-vs-equipped comparison panel
-- Live score delta for the selected slot
-- Explicit Equip and Dismantle actions
-- Paging for filtered inventory views
-- Existing targeted Weapon / Armor / Relic crafting remains available
-
-### Loot economy
-
-Equipment uses Common, Uncommon, Rare, Epic and Legendary rarities.
-
-Soul Shard dismantle values:
-
-- Common: 5
-- Uncommon: 12
-- Rare: 30
-- Epic: 70
-- Legendary: 160
-
-Crafting costs 120 Soul Shards and guarantees Rare+ gear.
-
-Rare+ items can roll Executioner, Frenzy, Bulwark, Vital Core, Vampiric or Fortune traits. Ember, Crypt and Warden sets provide real two-piece and three-piece run bonuses.
+- All / Weapon / Armor / Relic filters
+- Rarity / Level / Score sorting
+- Persistent sort mode
+- Selected-vs-equipped score comparison
+- Soul Shard dismantling
+- Targeted Rare+ Weapon / Armor / Relic crafting
+- Traits and Ember / Crypt / Warden sets
 
 ### Permanent progression
 
@@ -102,19 +121,24 @@ Rare+ items can roll Executioner, Frenzy, Bulwark, Vital Core, Vampiric or Fortu
 
 ## Validation
 
-The Godot 4.7.1 CI pipeline validates:
+Godot 4.7.1 CI validates:
 
-1. Direct parser checks through the active `main_v08.gd` controller.
-2. Headless project/editor import with script errors treated as failures.
+1. Direct parser checks through `main_v09.gd`.
+2. Headless project/editor import.
 3. Main-scene runtime launch.
-4. All standalone SVG character imports.
-5. The 500 × 800 combat atlas import.
-6. Item locking and locked-item dismantle protection.
-7. Slot filtering, score sorting and selected-vs-equipped comparison.
-8. Soul Shard dismantling and guaranteed Rare+ crafting.
-9. Player Attack / Hit / NOVA animation state triggers.
-10. Enemy Hit and Death animation event paths.
-11. Existing Crypt routing, Treasure rewards, Missions, Tower Pass, Crypt Keeper, standard Warden, equipment bonuses and cash-out regressions.
+4. Standalone SVG imports plus v0.8 combat atlas.
+5. 1600 × 1200 v0.9 motion-atlas import.
+6. Multi-frame motion mapping and left/right player facing.
+7. Item locking, filtering, sorting and equipment comparison.
+8. Soul Shard dismantling and Rare+ crafting.
+9. Dungeon and Crypt regressions.
+10. Forgotten Castle routing and Castle enemy pools.
+11. Gargoyle / Sentinel / Hexer factory paths.
+12. Falling Masonry hazard.
+13. Royal Sentinel guard reduction.
+14. Floor-30 Hollow King spawn, intro and Phase II.
+15. Standard Warden and Crypt Keeper regressions.
+16. Missions, Tower Pass, equipment bonuses and cash-out.
 
 ## Run locally
 
@@ -130,11 +154,11 @@ The Godot 4.7.1 CI pipeline validates:
 - [x] Project foundation and vertical-slice loop
 - [x] Touch movement / auto attack / projectile combat
 - [x] Run upgrades and risk/reward decision
-- [x] Warden + Crypt Keeper boss encounters
 - [x] Haptics and first procedural audio feedback
 - [x] External production vector asset pass
-- [x] Multi-state combat atlas with Idle / Move / Attack / Hit / Death
-- [ ] Higher-frame-count walk / attack sequences and directional variants
+- [x] Multi-state combat atlas
+- [x] Higher-frame-count walk / attack sequences
+- [x] Directional left/right variants
 - [ ] Production audio / music
 
 ### Phase 2 — Meta progression
@@ -155,14 +179,17 @@ The Godot 4.7.1 CI pipeline validates:
 - [ ] Cloud save
 
 ### Phase 4 — Content
-- [x] Dungeon area prototype
-- [x] Crypt area prototype
+- [x] Dungeon — Floors 1–10
+- [x] Crypt — Floors 11–20
+- [x] Forgotten Castle — Floors 21–30
 - [x] Combat / Ambush / Elite / Treasure rooms
 - [x] Ghoul and Necromancer
+- [x] Gargoyle / Royal Sentinel / Hexer
+- [x] The Warden
 - [x] The Crypt Keeper
-- [ ] Forgotten Castle — Floors 21–30
+- [x] The Hollow King
+- [ ] Floor 31+ area
 - [ ] More heroes
-- [ ] Third authored boss
 - [ ] Upgrade synergies and room events
 
 ## Repository layout
@@ -170,17 +197,18 @@ The Godot 4.7.1 CI pipeline validates:
 ```text
 .github/                  CI validation
 scenes/                   Godot scenes
-assets/art/               Standalone SVGs + combat animation atlas
+assets/art/               Standalone SVGs + combat/motion atlases
 scripts/main_v03.gd       Combat/meta controller
 scripts/main_v04.gd       Loot/Missions/Tower Pass extension
 scripts/main_v05.gd       Crypt/rooms/traits extension
 scripts/main_v06.gd       Visual baseline / Crypt Keeper extension
 scripts/main_v07.gd       External asset renderer + Soul Shard crafting
 scripts/main_v08.gd       Combat atlas state renderer + advanced Vault UX
+scripts/main_v09.gd       Forgotten Castle + directional motion + Hollow King
 scripts/progression.gd    Permanent Camp progression and save data
 scripts/run_profile.gd    Per-run player/build state
 scripts/enemy_factory.gd  Enemy creation, scaling, elites and boss variants
-scripts/room_system.gd    Area routing and room generation
+scripts/room_system.gd    Area routing, rooms and hazards
 scripts/loot_system.gd    Gear, traits, sets, locks, score, Soul Shards and crafting
 scripts/mission_system.gd Daily/weekly mission progress and claims
 scripts/tower_pass.gd     Free Tower Pass XP and rewards
