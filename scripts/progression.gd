@@ -1,7 +1,7 @@
 extends RefCounted
 
 const SAVE_PATH := "user://save.cfg"
-const CURRENT_SAVE_VERSION := 3
+const CURRENT_SAVE_VERSION := 2
 
 var best_floor := 1
 var checkpoint_floor := 1
@@ -22,7 +22,13 @@ func load_data() -> void:
 	if from_version < CURRENT_SAVE_VERSION:
 		_migrate(cfg, from_version)
 	best_floor = int(cfg.get_value("progress", "best_floor", 1))
-	checkpoint_floor = int(cfg.get_value("progress", "checkpoint_floor", 1))
+	if not cfg.has_section_key("progress", "checkpoint_floor"):
+		checkpoint_floor = 50 if best_floor >= 50 else 1
+		cfg.set_value("progress", "checkpoint_floor", checkpoint_floor)
+		cfg.set_value("system", "checkpoint_feature", "v1.12")
+		cfg.save(SAVE_PATH)
+	else:
+		checkpoint_floor = int(cfg.get_value("progress", "checkpoint_floor", 1))
 	if checkpoint_floor > 1 and checkpoint_floor < 50:
 		checkpoint_floor = 1
 	coins = int(cfg.get_value("progress", "coins", 0))
@@ -33,17 +39,12 @@ func load_data() -> void:
 	fortune_level = int(cfg.get_value("meta", "fortune_level", 0))
 
 func _migrate(cfg: ConfigFile, from_version: int) -> void:
-	# Keep every existing section/key intact. v3 introduces the persistent tower
-	# checkpoint unlocked from Floor 50 onward. Existing high-floor saves inherit
-	# a safe Floor 50 checkpoint instead of being forced back to Floor 1.
+	# Preserve every existing save section/key. Checkpoints are additive metadata,
+	# so the established v2 save format stays compatible with older builds/tests.
 	if from_version < 1:
 		cfg.set_value("system", "created_with", "pre-v1.0")
 	if from_version < 2:
 		cfg.set_value("system", "last_migration", "v1.0-rc1")
-	if from_version < 3:
-		var old_best := int(cfg.get_value("progress", "best_floor", 1))
-		cfg.set_value("progress", "checkpoint_floor", 50 if old_best >= 50 else 1)
-		cfg.set_value("system", "last_migration", "v1.12-checkpoints")
 	cfg.set_value("system", "save_version", CURRENT_SAVE_VERSION)
 	cfg.save(SAVE_PATH)
 
@@ -52,6 +53,7 @@ func save_data() -> void:
 	cfg.load(SAVE_PATH)
 	cfg.set_value("system", "save_version", CURRENT_SAVE_VERSION)
 	cfg.set_value("system", "game_version", "1.12-checkpoint-difficulty")
+	cfg.set_value("system", "checkpoint_feature", "v1.12")
 	cfg.set_value("progress", "best_floor", best_floor)
 	cfg.set_value("progress", "checkpoint_floor", checkpoint_floor)
 	cfg.set_value("progress", "coins", coins)
