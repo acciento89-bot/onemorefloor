@@ -61,10 +61,10 @@ func start_run() -> void:
 		run.crit_mult += float(meta.mastery_crit_mult_bonus())
 
 func continue_run() -> void:
-	var sigils_before := int(meta.ascension_sigils) if meta != null and "ascension_sigils" in meta else 0
+	var sigils_before: int = int(meta.ascension_sigils) if meta != null else 0
 	super.continue_run()
-	if meta != null and "ascension_sigils" in meta:
-		var gained := int(meta.ascension_sigils) - sigils_before
+	if meta != null:
+		var gained: int = int(meta.ascension_sigils) - sigils_before
 		if gained > 0:
 			loot_notice = "ASCENSION MILESTONE — +%d SIGIL%s" % [gained, "" if gained == 1 else "S"]
 			loot_notice_color = C_GOLD
@@ -86,15 +86,15 @@ func _v31_prepare_floor_contract() -> void:
 	v31_challenge_target = 0.0
 	if run == null:
 		return
-	var floor_no := int(run.floor_no)
-	var room_type := String(current_room.get("type", "COMBAT"))
+	var floor_no: int = int(run.floor_no)
+	var room_type: String = String(current_room.get("type", "COMBAT"))
 	if floor_no < 6 or room_type in ["BOSS", "TREASURE"] or enemies.is_empty():
 		return
-	var chance := minf(0.38, 0.16 + float(floor_no) * 0.0011)
-	var guaranteed := floor_no % 10 == 7
+	var chance: float = minf(0.38, 0.16 + float(floor_no) * 0.0011)
+	var guaranteed: bool = floor_no % 10 == 7
 	if not guaranteed and rng.randf() > chance:
 		return
-	var pool := ["RUSH", "HUNTED", "FRAGILE", "OVERLOAD"]
+	var pool: Array[String] = ["RUSH", "HUNTED", "FRAGILE", "OVERLOAD"]
 	v31_challenge_type = String(pool[rng.randi_range(0, pool.size() - 1)])
 	v31_challenge_active = true
 	v31_challenge_floor = floor_no
@@ -108,7 +108,7 @@ func _v31_prepare_floor_contract() -> void:
 				e["speed"] = float(e.get("speed", 1.0)) * 1.10
 				enemies[i] = e
 		"HUNTED":
-			var idx := rng.randi_range(0, enemies.size() - 1)
+			var idx: int = rng.randi_range(0, enemies.size() - 1)
 			var target: Dictionary = enemies[idx]
 			target["max_hp"] = float(target.get("max_hp", target.get("hp", 1.0))) * 2.15
 			target["hp"] = float(target["max_hp"])
@@ -133,7 +133,7 @@ func damage_player(raw_damage: float, source: Vector2) -> void:
 	super.damage_player(raw_damage, source)
 
 func roll_upgrade_options() -> void:
-	var contract_result := _v31_resolve_floor_contract()
+	var contract_result: String = _v31_resolve_floor_contract()
 	super.roll_upgrade_options()
 	if contract_result != "":
 		loot_notice = contract_result
@@ -144,10 +144,10 @@ func roll_upgrade_options() -> void:
 func _v31_resolve_floor_contract() -> String:
 	if not v31_challenge_active or run == null or int(run.floor_no) != v31_challenge_floor:
 		return ""
-	var success := true
+	var success: bool = true
 	if v31_challenge_type == "RUSH":
 		success = v31_challenge_elapsed <= v31_challenge_target
-	var title := v31_challenge_type
+	var title: String = v31_challenge_type
 	v31_challenge_active = false
 	if not success:
 		return "%s CONTRACT FAILED — %.1fs" % [title, v31_challenge_elapsed]
@@ -180,7 +180,7 @@ func _v23_maybe_prepare_room_event() -> void:
 	super._v23_maybe_prepare_room_event()
 	if run == null or int(run.floor_no) < 10:
 		return
-	var new_events := ["cursed_gate", "mirror_chamber", "gamblers_reliquary"]
+	var new_events: Array[String] = ["cursed_gate", "mirror_chamber", "gamblers_reliquary"]
 	if room_event_active:
 		# About a third of existing events in the deeper tower become one of the
 		# new high-risk event families, keeping the overall event cadence stable.
@@ -206,7 +206,7 @@ func _v23_set_room_event(kind: String) -> void:
 			super._v23_set_room_event(kind)
 
 func _v23_event_choices() -> Array[Dictionary]:
-	var kind := String(room_event.get("type", ""))
+	var kind: String = String(room_event.get("type", ""))
 	if kind == "cursed_gate":
 		return [
 			{"title":"EMBRACE THE CURSE", "desc":"-10% max HP • +25% damage • +20% run coin multiplier", "accent":C_RED},
@@ -220,7 +220,7 @@ func _v23_event_choices() -> Array[Dictionary]:
 			{"title":"SHATTER MIRROR", "desc":"Lose 20% current HP • gain persistent Soul Shards", "accent":C_CYAN},
 		]
 	if kind == "gamblers_reliquary":
-		var item_cost := 85 + int(run.floor_no) * 4
+		var item_cost: int = 85 + int(run.floor_no) * 4
 		return [
 			{"title":"WAGER 20% COINS", "desc":"50/50: lose the wager or win triple", "accent":C_ORANGE},
 			{"title":"BUY RELIQUARY CACHE", "desc":"%d run coins • guaranteed gear drop" % item_cost, "accent":C_GOLD},
@@ -229,13 +229,13 @@ func _v23_event_choices() -> Array[Dictionary]:
 	return super._v23_event_choices()
 
 func _v23_resolve_room_event(index: int) -> void:
-	var kind := String(room_event.get("type", ""))
+	var kind: String = String(room_event.get("type", ""))
 	if not kind in ["cursed_gate", "mirror_chamber", "gamblers_reliquary"]:
 		super._v23_resolve_room_event(index)
 		return
 	if index < 0 or index > 2 or not room_event_active:
 		return
-	var result := "EVENT PASSED"
+	var result: String = "EVENT PASSED"
 	if kind == "cursed_gate":
 		if index == 0:
 			run.max_hp = maxf(40.0, run.max_hp * 0.90)
@@ -244,7 +244,7 @@ func _v23_resolve_room_event(index: int) -> void:
 			run_modifier_coin_mult *= 1.20
 			result = "CURSED GATE — CURSE EMBRACED"
 		elif index == 1:
-			var payment := int(round(float(run.run_coins) * 0.25))
+			var payment: int = int(round(float(run.run_coins) * 0.25))
 			run.run_coins = maxi(0, run.run_coins - payment)
 			run.armor = minf(0.62, run.armor + 0.07)
 			run.crit_chance = minf(0.70, run.crit_chance + 0.05)
@@ -253,10 +253,10 @@ func _v23_resolve_room_event(index: int) -> void:
 			result = "CURSED GATE — LEFT SEALED"
 	elif kind == "mirror_chamber":
 		if index == 0:
-			var best_kind := "power"
-			var best_count := -1
+			var best_kind: String = "power"
+			var best_count: int = -1
 			for key in run.upgrade_counts.keys():
-				var count := int(run.upgrade_counts[key])
+				var count: int = int(run.upgrade_counts[key])
 				if count > best_count:
 					best_count = count
 					best_kind = String(key)
@@ -267,14 +267,14 @@ func _v23_resolve_room_event(index: int) -> void:
 			run.hp = run.max_hp
 			result = "MIRROR — LIFE REFLECTED"
 		else:
-			var gained := 7 + int(run.floor_no / 8)
+			var gained: int = 7 + int(run.floor_no / 8)
 			run.hp = maxf(1.0, run.hp * 0.80)
 			loot.shards += gained
 			loot.save_data()
 			result = "MIRROR SHATTERED — +%d SHARDS" % gained
 	else:
 		if index == 0:
-			var wager := int(round(float(run.run_coins) * 0.20))
+			var wager: int = int(round(float(run.run_coins) * 0.20))
 			if wager <= 0:
 				result = "RELIQUARY — NOTHING TO WAGER"
 			elif rng.randf() < 0.50:
@@ -284,14 +284,14 @@ func _v23_resolve_room_event(index: int) -> void:
 				run.run_coins += wager * 2
 				result = "RELIQUARY — WON %d COINS" % (wager * 2)
 		elif index == 1:
-			var cost := 85 + int(run.floor_no) * 4
+			var cost: int = 85 + int(run.floor_no) * 4
 			if run.run_coins < cost:
 				loot_notice = "NOT ENOUGH RUN COINS"
 				loot_notice_color = C_RED
 				loot_notice_time = 1.4
 				return
 			run.run_coins -= cost
-			var item := loot.roll_drop("warden", int(run.floor_no), rng)
+			var item: Dictionary = loot.roll_drop("warden", int(run.floor_no), rng)
 			result = "RELIQUARY CACHE — %s" % String(item.get("name", "GEAR"))
 		else:
 			result = "RELIQUARY — NO WAGER"
@@ -317,12 +317,12 @@ func _v31_set_loot_notice(message: String, color: Color) -> void:
 	loot_notice_time = 2.2
 
 func _v31_enhance_selected() -> void:
-	var index := _v31_selected_vault_index()
+	var index: int = _v31_selected_vault_index()
 	if index < 0:
 		_v31_set_loot_notice("SELECT AN ITEM FIRST", C_MUTED)
 		return
 	var item: Dictionary = loot.inventory[index]
-	var cost := int(loot.enhance_cost(item))
+	var cost: int = int(loot.enhance_cost(item))
 	if loot.enhance_index(index):
 		_v31_set_loot_notice("ENHANCED %s  +%d" % [String(loot.inventory[index]["name"]), int(loot.inventory[index].get("enhance_level", 0))], C_GREEN)
 		_audio("claim")
@@ -330,12 +330,12 @@ func _v31_enhance_selected() -> void:
 		_v31_set_loot_notice("ENHANCE NEEDS %d SHARDS OR IS MAXED" % cost, C_RED)
 
 func _v31_enchant_selected() -> void:
-	var index := _v31_selected_vault_index()
+	var index: int = _v31_selected_vault_index()
 	if index < 0:
 		_v31_set_loot_notice("SELECT AN ITEM FIRST", C_MUTED)
 		return
 	var item: Dictionary = loot.inventory[index]
-	var cost := int(loot.enchant_cost(item))
+	var cost: int = int(loot.enchant_cost(item))
 	if loot.enchant_index(index, rng):
 		_v31_set_loot_notice("ENCHANTED — %s" % String(loot.inventory[index].get("trait", "")), C_PURPLE)
 		_audio("claim")
@@ -343,12 +343,12 @@ func _v31_enchant_selected() -> void:
 		_v31_set_loot_notice("ENCHANT NEEDS RARE+ AND %d SHARDS" % cost, C_RED)
 
 func _v31_awaken_selected() -> void:
-	var index := _v31_selected_vault_index()
+	var index: int = _v31_selected_vault_index()
 	if index < 0:
 		_v31_set_loot_notice("SELECT AN ITEM FIRST", C_MUTED)
 		return
 	var item: Dictionary = loot.inventory[index]
-	var cost := int(loot.awaken_cost(item))
+	var cost: int = int(loot.awaken_cost(item))
 	if loot.awaken_index(index):
 		var awakened: Dictionary = loot.inventory[index]
 		_v31_set_loot_notice("AWAKENED — %s %s" % [String(awakened["rarity"]), String(awakened["name"])], rarity_color(String(awakened["rarity"])))
@@ -358,14 +358,14 @@ func _v31_awaken_selected() -> void:
 
 func draw_vault_screen() -> void:
 	super.draw_vault_screen()
-	var index := _v31_selected_vault_index()
-	var has_item := index >= 0 and index < loot.inventory.size()
-	var enhance_label := "ENHANCE"
-	var enchant_label := "ENCHANT"
-	var awaken_label := "AWAKEN"
-	var can_enhance := false
-	var can_enchant := false
-	var can_awaken := false
+	var index: int = _v31_selected_vault_index()
+	var has_item: bool = index >= 0 and index < loot.inventory.size()
+	var enhance_label: String = "ENHANCE"
+	var enchant_label: String = "ENCHANT"
+	var awaken_label: String = "AWAKEN"
+	var can_enhance: bool = false
+	var can_enchant: bool = false
+	var can_awaken: bool = false
 	if has_item:
 		var item: Dictionary = loot.inventory[index]
 		enhance_label = "ENHANCE  %d" % int(loot.enhance_cost(item))
@@ -388,7 +388,7 @@ func draw_talents_screen() -> void:
 	if v31_mastery_open:
 		_v31_draw_mastery_overlay()
 		return
-	var sigils := int(meta.ascension_sigils) if meta != null and "ascension_sigils" in meta else 0
+	var sigils: int = int(meta.ascension_sigils) if meta != null else 0
 	_v16_frame(Rect2(106, 292, 508, 116), V16_GOLD, Color("07101d"), 0.15)
 	_v16_center("ASCENSION SIGILS  %d" % sigils, 326, 15, V16_GOLD_HI, true)
 	_v16_center("Warpath %d   •   Guardian %d   •   Arcana %d" % [int(meta.mastery_level("warpath")), int(meta.mastery_level("guardian")), int(meta.mastery_level("arcana"))], 354, 12, V16_MUTED)
@@ -399,29 +399,29 @@ func _v31_draw_mastery_overlay() -> void:
 	_v16_frame(Rect2(52, 170, 616, 914), V16_PURPLE, Color("050a14"), 0.24)
 	_v16_title("ASCENSION MASTERY", 246, 37, V16_GOLD)
 	_v16_center("SIGILS  %d" % int(meta.ascension_sigils), 292, 17, V16_GOLD_HI)
-	var names := ["WARPATH", "GUARDIAN", "ARCANA"]
-	var descs := [
+	var names: Array[String] = ["WARPATH", "GUARDIAN", "ARCANA"]
+	var descs: Array[String] = [
 		"+6% permanent damage / rank",
 		"+11 starting HP +0.8% armor / rank",
 		"+8% NOVA +0.4% crit +crit damage / rank",
 	]
-	var accents := [V16_ORANGE, V16_GREEN, V16_PURPLE]
+	var accents: Array[Color] = [V16_ORANGE, V16_GREEN, V16_PURPLE]
 	for i in range(3):
-		var kind := String(V31_MASTERY_KINDS[i])
+		var kind: String = String(V31_MASTERY_KINDS[i])
 		var r: Rect2 = V31_MASTERY_RECTS[i]
 		var accent: Color = accents[i]
 		_v16_frame(r, accent, Color(accent, 0.07), 0.16)
-		_v16_text(names[i], r.position + Vector2(28, 46), 22, V16_TEXT, true)
+		_v16_text(String(names[i]), r.position + Vector2(28, 46), 22, V16_TEXT, true)
 		_v16_text("RANK %d" % int(meta.mastery_level(kind)), r.position + Vector2(28, 77), 14, accent)
-		_v16_text(descs[i], r.position + Vector2(28, 108), 13, V16_MUTED)
-		var cost := int(meta.mastery_cost(kind))
+		_v16_text(String(descs[i]), r.position + Vector2(28, 108), 13, V16_MUTED)
+		var cost: int = int(meta.mastery_cost(kind))
 		_v16_text("TAP TO UPGRADE • %d SIGIL%s" % [cost, "" if cost == 1 else "S"], r.position + Vector2(320, 79), 13, V16_GOLD_HI)
 	_v16_button(V31_MASTERY_CLOSE, "BACK TO TALENTS", V16_PURPLE, 15)
 
 func _v31_buy_mastery(index: int) -> void:
 	if index < 0 or index >= V31_MASTERY_KINDS.size():
 		return
-	var kind := String(V31_MASTERY_KINDS[index])
+	var kind: String = String(V31_MASTERY_KINDS[index])
 	if meta.buy_mastery(kind):
 		_v31_set_loot_notice("%s MASTERY — RANK %d" % [kind.to_upper(), int(meta.mastery_level(kind))], C_GOLD)
 		_audio("claim")
@@ -473,9 +473,9 @@ func draw_game() -> void:
 	draw_rect(Rect2(38, 252, 644, 108), Color(0.018, 0.025, 0.055, 0.94))
 	draw_line(Vector2(52, 258), Vector2(668, 258), Color(V16_PURPLE, 0.45), 1.0)
 	draw_line(Vector2(52, 326), Vector2(668, 326), Color(V16_PURPLE, 0.30), 1.0)
-	var modifier := run_modifier if run_modifier != "NONE" else "STANDARD"
-	var ascension := "ASCENSION %d" % _v27_ascension_tier()
-	var contract := _v31_contract_label()
+	var modifier: String = run_modifier if run_modifier != "NONE" else "STANDARD"
+	var ascension: String = "ASCENSION %d" % _v27_ascension_tier()
+	var contract: String = _v31_contract_label()
 	draw_string(font, Vector2(54, 293), modifier, HORIZONTAL_ALIGNMENT_CENTER, 196, 12, V16_PURPLE_HI)
 	draw_string(font, Vector2(262, 293), ascension, HORIZONTAL_ALIGNMENT_CENTER, 196, 12, V16_GOLD_HI)
 	draw_string(font, Vector2(470, 293), contract, HORIZONTAL_ALIGNMENT_CENTER, 196, 12, C_CYAN if v31_challenge_active else V16_MUTED)
