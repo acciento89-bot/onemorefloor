@@ -9,11 +9,13 @@ on:
       - 'export_presets.cfg'
       - 'project.godot'
       - '.github/workflows/ios-testflight.yml'
+      - 'assets/audio/**'
   pull_request:
     paths:
       - 'export_presets.cfg'
       - 'project.godot'
       - '.github/workflows/ios-testflight.yml'
+      - 'assets/audio/**'
 
 permissions:
   contents: read
@@ -75,22 +77,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          "$GODOT" --headless --editor --path . --quit
+          "$GODOT" --headless --editor --path . --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
 
       - name: Export Godot Xcode project
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p build/ios
-          rm -f build/ios/OneMoreFloor.zip
+          rm -rf build/ios/OneMoreFloor build/ios/OneMoreFloor.xcodeproj build/ios/OneMoreFloor.xcframework build/ios/MoltenVK.xcframework build/ios/PrivacyInfo.xcprivacy
+          rm -f build/ios/OneMoreFloor-Xcode.zip
           "$GODOT" --headless --path . --export-release "iOS Playtest" build/ios/OneMoreFloor.zip
-          test -s build/ios/OneMoreFloor.zip
-          rm -rf build/ios/xcode
-          mkdir -p build/ios/xcode
-          unzip -q build/ios/OneMoreFloor.zip -d build/ios/xcode
-          PROJECT=$(find build/ios/xcode -name '*.xcodeproj' -print -quit)
-          test -n "$PROJECT"
+          test -d build/ios/OneMoreFloor.xcodeproj
+          test -d build/ios/OneMoreFloor
+          PROJECT="build/ios/OneMoreFloor.xcodeproj"
           echo "XCODE_PROJECT=$PROJECT" >> "$GITHUB_ENV"
+          ditto -c -k --sequesterRsrc --keepParent build/ios/OneMoreFloor.xcodeproj "$RUNNER_TEMP/OneMoreFloor-project.zip"
+          rm -rf "$RUNNER_TEMP/xcode-package"
+          mkdir -p "$RUNNER_TEMP/xcode-package"
+          cp -R build/ios/OneMoreFloor build/ios/OneMoreFloor.xcodeproj build/ios/OneMoreFloor.xcframework "$RUNNER_TEMP/xcode-package/"
+          if [[ -d build/ios/MoltenVK.xcframework ]]; then cp -R build/ios/MoltenVK.xcframework "$RUNNER_TEMP/xcode-package/"; fi
+          if [[ -f build/ios/PrivacyInfo.xcprivacy ]]; then cp build/ios/PrivacyInfo.xcprivacy "$RUNNER_TEMP/xcode-package/"; fi
+          ditto -c -k --sequesterRsrc "$RUNNER_TEMP/xcode-package" build/ios/OneMoreFloor-Xcode.zip
+          test -s build/ios/OneMoreFloor-Xcode.zip
           echo "Generated Xcode project: $PROJECT"
 
       - name: Inspect generated Xcode project
@@ -106,8 +114,7 @@ jobs:
           project=d.get('project', {})
           schemes=project.get('schemes') or []
           targets=project.get('targets') or []
-          value=(schemes[0] if schemes else (targets[0] if targets else ''))
-          print(value)
+          print(schemes[0] if schemes else (targets[0] if targets else ''))
           PY
           )
           test -n "$SCHEME"
@@ -144,7 +151,7 @@ jobs:
         with:
           name: one-more-floor-ios-playtest
           path: |
-            build/ios/OneMoreFloor.zip
+            build/ios/OneMoreFloor-Xcode.zip
             build/ios/OneMoreFloor-Simulator.app.zip
           if-no-files-found: error
           retention-days: 14
@@ -163,7 +170,7 @@ jobs:
             echo 'App Store Connect signing secrets are available; TestFlight stage enabled.'
           else
             echo 'available=false' >> "$GITHUB_OUTPUT"
-            echo 'ASC_ISSUER_ID / ASC_KEY_ID / ASC_PRIVATE_KEY_B64 are not all available in this repository. Xcode + Simulator artifacts are still valid; TestFlight upload is skipped.'
+            echo 'ASC_ISSUER_ID / ASC_KEY_ID / ASC_PRIVATE_KEY_B64 are not all available in this repository. Xcode + Simulator artifacts are valid; TestFlight upload is skipped.'
           fi
 
       - name: Prepare App Store Connect API key
@@ -201,10 +208,7 @@ jobs:
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             archive
-          APP="$RUNNER_TEMP/OneMoreFloor.xcarchive/Products/Applications/OneMoreFloor.app"
-          if [[ ! -d "$APP" ]]; then
-            APP=$(find "$RUNNER_TEMP/OneMoreFloor.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' -type d -print -quit)
-          fi
+          APP=$(find "$RUNNER_TEMP/OneMoreFloor.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' -type d -print -quit)
           test -n "$APP" -a -d "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
           codesign -dvv "$APP" 2>&1 | grep -E 'Identifier=|Authority=|TeamIdentifier=' || true
