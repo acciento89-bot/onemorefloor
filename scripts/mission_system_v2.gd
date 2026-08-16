@@ -1,12 +1,12 @@
 extends "res://scripts/mission_system.gd"
 
 # v1.19 — Missions 2.0
-# Three Daily + three Weekly contracts rotate each period. Advanced objectives are
-# gated by the player's progression so a new account never rolls an impossible
-# Awaken/Enchant mission. Completing the whole set unlocks a completion chest.
+# The first Daily stays a simple combat anchor; the other slots rotate. Advanced
+# objectives are progression-gated so a new account never rolls an impossible
+# Awaken/Enchant mission. Completing each full set unlocks a completion chest.
 
 const DAILY_POOL: Array[Dictionary] = [
-	{"id":"d_kills_30","title":"Tower Cleanup","event":"kills","goal":30,"coins":95,"xp":48,"min_floor":1},
+	{"id":"d_kills","title":"Tower Cleanup","event":"kills","goal":25,"coins":95,"xp":48,"min_floor":1},
 	{"id":"d_floors_8","title":"Keep Climbing","event":"floors","goal":8,"coins":105,"xp":52,"min_floor":1},
 	{"id":"d_cash_220","title":"Bring It Home","event":"cash","goal":220,"coins":125,"xp":62,"min_floor":1},
 	{"id":"d_wardens_1","title":"Break the Gatekeeper","event":"wardens","goal":1,"coins":145,"xp":70,"min_floor":1},
@@ -81,7 +81,7 @@ func _eligible(pool: Array[Dictionary]) -> Array[Dictionary]:
 			out.append(mission)
 	return out
 
-func _rotated(pool: Array[Dictionary], key: String, count: int, _step: int) -> Array:
+func _rotated(pool: Array[Dictionary], key: String, count: int) -> Array:
 	var out: Array = []
 	if pool.is_empty():
 		return out
@@ -94,11 +94,20 @@ func _rotated(pool: Array[Dictionary], key: String, count: int, _step: int) -> A
 
 func all_daily() -> Array:
 	_refresh_periods()
-	return _rotated(_eligible(DAILY_POOL), daily_key, 3, 5)
+	var eligible: Array[Dictionary] = _eligible(DAILY_POOL)
+	if eligible.is_empty():
+		return []
+	var out: Array = [DAILY_POOL[0]]
+	var rotating: Array[Dictionary] = []
+	for mission in eligible:
+		if String(mission.get("id", "")) != "d_kills":
+			rotating.append(mission)
+	out.append_array(_rotated(rotating, daily_key, 2))
+	return out
 
 func all_weekly() -> Array:
 	_refresh_periods()
-	return _rotated(_eligible(WEEKLY_POOL), weekly_key, 3, 3)
+	return _rotated(_eligible(WEEKLY_POOL), weekly_key, 3)
 
 func record(event: String, amount: int = 1) -> void:
 	_refresh_periods()
