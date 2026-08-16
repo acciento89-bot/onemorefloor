@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#050407"/><stop offset=".48" stop-color="#120b0b"/><stop offset="1" stop-color="#040305"/></linearGradient>
+ <radialGradient id="heat"><stop stop-color="#ffb33c" stop-opacity=".28"/><stop offset=".35" stop-color="#c85817" stop-opacity=".16"/><stop offset="1" stop-color="#1a0804" stop-opacity="0"/></radialGradient>
+ <linearGradient id="stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#302323"/><stop offset=".48" stop-color="#161014"/><stop offset="1" stop-color="#080609"/></linearGradient>
+ <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#3a3c47"/><stop offset=".48" stop-color="#d5d7dd"/><stop offset="1" stop-color="#3a3c47"/></linearGradient>
+</defs>
+<rect width="720" height="1280" fill="url(#bg)"/>
+<ellipse cx="360" cy="430" rx="330" ry="360" fill="url(#heat)"/>
+<!-- stone furnace arch -->
+<g fill="url(#stone)" stroke="#4d2c20" stroke-width="3">
+ <path d="M72 890V355q0-220 288-220t288 220v535h-92V380q0-142-196-142T164 380v510z"/>
+ <path d="M126 364h468v62H126z" opacity=".9"/>
+</g>
+<g fill="none" stroke="#7e3a17" opacity=".45">
+ <circle cx="360" cy="410" r="210" stroke-width="3"/><circle cx="360" cy="410" r="176"/><circle cx="360" cy="410" r="142"/>
+ <path d="M213 410h294M360 263v294M256 306l208 208M256 514l208-208"/>
+</g>
+<!-- chains -->
+<g fill="none" stroke="#2d2527" stroke-width="12" opacity=".9">
+ <path d="M45 0c60 90-12 142 42 224s-6 151 42 230"/><path d="M675 0c-60 90 12 142-42 224s6 151-42 230"/>
+</g>
+<g fill="none" stroke="#5d3a25" stroke-width="2" opacity=".8"><path d="M45 0c60 90-12 142 42 224s-6 151 42 230"/><path d="M675 0c-60 90 12 142-42 224s6 151-42 230"/></g>
+<!-- center forge dais -->
+<ellipse cx="360" cy="650" rx="205" ry="70" fill="#0b0809" stroke="#673518" stroke-width="3"/>
+<ellipse cx="360" cy="650" rx="160" ry="48" fill="#24100a" stroke="#a24d19" stroke-width="2"/>
+<ellipse cx="360" cy="650" rx="110" ry="30" fill="#7c2d0d" opacity=".48"/>
+<!-- anvil -->
+<g stroke="#262a34" stroke-width="3">
+ <path d="M274 435h172l-28 48h-50v62h42l30 62H280l30-62h42v-62h-50z" fill="url(#metal)"/>
+ <path d="M282 435h156l-18 18H300z" fill="#f0f1f5" opacity=".56"/>
+</g>
+<!-- hammer -->
+<g transform="rotate(-42 360 530)">
+ <rect x="350" y="480" width="20" height="155" rx="8" fill="#8a552a" stroke="#d49a4e" stroke-width="2"/>
+ <path d="M314 458h92v43h-92z" fill="url(#metal)" stroke="#292d36" stroke-width="3"/>
+</g>
+<!-- fire bowls -->
+<g>
+ <path d="M88 738h105l-15 30h-75zM527 738h105l-15 30h-75z" fill="#252028" stroke="#8f4c1d" stroke-width="3"/>
+ <ellipse cx="140" cy="695" rx="70" ry="85" fill="#ff6a17" opacity=".08"/><ellipse cx="580" cy="695" rx="70" ry="85" fill="#ff6a17" opacity=".08"/>
+ <path d="M140 738c-40-35-15-71 5-104 10 34 46 52 15 88-6 7-12 13-20 16zM580 738c-40-35-15-71 5-104 10 34 46 52 15 88-6 7-12 13-20 16z" fill="#ff8b24"/>
+ <path d="M140 728c-18-20-4-39 7-57 5 19 21 29 8 49-5 5-9 7-15 8zM580 728c-18-20-4-39 7-57 5 19 21 29 8 49-5 5-9 7-15 8z" fill="#fff0a1"/>
+</g>
+<!-- floor -->
+<path d="M0 840h720v440H0z" fill="#070506"/>
+<g stroke="#311e18" opacity=".65"><path d="M0 920h720M0 1000h720M0 1080h720M0 1160h720M0 1240h720M130 840l70 440M590 840l-70 440M360 840v440"/></g>
+<!-- sparks -->
+<g fill="#ff9b2d" opacity=".55"><circle cx="230" cy="574" r="2"/><circle cx="486" cy="601" r="2"/><circle cx="284" cy="704" r="1.6"/><circle cx="425" cy="681" r="1.4"/><circle cx="203" cy="840" r="1.4"/><circle cx="532" cy="820" r="2"/><circle cx="320" cy="760" r="1.2"/></g>
+</svg>
