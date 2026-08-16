@@ -1,6 +1,6 @@
 extends "res://scripts/main_v12.gd"
 
-const V13_VERSION := "1.2.0-rc2"
+const V13_VERSION := "1.2.0-rc3"
 const V13_ACTOR_PATHS := [
 	"res://assets/art/wanderer.svg",
 	"res://assets/art/goblin.svg",
@@ -18,8 +18,13 @@ const V13_ACTOR_PATHS := [
 
 var v13_actor_textures: Array[Texture2D] = []
 var v13_swallow_release_id: int = -99999
+var v13_pointer_sequence_locked: bool = false
+var v13_pointer_lock_touch_id: int = -99999
 
 func _ready() -> void:
+	# The game handles native touch events itself. Never let a touchscreen tap
+	# generate a second mouse click that can hit the screen underneath a modal.
+	Input.emulate_mouse_from_touch = false
 	super._ready()
 	v13_actor_textures.clear()
 	for path: String in V13_ACTOR_PATHS:
@@ -27,9 +32,27 @@ func _ready() -> void:
 		v13_actor_textures.append(tex)
 	queue_redraw()
 
-# Settings is drawn on top of Home, so a touch release must never fall through
-# into the PLAY hitbox after BACK closes the modal.
+# Defense in depth for platforms that still deliver an emulated mouse event.
+# Godot marks touch-generated mouse input with DEVICE_ID_EMULATION.
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton or event is InputEventMouseMotion:
+		if event.device == InputEvent.DEVICE_ID_EMULATION:
+			return
+	super._unhandled_input(event)
+
+# Settings is drawn on top of Home. Once a Settings gesture closes the modal,
+# the whole pointer sequence remains captured until the original finger is up.
+# This prevents the same physical tap (or a duplicate mouse event) from ever
+# reaching the PLAY hitbox underneath.
 func pointer(pos: Vector2, pressed: bool, id: int) -> void:
+	if v13_pointer_sequence_locked:
+		if not pressed and id == v13_pointer_lock_touch_id:
+			v13_pointer_sequence_locked = false
+			v13_pointer_lock_touch_id = -99999
+			v13_swallow_release_id = -99999
+			joy_active = false
+			joy_vector = Vector2.ZERO
+		return
 	if not pressed and id == v13_swallow_release_id:
 		v13_swallow_release_id = -99999
 		joy_active = false
@@ -37,7 +60,11 @@ func pointer(pos: Vector2, pressed: bool, id: int) -> void:
 		return
 	if pressed and settings_open:
 		v13_swallow_release_id = id
+		var settings_was_open := settings_open
 		super.pointer(pos, pressed, id)
+		if settings_was_open and not settings_open:
+			v13_pointer_sequence_locked = true
+			v13_pointer_lock_touch_id = id
 		return
 	super.pointer(pos, pressed, id)
 
