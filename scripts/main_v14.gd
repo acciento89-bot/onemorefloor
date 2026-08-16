@@ -42,7 +42,9 @@ func _v14_vfx(index: int, r: Rect2, modulate: Color = Color.WHITE) -> void:
 func panel(r: Rect2, fill: Color, border: Color) -> void:
 	# Deep stacked shadow and a soft accent underglow make cards feel like
 	# physical fantasy UI plates instead of flat debug rectangles.
-	draw_rect(r.grow(8.0) + Rect2(Vector2(0, 5), Vector2.ZERO), Color(0.0, 0.0, 0.0, 0.34))
+	var shadow := r.grow(8.0)
+	shadow.position += Vector2(0, 5)
+	draw_rect(shadow, Color(0.0, 0.0, 0.0, 0.34))
 	draw_rect(r.grow(4.0), Color(border, 0.055))
 	draw_rect(r, fill)
 	draw_rect(r.grow(-3.0), Color(border, 0.055))
@@ -65,7 +67,9 @@ func button(r: Rect2, label: String, accent: Color, size: int) -> void:
 	panel(r, fill, accent)
 	draw_rect(r.grow(-8.0), Color(accent, 0.035))
 	draw_line(r.position + Vector2(14, 10), Vector2(r.end.x - 14, r.position.y + 10), Color(accent, 0.18), 1.0)
-	center_rect(label, r + Rect2(Vector2(0, 1), Vector2.ZERO), size, V12_IVORY if active else C_MUTED)
+	var label_rect := r
+	label_rect.position.y += 1.0
+	center_rect(label, label_rect, size, V12_IVORY if active else C_MUTED)
 
 func _v12_coin_badge(r: Rect2, amount: int) -> void:
 	panel(r, Color("080e19"), V12_GOLD)
