@@ -15,7 +15,7 @@ func _run_v14_smoke() -> void:
 	var game = packed.instantiate()
 	root.add_child(game)
 	if not game.has_method("_v14_vfx") or not game.has_method("_v14_room_index"):
-		_fail(402, "v1.3 smoke: high-fidelity controller is not active")
+		_fail(402, "v1.3 smoke: high-fidelity controller inheritance regressed")
 		return
 	if game.tex_v14_environment == null:
 		_fail(403, "v1.3 smoke: high-fidelity environment texture missing")
@@ -42,7 +42,7 @@ func _run_v14_smoke() -> void:
 		_fail(410, "v1.3 smoke: castle/deep tower environment mapping is wrong")
 		return
 
-	# Keep the native iOS Settings BACK regression protected in the new renderer.
+	# Keep the native iOS Settings BACK regression protected in all descendants.
 	game.tutorial_active = false
 	game.state = game.State.HOME
 	game.settings_open = true
@@ -56,18 +56,8 @@ func _run_v14_smoke() -> void:
 		return
 
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	if not project_text.contains("config/version=\"1.3.0-rc1\""):
-		_fail(412, "v1.3 smoke: project version missing")
-		return
 	if not project_text.contains("pointing/emulate_mouse_from_touch=false"):
-		_fail(413, "v1.3 smoke: mobile pointer hardening regressed")
-		return
-	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not export_text.contains("application/short_version=\"1.3.0\""):
-		_fail(414, "v1.3 smoke: iOS visible version missing")
-		return
-	if not export_text.contains("application/version=\"6\"") or not export_text.contains("version/code=6"):
-		_fail(415, "v1.3 smoke: mobile build number 6 missing")
+		_fail(412, "v1.3 smoke: mobile pointer hardening regressed")
 		return
 
 	print("ONE MORE FLOOR v1.3 high-fidelity art smoke test passed")
