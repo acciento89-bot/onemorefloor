@@ -1,0 +1,266 @@
+name: ONE MORE FLOOR iOS Playtest
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/v1.0-ios-testflight
+    paths:
+      - 'export_presets.cfg'
+      - 'project.godot'
+      - '.github/workflows/ios-testflight.yml'
+      - 'assets/audio/**'
+  pull_request:
+    paths:
+      - 'export_presets.cfg'
+      - 'project.godot'
+      - '.github/workflows/ios-testflight.yml'
+      - 'assets/audio/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: onemorefloor-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: '4.7.1'
+  GODOT_TAG: '4.7.1-stable'
+  TEAM_ID: 'TKG684N5GL'
+  BUNDLE_ID: 'de.kamilunavo.onemorefloor'
+
+jobs:
+  ios-playtest:
+    runs-on: macos-26
+    timeout-minutes: 55
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Xcode version
+        run: |
+          xcodebuild -version
+          xcode-select -p
+
+      - name: Download Godot 4.7.1 for macOS
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 \
+            -o "$RUNNER_TEMP/godot.zip" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_macos.universal.zip"
+          mkdir -p "$RUNNER_TEMP/godot"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          GODOT="$RUNNER_TEMP/godot/Godot.app/Contents/MacOS/Godot"
+          test -x "$GODOT"
+          "$GODOT" --version
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+
+      - name: Install Godot export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEMPLATE_ROOT="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$TEMPLATE_ROOT"
+          curl -L --fail --retry 3 \
+            -o "$RUNNER_TEMP/templates.tpz" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_export_templates.tpz"
+          rm -rf "$RUNNER_TEMP/export-templates"
+          mkdir -p "$RUNNER_TEMP/export-templates"
+          unzip -q "$RUNNER_TEMP/templates.tpz" -d "$RUNNER_TEMP/export-templates"
+          cp -R "$RUNNER_TEMP/export-templates/templates/." "$TEMPLATE_ROOT/"
+          test -f "$TEMPLATE_ROOT/ios.zip"
+          echo "Installed iOS template: $TEMPLATE_ROOT/ios.zip"
+
+      - name: Import project headlessly
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --editor --path . --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+
+      - name: Export Godot Xcode project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/ios
+          rm -rf build/ios/OneMoreFloor build/ios/OneMoreFloor.xcodeproj build/ios/OneMoreFloor.xcframework build/ios/MoltenVK.xcframework build/ios/PrivacyInfo.xcprivacy
+          rm -f build/ios/OneMoreFloor-Xcode.zip build/ios/OneMoreFloor-Unsigned-iOS.app.zip
+          "$GODOT" --headless --path . --export-release "iOS Playtest" build/ios/OneMoreFloor.zip
+          test -d build/ios/OneMoreFloor.xcodeproj
+          test -d build/ios/OneMoreFloor
+          PROJECT="build/ios/OneMoreFloor.xcodeproj"
+          echo "XCODE_PROJECT=$PROJECT" >> "$GITHUB_ENV"
+          ditto -c -k --sequesterRsrc --keepParent build/ios/OneMoreFloor.xcodeproj "$RUNNER_TEMP/OneMoreFloor-project.zip"
+          rm -rf "$RUNNER_TEMP/xcode-package"
+          mkdir -p "$RUNNER_TEMP/xcode-package"
+          cp -R build/ios/OneMoreFloor build/ios/OneMoreFloor.xcodeproj build/ios/OneMoreFloor.xcframework "$RUNNER_TEMP/xcode-package/"
+          if [[ -d build/ios/MoltenVK.xcframework ]]; then cp -R build/ios/MoltenVK.xcframework "$RUNNER_TEMP/xcode-package/"; fi
+          if [[ -f build/ios/PrivacyInfo.xcprivacy ]]; then cp build/ios/PrivacyInfo.xcprivacy "$RUNNER_TEMP/xcode-package/"; fi
+          ditto -c -k --sequesterRsrc "$RUNNER_TEMP/xcode-package" build/ios/OneMoreFloor-Xcode.zip
+          test -s build/ios/OneMoreFloor-Xcode.zip
+          echo "Generated Xcode project: $PROJECT"
+
+      - name: Inspect generated Xcode project
+        id: xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project "$XCODE_PROJECT" -list -json | tee "$RUNNER_TEMP/xcode-list.json"
+          SCHEME=$(python3 - <<'PY'
+          import json, os
+          p=os.environ['RUNNER_TEMP']+'/xcode-list.json'
+          d=json.load(open(p))
+          project=d.get('project', {})
+          schemes=project.get('schemes') or []
+          targets=project.get('targets') or []
+          print(schemes[0] if schemes else (targets[0] if targets else ''))
+          PY
+          )
+          test -n "$SCHEME"
+          echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
+          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
+          echo "Selected scheme/target: $SCHEME"
+
+      - name: Compile unsigned iPhone/iPad device build
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/DerivedData"
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Debug \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+          APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphoneos" -maxdepth 1 -name '*.app' -type d -print -quit)
+          test -n "$APP" -a -d "$APP"
+          echo "DEVICE_APP=$APP" >> "$GITHUB_ENV"
+          echo "Unsigned device app built: $APP"
+
+      - name: Package unsigned device app
+        shell: bash
+        run: |
+          set -euo pipefail
+          ditto -c -k --sequesterRsrc --keepParent "$DEVICE_APP" build/ios/OneMoreFloor-Unsigned-iOS.app.zip
+          test -s build/ios/OneMoreFloor-Unsigned-iOS.app.zip
+
+      - name: Upload Xcode and unsigned iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-more-floor-ios-playtest
+          path: |
+            build/ios/OneMoreFloor-Xcode.zip
+            build/ios/OneMoreFloor-Unsigned-iOS.app.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Detect App Store Connect signing secrets
+        id: asc
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$ASC_ISSUER_ID" && -n "$ASC_KEY_ID" && -n "$ASC_PRIVATE_KEY_B64" ]]; then
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+            echo 'App Store Connect signing secrets are available; TestFlight stage enabled.'
+          else
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            echo 'ASC_ISSUER_ID / ASC_KEY_ID / ASC_PRIVATE_KEY_B64 are not all available in this repository. Xcode + unsigned device artifacts are valid; TestFlight upload is skipped.'
+          fi
+
+      - name: Prepare App Store Connect API key
+        if: steps.asc.outputs.available == 'true'
+        shell: bash
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Archive signed iPhone/iPad app
+        if: steps.asc.outputs.available == 'true'
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/OneMoreFloor.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            archive
+          APP=$(find "$RUNNER_TEMP/OneMoreFloor.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' -type d -print -quit)
+          test -n "$APP" -a -d "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dvv "$APP" 2>&1 | grep -E 'Identifier=|Authority=|TeamIdentifier=' || true
+
+      - name: Create TestFlight export options
+        if: steps.asc.outputs.available == 'true'
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>upload</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>teamID</key>
+            <string>$TEAM_ID</string>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>manageAppVersionAndBuildNumber</key>
+            <false/>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Upload to TestFlight with Apple cloud signing
+        if: steps.asc.outputs.available == 'true'
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/OneMoreFloor.xcarchive" \
+            -exportPath "$RUNNER_TEMP/TestFlightExport" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Remove App Store Connect key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
