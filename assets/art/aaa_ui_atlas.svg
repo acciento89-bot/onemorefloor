@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2000" viewBox="0 0 1200 2000">
+<defs>
+ <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f7d782"/><stop offset=".22" stop-color="#9b6a25"/><stop offset=".55" stop-color="#f2bd4f"/><stop offset=".8" stop-color="#6b4316"/><stop offset="1" stop-color="#f3cb68"/></linearGradient>
+ <linearGradient id="silver" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#c8e8ff"/><stop offset=".28" stop-color="#527a9a"/><stop offset=".72" stop-color="#18314d"/><stop offset="1" stop-color="#83cfff"/></linearGradient>
+ <linearGradient id="purple" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d59cff"/><stop offset=".25" stop-color="#7335b7"/><stop offset=".75" stop-color="#2b124d"/><stop offset="1" stop-color="#ab5cff"/></linearGradient>
+ <linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#8dffc3"/><stop offset=".25" stop-color="#278a5b"/><stop offset=".75" stop-color="#0c3528"/><stop offset="1" stop-color="#54e99b"/></linearGradient>
+ <linearGradient id="orange" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffd0a0"/><stop offset=".25" stop-color="#a54b20"/><stop offset=".75" stop-color="#41190e"/><stop offset="1" stop-color="#ff9a4d"/></linearGradient>
+ <linearGradient id="dark" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#17253a"/><stop offset=".5" stop-color="#091321"/><stop offset="1" stop-color="#03070d"/></linearGradient>
+ <radialGradient id="glow"><stop stop-color="#ffffff" stop-opacity=".35"/><stop offset=".35" stop-color="#b46bff" stop-opacity=".15"/><stop offset="1" stop-color="#000000" stop-opacity="0"/></radialGradient>
+ <filter id="shadow" x="-20%" y="-30%" width="140%" height="170%"><feGaussianBlur in="SourceAlpha" stdDeviation="10"/><feOffset dy="10"/><feComponentTransfer><feFuncA type="linear" slope=".75"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="12"/></filter>
+ <pattern id="runes" width="80" height="80" patternUnits="userSpaceOnUse"><path d="M40 10L58 40 40 70 22 40Z" fill="none" stroke="#8f54ce" stroke-width="1" opacity=".16"/><circle cx="40" cy="40" r="9" fill="none" stroke="#e7b84e" opacity=".10"/></pattern>
+</defs>
+
+<!-- GOLD PRIMARY 100,20 / 1000x170 -->
+<g transform="translate(100 20)" filter="url(#shadow)"><rect width="1000" height="170" rx="16" fill="#02050a"/><rect x="3" y="3" width="994" height="164" rx="14" fill="url(#metal)"/><rect x="9" y="9" width="982" height="152" rx="11" fill="#171107"/><rect x="17" y="17" width="966" height="136" rx="8" fill="url(#dark)"/><rect x="23" y="23" width="954" height="124" rx="6" fill="#2b210e" opacity=".7"/><path d="M42 28H958" stroke="#ffe9a3" stroke-width="3" opacity=".75"/><path d="M42 142H958" stroke="#5c3510" stroke-width="5" opacity=".8"/><path d="M0 45L38 0H82L40 36H960L918 0H962L1000 45V125L962 170H918L960 134H40L82 170H38L0 125Z" fill="none" stroke="#ffd36c" stroke-width="3"/><circle cx="500" cy="85" r="230" fill="url(#glow)" opacity=".35"/></g>
+
+<!-- PURPLE SECONDARY -->
+<g transform="translate(100 220)" filter="url(#shadow)"><rect width="1000" height="170" rx="16" fill="#02050a"/><rect x="3" y="3" width="994" height="164" rx="14" fill="url(#purple)"/><rect x="9" y="9" width="982" height="152" rx="11" fill="#10081e"/><rect x="17" y="17" width="966" height="136" rx="8" fill="#190d2b"/><rect x="20" y="20" width="960" height="130" rx="7" fill="url(#runes)"/><path d="M42 28H958" stroke="#e8c1ff" stroke-width="3" opacity=".65"/><path d="M0 45L38 0H82L40 36H960L918 0H962L1000 45V125L962 170H918L960 134H40L82 170H38L0 125Z" fill="none" stroke="#ad61ff" stroke-width="3"/></g>
+
+<!-- CYAN -->
+<g transform="translate(100 420)" filter="url(#shadow)"><rect width="1000" height="170" rx="16" fill="#02050a"/><rect x="3" y="3" width="994" height="164" rx="14" fill="url(#silver)"/><rect x="9" y="9" width="982" height="152" rx="11" fill="#061521"/><rect x="17" y="17" width="966" height="136" rx="8" fill="#0a1e30"/><path d="M42 28H958" stroke="#bfeaff" stroke-width="3" opacity=".7"/><path d="M0 45L38 0H82L40 36H960L918 0H962L1000 45V125L962 170H918L960 134H40L82 170H38L0 125Z" fill="none" stroke="#55cfff" stroke-width="3"/></g>
+
+<!-- GREEN -->
+<g transform="translate(100 620)" filter="url(#shadow)"><rect width="1000" height="170" rx="16" fill="#02050a"/><rect x="3" y="3" width="994" height="164" rx="14" fill="url(#green)"/><rect x="9" y="9" width="982" height="152" rx="11" fill="#06150f"/><rect x="17" y="17" width="966" height="136" rx="8" fill="#0a251b"/><path d="M42 28H958" stroke="#baffd7" stroke-width="3" opacity=".7"/><path d="M0 45L38 0H82L40 36H960L918 0H962L1000 45V125L962 170H918L960 134H40L82 170H38L0 125Z" fill="none" stroke="#5af0a0" stroke-width="3"/></g>
+
+<!-- ORANGE -->
+<g transform="translate(100 820)" filter="url(#shadow)"><rect width="1000" height="170" rx="16" fill="#02050a"/><rect x="3" y="3" width="994" height="164" rx="14" fill="url(#orange)"/><rect x="9" y="9" width="982" height="152" rx="11" fill="#180904"/><rect x="17" y="17" width="966" height="136" rx="8" fill="#291108"/><path d="M42 28H958" stroke="#ffd6b1" stroke-width="3" opacity=".7"/><path d="M0 45L38 0H82L40 36H960L918 0H962L1000 45V125L962 170H918L960 134H40L82 170H38L0 125Z" fill="none" stroke="#ff9950" stroke-width="3"/></g>
+
+<!-- LARGE PANEL -->
+<g transform="translate(50 1040)" filter="url(#shadow)"><rect width="1100" height="480" rx="24" fill="#010307"/><rect x="5" y="5" width="1090" height="470" rx="20" fill="url(#metal)"/><rect x="13" y="13" width="1074" height="454" rx="16" fill="#060b14"/><rect x="25" y="25" width="1050" height="430" rx="12" fill="url(#dark)"/><rect x="28" y="28" width="1044" height="424" rx="10" fill="url(#runes)" opacity=".8"/><path d="M65 45H1035M65 435H1035" stroke="#e7b64d" stroke-width="2" opacity=".6"/><path d="M0 90L72 0H150L92 60H1008L950 0H1028L1100 90V390L1028 480H950L1008 420H92L150 480H72L0 390Z" fill="none" stroke="#b98931" stroke-width="4"/></g>
+
+<!-- CURRENCY/STAT CARD -->
+<g transform="translate(260 1580)" filter="url(#shadow)"><rect width="680" height="220" rx="18" fill="#010307"/><rect x="4" y="4" width="672" height="212" rx="16" fill="url(#metal)"/><rect x="11" y="11" width="658" height="198" rx="12" fill="#060b14"/><rect x="20" y="20" width="640" height="180" rx="9" fill="url(#dark)"/><circle cx="95" cy="110" r="55" fill="#070b16" stroke="#e8b54c" stroke-width="5"/><circle cx="95" cy="110" r="41" fill="#24180a" stroke="#9b5fff" stroke-width="3"/><path d="M95 72L106 96 132 100 112 118 117 145 95 132 73 145 78 118 58 100 84 96Z" fill="#f2be4e" stroke="#fff1a5" stroke-width="2"/><path d="M175 52H620M175 168H620" stroke="#e5b54c" opacity=".24"/></g>
+
+<!-- SMALL ORNAMENT STRIP -->
+<g transform="translate(140 1840)"><path d="M0 50H370L400 20 430 50H800" fill="none" stroke="url(#metal)" stroke-width="4"/><path d="M400 8L442 50 400 92 358 50Z" fill="#7b38c2" stroke="#efc55d" stroke-width="4"/><path d="M400 25L425 50 400 75 375 50Z" fill="#c37aff"/></g>
+</svg>
