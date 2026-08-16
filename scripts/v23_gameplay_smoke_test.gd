@@ -97,10 +97,11 @@ func _run() -> void:
 		_fail(1213, "v1.11 gameplay: Arcane Shrine event choice did not resolve")
 		return
 
-	game.upgrade_options = [{
+	game.upgrade_options.clear()
+	game.upgrade_options.append({
 		"name":"POWER SURGE", "desc":"test", "kind":"power", "color":game.C_GOLD,
 		"tier":"EPIC", "strength":1.70, "tier_color":game.C_PURPLE
-	}]
+	})
 	var before_epic := float(game.run.damage)
 	game.apply_upgrade(0)
 	if float(game.run.damage) <= before_epic * 1.35 or game.state != game.State.DECISION:
