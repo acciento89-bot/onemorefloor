@@ -15,7 +15,7 @@ func _run_v13_smoke() -> void:
 	var game = packed.instantiate()
 	root.add_child(game)
 	if not game.has_method("_v13_actor_texture"):
-		_fail(302, "v1.2 rc3 smoke: premium actor controller is not active")
+		_fail(302, "v1.2 rc3 smoke: premium actor/input lineage is not active")
 		return
 	if game.v13_actor_textures.size() != 12:
 		_fail(303, "v1.2 rc3 smoke: expected 12 premium actor textures")
@@ -29,12 +29,13 @@ func _run_v13_smoke() -> void:
 			_fail(305, "v1.2 rc3 smoke: actor texture %d is not production resolution" % i)
 			return
 	if game.tex_v12_environment == null or game.tex_v12_environment.get_width() < 648 or game.tex_v12_environment.get_height() < 3360:
-		_fail(306, "v1.2 rc3 smoke: premium environment texture missing")
+		_fail(306, "v1.2 rc3 smoke: premium environment fallback texture missing")
 		return
 
 	# Reproduce the real-device Settings BACK bug: the BACK center overlaps PLAY.
-	# iOS can also emit a mouse event for the same physical touch, so exercise
-	# both event types while the modal is disappearing.
+	# iOS may emit a mouse event for the same physical touch, so exercise both
+	# event types while the modal is disappearing. This regression remains valid
+	# for every later renderer/version.
 	game.tutorial_active = false
 	game.state = game.State.HOME
 	game.settings_open = true
@@ -55,15 +56,11 @@ func _run_v13_smoke() -> void:
 		_fail(310, "v1.2 rc3 smoke: Settings touch sequence was not captured")
 		return
 
-	# Simulate a duplicate pointer press even without relying on Godot's device
-	# tagging. The sequence lock must keep it away from PLAY.
 	game.pointer(back_pos, true, -99)
 	if game.state != game.State.HOME:
 		_fail(311, "v1.2 rc3 smoke: duplicate pointer press leaked into PLAY")
 		return
 
-	# Simulate Godot's actual touch-generated mouse event. The most-derived input
-	# handler must reject DEVICE_ID_EMULATION before it reaches the pointer stack.
 	var ghost_mouse := InputEventMouseButton.new()
 	ghost_mouse.button_index = MOUSE_BUTTON_LEFT
 	ghost_mouse.position = back_pos + game.v11_layout_offset
@@ -83,18 +80,15 @@ func _run_v13_smoke() -> void:
 		return
 
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	if not project_text.contains("config/version=\"1.2.0-rc3\""):
-		_fail(315, "v1.2 rc3 smoke: project version missing")
-		return
 	if not project_text.contains("pointing/emulate_mouse_from_touch=false"):
 		_fail(316, "v1.2 rc3 smoke: touch-to-mouse emulation is not disabled")
 		return
 	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not export_text.contains("application/version=\"5\""):
-		_fail(317, "v1.2 rc3 smoke: iOS build number 5 missing")
+	if not export_text.contains("application/bundle_identifier=\"de.kamilunavo.onemorefloor\""):
+		_fail(317, "v1.2 rc3 smoke: iOS bundle identity regressed")
 		return
-	if not export_text.contains("version/code=5"):
-		_fail(318, "v1.2 rc3 smoke: Android build code 5 missing")
+	if not export_text.contains("version/code="):
+		_fail(318, "v1.2 rc3 smoke: Android build code missing")
 		return
 
 	print("ONE MORE FLOOR v1.2 rc3 premium art/mobile input smoke test passed")
