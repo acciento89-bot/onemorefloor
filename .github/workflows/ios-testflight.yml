@@ -86,7 +86,7 @@ jobs:
           set -euo pipefail
           mkdir -p build/ios
           rm -rf build/ios/OneMoreFloor build/ios/OneMoreFloor.xcodeproj build/ios/OneMoreFloor.xcframework build/ios/MoltenVK.xcframework build/ios/PrivacyInfo.xcprivacy
-          rm -f build/ios/OneMoreFloor-Xcode.zip build/ios/OneMoreFloor-Unsigned-iOS.app.zip
+          rm -f build/ios/OneMoreFloor-Xcode.zip build/ios/OneMoreFloor-Unsigned-iOS.app.zip build/ios/TestFlight-export.log build/ios/OneMoreFloor-xcdistributionlogs.zip
           "$GODOT" --headless --path . --export-release "iOS Playtest" build/ios/OneMoreFloor.zip
           test -d build/ios/OneMoreFloor.xcodeproj
           test -d build/ios/OneMoreFloor
@@ -247,13 +247,16 @@ jobs:
           PLIST
 
       - name: Upload to TestFlight with Apple cloud signing
+        id: testflight
         if: steps.asc.outputs.available == 'true'
+        continue-on-error: true
         shell: bash
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          set +e
           xcodebuild \
             -exportArchive \
             -archivePath "$RUNNER_TEMP/OneMoreFloor.xcarchive" \
@@ -262,7 +265,45 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath "$ASC_KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            2>&1 | tee "$RUNNER_TEMP/testflight-export.log"
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          cp "$RUNNER_TEMP/testflight-export.log" build/ios/TestFlight-export.log
+
+          DIST_LOG=$(find /var/folders "$RUNNER_TEMP" -name '*.xcdistributionlogs' -type d -print 2>/dev/null | tail -1 || true)
+          if [[ -n "$DIST_LOG" && -d "$DIST_LOG" ]]; then
+            echo "Distribution logs: $DIST_LOG"
+            ditto -c -k --sequesterRsrc --keepParent "$DIST_LOG" build/ios/OneMoreFloor-xcdistributionlogs.zip
+          else
+            echo 'No xcdistributionlogs bundle found.'
+          fi
+
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          if [[ "$STATUS" -ne 0 ]]; then
+            echo "TestFlight export/upload failed with exit code $STATUS; diagnostics were captured."
+          else
+            echo 'TestFlight export/upload completed successfully.'
+          fi
+          exit 0
+
+      - name: Upload TestFlight diagnostics
+        if: always() && steps.asc.outputs.available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-more-floor-testflight-diagnostics
+          path: |
+            build/ios/TestFlight-export.log
+            build/ios/OneMoreFloor-xcdistributionlogs.zip
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Fail if TestFlight upload failed
+        if: steps.asc.outputs.available == 'true' && steps.testflight.outputs.status != '0'
+        shell: bash
+        run: |
+          echo "TestFlight upload failed with exit code ${{ steps.testflight.outputs.status }}. See one-more-floor-testflight-diagnostics artifact."
+          exit 1
 
       - name: Remove App Store Connect key
         if: always()
