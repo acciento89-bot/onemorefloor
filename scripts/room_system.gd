@@ -24,15 +24,42 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 			"hazard": "none"
 		}
 
-	var roll: float = rng.randf()
+	# The deeper the climb, the less often the tower gives away a soft Treasure
+	# room. Ambush, Elite and Miniboss rooms become steadily more common.
+	var treasure_cut := 0.14
+	var ambush_cut := 0.32
+	var elite_cut := 0.46
+	var miniboss_cut := 0.54
+	if floor_no >= 16:
+		treasure_cut = 0.10
+		ambush_cut = 0.38
+		elite_cut = 0.60
+		miniboss_cut = 0.72
+	elif floor_no >= 6:
+		treasure_cut = 0.12
+		ambush_cut = 0.36
+		elite_cut = 0.54
+		miniboss_cut = 0.64
+	if floor_no >= 31:
+		treasure_cut = 0.08
+		ambush_cut = 0.38
+		elite_cut = 0.62
+		miniboss_cut = 0.76
+	if floor_no >= 50:
+		treasure_cut = 0.06
+		ambush_cut = 0.40
+		elite_cut = 0.66
+		miniboss_cut = 0.82
+
+	var roll := rng.randf()
 	var room_type := "COMBAT"
-	if roll < 0.14:
+	if roll < treasure_cut:
 		room_type = "TREASURE"
-	elif roll < 0.32:
+	elif roll < ambush_cut:
 		room_type = "AMBUSH"
-	elif roll < 0.46:
+	elif roll < elite_cut:
 		room_type = "ELITE"
-	elif roll < 0.54 and floor_no >= 6:
+	elif roll < miniboss_cut and floor_no >= 6:
 		room_type = "MINIBOSS"
 
 	var reward_bonus := 0
@@ -51,7 +78,7 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 		enemy_bonus = -2
 		reward_bonus = 28 + floor_no * 3
 
-	var area: String = area_for_floor(floor_no)
+	var area := area_for_floor(floor_no)
 	if area == "CRYPT":
 		hazard = "soul_mist" if rng.randf() < 0.55 else "bone_runes"
 	elif area == "FORGOTTEN CASTLE":
