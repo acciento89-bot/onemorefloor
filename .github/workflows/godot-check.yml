@@ -10,7 +10,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -44,13 +44,13 @@ jobs:
           ./godot --headless --path . --script res://scripts/main_v10.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v11.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v12.gd --check-only
-          ./godot --headless --path . --script res://scripts/v12_smoke_test.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v13.gd --check-only
 
       - name: Parse project headlessly
         run: |
           set -o pipefail
           ./godot --headless --editor --path . --quit 2>&1 | tee parse.log
-          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|ERROR:.*audio" parse.log; then
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|ERROR:.*audio|Error.*SVG" parse.log; then
             echo "Godot reported script/resource errors during project parse"
             exit 1
           fi
@@ -87,3 +87,9 @@ jobs:
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v12_smoke_test.gd --quit-after 120 | tee v12-smoke.log
           grep -q "ONE MORE FLOOR v1.2 production art smoke test passed" v12-smoke.log
+
+      - name: Run v1.2 rc2 premium art input smoke script
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v13_smoke_test.gd --quit-after 120 | tee v13-smoke.log
+          grep -q "ONE MORE FLOOR v1.2 rc2 premium art/input smoke test passed" v13-smoke.log

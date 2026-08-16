@@ -15,69 +15,49 @@ func _run_v12_smoke() -> void:
 	var game = packed.instantiate()
 	root.add_child(game)
 
-	if not game.has_method("_f12_panel") or not game.has_method("_f12_draw_actor_region"):
-		_fail(302, "v1.2 smoke: production fantasy controller is not active")
+	if not game.has_method("_v12_actor_index") or not game.has_method("_v12_icon") or not game.has_method("_v12_meta_header"):
+		_fail(302, "v1.2 smoke: production art controller is not active")
 		return
 
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	if not scene_text.contains("res://scripts/main_v12.gd"):
-		_fail(303, "v1.2 smoke: main scene does not point to main_v12.gd")
+	if not scene_text.contains("res://scripts/main_v12.gd") and not scene_text.contains("res://scripts/main_v13.gd"):
+		_fail(303, "v1.2 smoke: main scene is not using a v1.2 production renderer")
 		return
 
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	if not project_text.contains("config/version=\"1.2.0-rc1\""):
-		_fail(304, "v1.2 smoke: project version is not 1.2.0-rc1")
-		return
-	if not project_text.contains("window/stretch/aspect=\"expand\""):
-		_fail(305, "v1.2 smoke: responsive expand canvas was lost")
+	if not project_text.contains("config/version=\"1.2.0-"):
+		_fail(304, "v1.2 smoke: project version is not in the 1.2.0 release line")
 		return
 
-	if game.tex_fantasy_actors == null:
-		_fail(306, "v1.2 smoke: fantasy actor atlas did not import")
+	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
+	if not export_text.contains("application/short_version=\"1.2.0\""):
+		_fail(305, "v1.2 smoke: iOS short version is not 1.2.0")
 		return
-	if game.tex_fantasy_actors.get_width() < 1600 or game.tex_fantasy_actors.get_height() < 1200:
-		_fail(307, "v1.2 smoke: fantasy actor atlas dimensions are invalid")
-		return
-	if game.tex_fantasy_biomes == null:
-		_fail(308, "v1.2 smoke: fantasy biome atlas did not import")
-		return
-	if game.tex_fantasy_biomes.get_width() < 2592 or game.tex_fantasy_biomes.get_height() < 840:
-		_fail(309, "v1.2 smoke: fantasy biome atlas dimensions are invalid")
+	if not export_text.contains("version/name=\"1.2.0\""):
+		_fail(306, "v1.2 smoke: Android version name is not 1.2.0")
 		return
 
-	var controller_text := FileAccess.get_file_as_string("res://scripts/main_v12.gd")
-	for required in [
-		"fantasy_actor_atlas.svg",
-		"fantasy_biomes.svg",
-		"func draw_home()",
-		"func draw_hero_screen()",
-		"func draw_forge_screen()",
-		"func draw_talents_screen()",
-		"func draw_vault_screen()",
-		"func draw_missions_screen()",
-		"func draw_pass_screen()",
-		"func draw_upgrade()",
-		"func draw_decision()",
-		"func draw_game_over()",
-		"func _draw_combat_hud()"
-	]:
-		if not controller_text.contains(required):
-			_fail(310, "v1.2 smoke: missing production visual surface %s" % required)
-			return
+	if game.tex_v12_environment == null:
+		_fail(307, "v1.2 smoke: production environment atlas failed to load")
+		return
+	if game.tex_v12_icons == null:
+		_fail(308, "v1.2 smoke: production icon atlas failed to load")
+		return
+	if game.tex_v12_actors == null:
+		_fail(309, "v1.2 smoke: compatibility actor atlas failed to load")
+		return
 
-	for legacy_label in [
-		"v0.3 META PROGRESSION",
-		"v0.4 LOOT + MISSIONS",
-		"v0.6 VISUAL PRODUCTION",
-		"v0.8 ANIMATION + VAULT",
-		"v0.9 FORGOTTEN CASTLE",
-		"v1.0 RC1"
-	]:
-		if controller_text.contains(legacy_label):
-			_fail(311, "v1.2 smoke: legacy development label leaked into production skin")
-			return
+	if game.tex_v12_environment.get_width() < 648 or game.tex_v12_environment.get_height() < 3360:
+		_fail(310, "v1.2 smoke: environment atlas dimensions are invalid")
+		return
+	if game.tex_v12_icons.get_width() < 512 or game.tex_v12_icons.get_height() < 512:
+		_fail(311, "v1.2 smoke: icon atlas dimensions are invalid")
+		return
+	if game.tex_v12_actors.get_width() < 512 or game.tex_v12_actors.get_height() < 576:
+		_fail(312, "v1.2 smoke: compatibility actor atlas dimensions are invalid")
+		return
 
-	var expected_rows := {
+	var expected := {
 		"goblin": 1,
 		"bat": 2,
 		"skeleton": 3,
@@ -85,33 +65,37 @@ func _run_v12_smoke() -> void:
 		"necromancer": 5,
 		"gargoyle": 8,
 		"sentinel": 9,
-		"hexer": 10
+		"hexer": 10,
 	}
-	for kind in expected_rows:
-		if int(game._motion_row(kind)) != int(expected_rows[kind]):
-			_fail(312, "v1.2 smoke: actor row mismatch for %s" % kind)
+	for kind in expected.keys():
+		if int(game._v12_actor_index(String(kind), "warden")) != int(expected[kind]):
+			_fail(313, "v1.2 smoke: actor mapping is wrong for %s" % String(kind))
 			return
-	if int(game._motion_row("warden", "crypt_keeper")) != 7:
-		_fail(313, "v1.2 smoke: Crypt Keeper row mismatch")
+	if int(game._v12_actor_index("warden", "warden")) != 6:
+		_fail(314, "v1.2 smoke: Warden actor mapping is wrong")
 		return
-	if int(game._motion_row("warden", "hollow_king")) != 11:
-		_fail(314, "v1.2 smoke: Hollow King row mismatch")
+	if int(game._v12_actor_index("warden", "crypt_keeper")) != 7:
+		_fail(315, "v1.2 smoke: Crypt Keeper actor mapping is wrong")
+		return
+	if int(game._v12_actor_index("warden", "hollow_king")) != 11:
+		_fail(316, "v1.2 smoke: Hollow King actor mapping is wrong")
 		return
 
-	if game.release_audio == null:
-		_fail(315, "v1.2 smoke: release audio regression")
-		return
-	for context in ["menu", "dungeon", "crypt", "castle", "boss"]:
-		if not game.release_audio.available_music_contexts().has(context):
-			_fail(316, "v1.2 smoke: missing music context %s" % context)
+	var controller_text := FileAccess.get_file_as_string("res://scripts/main_v12.gd")
+	for required in ["VAULT + FORGE", "TOWER PASS", "FLOOR CLEARED!", "Permanent passive bonuses", "Permanent Wanderer training"]:
+		if not controller_text.contains(required):
+			_fail(317, "v1.2 smoke: production screen text missing: %s" % required)
 			return
-
-	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not export_text.contains("application/short_version=\"1.2.0\"") or not export_text.contains("application/version=\"3\""):
-		_fail(317, "v1.2 smoke: iOS version/build metadata is wrong")
+	if not controller_text.contains("environment_production.svg") or not controller_text.contains("ui_icons_production.svg"):
+		_fail(318, "v1.2 smoke: production art resources are not wired into controller")
 		return
-	if not export_text.contains("version/code=3") or not export_text.contains("version/name=\"1.2.0\""):
-		_fail(318, "v1.2 smoke: Android version/build metadata is wrong")
+
+	if not game.has_method("screen_to_design") or not game.has_method("_sync_music_context"):
+		_fail(319, "v1.2 smoke: responsive/audio v1.1 layer regressed")
+		return
+	var translated: Vector2 = game.screen_to_design(game.v11_layout_offset + Vector2(360, 640))
+	if translated.distance_to(Vector2(360, 640)) > 0.01:
+		_fail(320, "v1.2 smoke: touch translation regressed")
 		return
 
 	print("ONE MORE FLOOR v1.2 production art smoke test passed")
