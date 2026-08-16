@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download Godot 4.7.1
         run: |
@@ -42,6 +42,7 @@ jobs:
           ./godot --headless --path . --script res://scripts/main_v08.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v09.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v10.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v11.gd --check-only
 
       - name: Parse project headlessly
         run: |
@@ -72,3 +73,9 @@ jobs:
           set -o pipefail
           ./godot --headless --path . --script res://scripts/release_smoke_test.gd --quit-after 120 | tee release-smoke.log
           grep -q "ONE MORE FLOOR v1.0 release smoke test passed" release-smoke.log
+
+      - name: Run v1.1 visual audio smoke script
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v11_smoke_test.gd --quit-after 120 | tee v11-smoke.log
+          grep -q "ONE MORE FLOOR v1.1 visual/audio smoke test passed" v11-smoke.log

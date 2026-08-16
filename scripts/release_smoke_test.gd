@@ -20,7 +20,6 @@ func _run_release_smoke() -> void:
 		return
 
 	var audio_paths := [
-		"res://assets/audio/tower_theme.wav",
 		"res://assets/audio/menu_click.wav",
 		"res://assets/audio/attack.wav",
 		"res://assets/audio/loot.wav",

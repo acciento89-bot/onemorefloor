@@ -4,19 +4,25 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - agent/v1.0-ios-testflight
       - main
+      - agent/**
     paths:
       - 'export_presets.cfg'
       - 'project.godot'
       - '.github/workflows/ios-testflight.yml'
+      - 'scripts/**'
+      - 'scenes/**'
       - 'assets/audio/**'
+      - 'assets/art/**'
   pull_request:
     paths:
       - 'export_presets.cfg'
       - 'project.godot'
       - '.github/workflows/ios-testflight.yml'
+      - 'scripts/**'
+      - 'scenes/**'
       - 'assets/audio/**'
+      - 'assets/art/**'
 
 permissions:
   contents: read
@@ -170,12 +176,12 @@ jobs:
           ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
         run: |
           set -euo pipefail
-          if [[ -n "$ASC_ISSUER_ID" && -n "$ASC_KEY_ID" && -n "$ASC_PRIVATE_KEY_B64" ]]; then
+          if [[ "$GITHUB_REF" == "refs/heads/main" && -n "$ASC_ISSUER_ID" && -n "$ASC_KEY_ID" && -n "$ASC_PRIVATE_KEY_B64" ]]; then
             echo 'available=true' >> "$GITHUB_OUTPUT"
-            echo 'App Store Connect signing secrets are available; TestFlight stage enabled.'
+            echo 'Main branch and App Store Connect signing secrets detected; TestFlight stage enabled.'
           else
             echo 'available=false' >> "$GITHUB_OUTPUT"
-            echo 'ASC_ISSUER_ID / ASC_KEY_ID / ASC_PRIVATE_KEY_B64 are not all available in this repository. Xcode + unsigned device artifacts are valid; TestFlight upload is skipped.'
+            echo 'Unsigned iOS validation complete. Signed/TestFlight stages run only on main with all ASC secrets available.'
           fi
 
       - name: Prepare App Store Connect API key
