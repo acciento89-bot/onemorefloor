@@ -1,14 +1,15 @@
-name: Concept Final Check
+name: Premium Reference Check
 
 on:
   push:
     branches:
       - agent/v1.6-concept-final
+      - agent/v1.6.2-premium-reference-pass
       - main
   pull_request:
 
 jobs:
-  concept-final:
+  premium-reference:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -22,21 +23,21 @@ jobs:
           mv Godot_v4.7.1-stable_linux.x86_64 godot
           chmod +x godot
 
-      - name: Parse final concept renderer
+      - name: Parse premium renderer
         run: |
           ./godot --headless --path . --script res://scripts/main_v18.gd --check-only
           ./godot --headless --path . --script res://scripts/v18_smoke_test.gd --check-only
 
-      - name: Import concept assets
+      - name: Import premium assets
         run: |
           set -o pipefail
-          ./godot --headless --editor --path . --quit 2>&1 | tee concept-import.log
-          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Error.*SVG" concept-import.log; then
+          ./godot --headless --editor --path . --quit 2>&1 | tee premium-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Error.*SVG" premium-import.log; then
             exit 1
           fi
 
-      - name: Run final concept regression
+      - name: Run premium reference regression
         run: |
           set -o pipefail
-          ./godot --headless --path . --script res://scripts/v18_smoke_test.gd --quit-after 120 | tee concept-final.log
-          grep -q "ONE MORE FLOOR v1.6.1 final concept environment smoke test passed" concept-final.log
+          ./godot --headless --path . --script res://scripts/v18_smoke_test.gd --quit-after 120 | tee premium-reference.log
+          grep -q "ONE MORE FLOOR v1.6.2 premium reference smoke test passed" premium-reference.log
