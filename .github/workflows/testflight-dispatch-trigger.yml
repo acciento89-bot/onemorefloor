@@ -1,0 +1,25 @@
+name: Trigger ONE MORE FLOOR TestFlight
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/testflight-trigger'
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch-testflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch iOS TestFlight workflow on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run ios-testflight.yml \
+            --repo "${{ github.repository }}" \
+            --ref main
