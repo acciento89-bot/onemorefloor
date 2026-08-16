@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="2048" viewBox="0 0 2048 2048">
+<defs>
+ <linearGradient id="blackGlass" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#101725"/><stop offset=".45" stop-color="#070b13"/><stop offset="1" stop-color="#020409"/></linearGradient>
+ <linearGradient id="goldMetal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5d3510"/><stop offset=".16" stop-color="#f9d77b"/><stop offset=".33" stop-color="#a6661f"/><stop offset=".55" stop-color="#fff0a5"/><stop offset=".76" stop-color="#78400f"/><stop offset="1" stop-color="#d99b35"/></linearGradient>
+ <linearGradient id="violetMetal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#32104f"/><stop offset=".19" stop-color="#c16aff"/><stop offset=".42" stop-color="#6b2db2"/><stop offset=".64" stop-color="#e7a5ff"/><stop offset=".82" stop-color="#3a1458"/><stop offset="1" stop-color="#9d48ee"/></linearGradient>
+ <linearGradient id="blueMetal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0b2f4c"/><stop offset=".19" stop-color="#74d9ff"/><stop offset=".42" stop-color="#187aa7"/><stop offset=".64" stop-color="#c5f3ff"/><stop offset=".82" stop-color="#103b58"/><stop offset="1" stop-color="#37b9ef"/></linearGradient>
+ <linearGradient id="greenMetal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0c3a27"/><stop offset=".19" stop-color="#76f7aa"/><stop offset=".42" stop-color="#21885a"/><stop offset=".64" stop-color="#c6ffdc"/><stop offset=".82" stop-color="#103d2b"/><stop offset="1" stop-color="#48d982"/></linearGradient>
+ <linearGradient id="orangeMetal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#52210d"/><stop offset=".19" stop-color="#ffb064"/><stop offset=".42" stop-color="#ae521e"/><stop offset=".64" stop-color="#ffd1a0"/><stop offset=".82" stop-color="#51210d"/><stop offset="1" stop-color="#ea8137"/></linearGradient>
+ <linearGradient id="silverMetal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#252a37"/><stop offset=".2" stop-color="#c6cede"/><stop offset=".42" stop-color="#656e82"/><stop offset=".64" stop-color="#eff3ff"/><stop offset=".84" stop-color="#303646"/><stop offset="1" stop-color="#8e98af"/></linearGradient>
+ <radialGradient id="violetGlow"><stop stop-color="#bd62ff" stop-opacity=".52"/><stop offset=".45" stop-color="#6f2dc4" stop-opacity=".18"/><stop offset="1" stop-color="#321055" stop-opacity="0"/></radialGradient>
+ <pattern id="micro" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M0 14h28M14 0v28" stroke="#fff" stroke-opacity=".022"/><path d="M0 0l28 28M28 0L0 28" stroke="#9b63d5" stroke-opacity=".025"/></pattern>
+</defs>
+<!-- Wide ornamental bars: x0..760, 6 variants -->
+<g id="goldBar" transform="translate(0 0)">
+ <rect x="8" y="12" width="744" height="132" rx="3" fill="#000" opacity=".7"/>
+ <rect x="0" y="0" width="760" height="132" rx="4" fill="url(#goldMetal)"/>
+ <rect x="5" y="5" width="750" height="122" rx="3" fill="#120c07"/>
+ <rect x="10" y="10" width="740" height="112" rx="2" fill="url(#blackGlass)"/>
+ <rect x="13" y="13" width="734" height="106" fill="url(#micro)"/>
+ <path d="M0 27L27 0h48L56 13H22v34L10 59 0 49zM760 27L733 0h-48l19 13h34v34l12 12 10-10zM0 105l27 27h48l-19-13H22V85L10 73 0 83zM760 105l-27 27h-48l19-13h34V85l12-12 10 10z" fill="url(#goldMetal)"/>
+ <path d="M19 19h722M19 113h722" stroke="#f7dc84" stroke-opacity=".48"/><path d="M31 24h698M31 108h698" stroke="#8c581c"/>
+ <path d="M380 0l14 14-14 14-14-14z" fill="#fff0a4"/><path d="M380 5l9 9-9 9-9-9z" fill="#9a6120"/>
+</g>
+<g id="purpleBar" transform="translate(0 150)">
+ <rect x="8" y="12" width="744" height="132" fill="#000" opacity=".72"/><rect width="760" height="132" fill="url(#violetMetal)"/><rect x="5" y="5" width="750" height="122" fill="#13081f"/><rect x="10" y="10" width="740" height="112" fill="url(#blackGlass)"/><rect x="13" y="13" width="734" height="106" fill="url(#micro)"/>
+ <path d="M0 27L27 0h48L56 13H22v34L10 59 0 49zM760 27L733 0h-48l19 13h34v34l12 12 10-10zM0 105l27 27h48l-19-13H22V85L10 73 0 83zM760 105l-27 27h-48l19-13h34V85l12-12 10 10z" fill="url(#violetMetal)"/>
+ <path d="M19 19h722M19 113h722" stroke="#dba5ff" stroke-opacity=".52"/><path d="M31 24h698M31 108h698" stroke="#6b2c9d"/><path d="M380 0l14 14-14 14-14-14z" fill="#ca72ff"/><path d="M380 5l9 9-9 9-9-9z" fill="#5b2394"/>
+</g>
+<g id="blueBar" transform="translate(0 300)">
+ <rect x="8" y="12" width="744" height="132" fill="#000" opacity=".72"/><rect width="760" height="132" fill="url(#blueMetal)"/><rect x="5" y="5" width="750" height="122" fill="#07121d"/><rect x="10" y="10" width="740" height="112" fill="url(#blackGlass)"/><rect x="13" y="13" width="734" height="106" fill="url(#micro)"/>
+ <path d="M0 27L27 0h48L56 13H22v34L10 59 0 49zM760 27L733 0h-48l19 13h34v34l12 12 10-10zM0 105l27 27h48l-19-13H22V85L10 73 0 83zM760 105l-27 27h-48l19-13h34V85l12-12 10 10z" fill="url(#blueMetal)"/><path d="M19 19h722M19 113h722" stroke="#b9efff" stroke-opacity=".52"/><path d="M31 24h698M31 108h698" stroke="#1a729c"/>
+</g>
+<g id="greenBar" transform="translate(0 450)">
+ <rect x="8" y="12" width="744" height="132" fill="#000" opacity=".72"/><rect width="760" height="132" fill="url(#greenMetal)"/><rect x="5" y="5" width="750" height="122" fill="#071811"/><rect x="10" y="10" width="740" height="112" fill="url(#blackGlass)"/><rect x="13" y="13" width="734" height="106" fill="url(#micro)"/>
+ <path d="M0 27L27 0h48L56 13H22v34L10 59 0 49zM760 27L733 0h-48l19 13h34v34l12 12 10-10zM0 105l27 27h48l-19-13H22V85L10 73 0 83zM760 105l-27 27h-48l19-13h34V85l12-12 10 10z" fill="url(#greenMetal)"/><path d="M19 19h722M19 113h722" stroke="#baffd5" stroke-opacity=".52"/><path d="M31 24h698M31 108h698" stroke="#28744f"/>
+</g>
+<g id="orangeBar" transform="translate(0 600)">
+ <rect x="8" y="12" width="744" height="132" fill="#000" opacity=".72"/><rect width="760" height="132" fill="url(#orangeMetal)"/><rect x="5" y="5" width="750" height="122" fill="#190b06"/><rect x="10" y="10" width="740" height="112" fill="url(#blackGlass)"/><rect x="13" y="13" width="734" height="106" fill="url(#micro)"/>
+ <path d="M0 27L27 0h48L56 13H22v34L10 59 0 49zM760 27L733 0h-48l19 13h34v34l12 12 10-10zM0 105l27 27h48l-19-13H22V85L10 73 0 83zM760 105l-27 27h-48l19-13h34V85l12-12 10 10z" fill="url(#orangeMetal)"/><path d="M19 19h722M19 113h722" stroke="#ffd1a2" stroke-opacity=".52"/><path d="M31 24h698M31 108h698" stroke="#8d431b"/>
+</g>
+<g id="darkBar" transform="translate(0 750)">
+ <rect x="8" y="12" width="744" height="132" fill="#000" opacity=".72"/><rect width="760" height="132" fill="url(#silverMetal)"/><rect x="5" y="5" width="750" height="122" fill="#090b12"/><rect x="10" y="10" width="740" height="112" fill="url(#blackGlass)"/><rect x="13" y="13" width="734" height="106" fill="url(#micro)"/>
+ <path d="M0 27L27 0h48L56 13H22v34L10 59 0 49zM760 27L733 0h-48l19 13h34v34l12 12 10-10zM0 105l27 27h48l-19-13H22V85L10 73 0 83zM760 105l-27 27h-48l19-13h34V85l12-12 10 10z" fill="url(#silverMetal)"/><path d="M19 19h722M19 113h722" stroke="#e2e8f5" stroke-opacity=".34"/>
+</g>
+<!-- Large gold/purple panels -->
+<g transform="translate(800 0)"><rect x="10" y="14" width="1180" height="430" fill="#000" opacity=".7"/><rect width="1200" height="430" fill="url(#goldMetal)"/><rect x="5" y="5" width="1190" height="420" fill="#0b0806"/><rect x="11" y="11" width="1178" height="408" fill="url(#blackGlass)"/><rect x="15" y="15" width="1170" height="400" fill="url(#micro)"/><path d="M0 54L54 0h86L106 18H31v75L16 112 0 96zM1200 54l-54-54h-86l34 18h75v75l15 19 16-16zM0 376l54 54h86l-34-18H31v-75l-15-19-16 16zM1200 376l-54 54h-86l34-18h75v-75l15-19 16 16z" fill="url(#goldMetal)"/><path d="M32 29h1136M32 401h1136" stroke="#ffe49a" stroke-opacity=".42"/></g>
+<g transform="translate(800 460)"><rect x="10" y="14" width="1180" height="430" fill="#000" opacity=".7"/><rect width="1200" height="430" fill="url(#violetMetal)"/><rect x="5" y="5" width="1190" height="420" fill="#100719"/><rect x="11" y="11" width="1178" height="408" fill="url(#blackGlass)"/><rect x="15" y="15" width="1170" height="400" fill="url(#micro)"/><path d="M0 54L54 0h86L106 18H31v75L16 112 0 96zM1200 54l-54-54h-86l34 18h75v75l15 19 16-16zM0 376l54 54h86l-34-18H31v-75l-15-19-16 16zM1200 376l-54 54h-86l34-18h75v-75l15-19 16 16z" fill="url(#violetMetal)"/><path d="M32 29h1136M32 401h1136" stroke="#e8b6ff" stroke-opacity=".42"/></g>
+<!-- Medallions -->
+<g transform="translate(820 940)"><circle cx="96" cy="96" r="90" fill="#03060c" stroke="url(#goldMetal)" stroke-width="12"/><circle cx="96" cy="96" r="68" fill="#0c1220" stroke="#7145a8" stroke-width="5"/><path d="M96 22l14 18-14 18-14-18z" fill="#a648ff"/><path d="M96 54l14 28 31 5-22 21 5 31-28-15-28 15 5-31-22-21 31-5z" fill="url(#goldMetal)"/></g>
+<g transform="translate(1030 940)"><circle cx="96" cy="96" r="90" fill="#03060c" stroke="url(#violetMetal)" stroke-width="12"/><circle cx="96" cy="96" r="68" fill="#0d0719" stroke="#c36aff" stroke-width="4"/><path d="M96 22l14 18-14 18-14-18z" fill="#a648ff"/><path d="M96 55l20 41-20 41-20-41z" fill="#ad51ff" stroke="#f1d5ff" stroke-width="4"/></g>
+<g transform="translate(1240 940)"><circle cx="96" cy="96" r="90" fill="#03060c" stroke="url(#greenMetal)" stroke-width="12"/><circle cx="96" cy="96" r="68" fill="#06150d" stroke="#55df8a" stroke-width="4"/><path d="M96 22l14 18-14 18-14-18z" fill="#a648ff"/><path d="M96 64c29-31 68-11 68 22 0 34-38 58-68 78-30-20-68-44-68-78 0-33 39-53 68-22z" fill="#3fdc75"/><path d="M88 82h16v20h20v16h-20v20H88v-20H68v-16h20z" fill="white"/></g>
+<!-- Gem glow field -->
+<ellipse cx="1680" cy="1100" rx="280" ry="230" fill="url(#violetGlow)"/><path d="M1680 900l70 120-70 140-70-140z" fill="#8f3be3" stroke="#e2b8ff" stroke-width="6"/><path d="M1680 910v240M1615 1020h130" stroke="#fff" stroke-opacity=".48" stroke-width="3"/>
+<!-- Small ornate square tabs -->
+<g transform="translate(800 1270)"><rect x="7" y="9" width="270" height="240" fill="#000" opacity=".7"/><rect width="280" height="240" fill="url(#blueMetal)"/><rect x="5" y="5" width="270" height="230" fill="#06101a"/><rect x="11" y="11" width="258" height="218" fill="url(#blackGlass)"/><path d="M0 32L32 0h45L59 13H20v38L8 64 0 56zM280 32L248 0h-45l18 13h39v38l12 13 8-8zM0 208l32 32h45l-18-13H20v-38L8 176 0 184zM280 208l-32 32h-45l18-13h39v-38l12-13 8 8z" fill="url(#blueMetal)"/></g>
+<g transform="translate(1100 1270)"><rect x="7" y="9" width="270" height="240" fill="#000" opacity=".7"/><rect width="280" height="240" fill="url(#orangeMetal)"/><rect x="5" y="5" width="270" height="230" fill="#120805"/><rect x="11" y="11" width="258" height="218" fill="url(#blackGlass)"/><path d="M0 32L32 0h45L59 13H20v38L8 64 0 56zM280 32L248 0h-45l18 13h39v38l12 13 8-8zM0 208l32 32h45l-18-13H20v-38L8 176 0 184zM280 208l-32 32h-45l18-13h39v-38l12-13 8 8z" fill="url(#orangeMetal)"/></g>
+<g transform="translate(1400 1270)"><rect x="7" y="9" width="270" height="240" fill="#000" opacity=".7"/><rect width="280" height="240" fill="url(#violetMetal)"/><rect x="5" y="5" width="270" height="230" fill="#100719"/><rect x="11" y="11" width="258" height="218" fill="url(#blackGlass)"/><path d="M0 32L32 0h45L59 13H20v38L8 64 0 56zM280 32L248 0h-45l18 13h39v38l12 13 8-8zM0 208l32 32h45l-18-13H20v-38L8 176 0 184zM280 208l-32 32h-45l18-13h39v-38l12-13 8 8z" fill="url(#violetMetal)"/></g>
+<g transform="translate(1700 1270)"><rect x="7" y="9" width="270" height="240" fill="#000" opacity=".7"/><rect width="280" height="240" fill="url(#goldMetal)"/><rect x="5" y="5" width="270" height="230" fill="#120c06"/><rect x="11" y="11" width="258" height="218" fill="url(#blackGlass)"/><path d="M0 32L32 0h45L59 13H20v38L8 64 0 56zM280 32L248 0h-45l18 13h39v38l12 13 8-8zM0 208l32 32h45l-18-13H20v-38L8 176 0 184zM280 208l-32 32h-45l18-13h39v-38l12-13 8 8z" fill="url(#goldMetal)"/></g>
+<!-- Large chamfered CTA -->
+<g transform="translate(800 1540)"><path d="M55 0h820l55 55v120l-55 55H55L0 175V55z" fill="#000" opacity=".75" transform="translate(9 12)"/><path d="M55 0h820l55 55v120l-55 55H55L0 175V55z" fill="url(#goldMetal)"/><path d="M62 9h806l51 51v110l-51 51H62L11 170V60z" fill="#211606"/><path d="M72 19h786l42 42v108l-42 42H72L30 169V61z" fill="url(#blackGlass)"/><path d="M465 0l18 18-18 18-18-18z" fill="#fff0a6"/><path d="M12 80h28M890 80h28M12 150h28M890 150h28" stroke="#f0ba47" stroke-width="4"/></g>
+</svg>
