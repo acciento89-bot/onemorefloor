@@ -3,6 +3,14 @@ extends RefCounted
 const ROOM_TYPES := ["COMBAT", "AMBUSH", "ELITE", "TREASURE", "MINIBOSS"]
 
 func area_for_floor(floor_no: int) -> String:
+	if floor_no >= 200:
+		return "CELESTIAL GRAVE"
+	if floor_no >= 150:
+		return "BLOODSTAR KEEP"
+	if floor_no >= 100:
+		return "ECLIPSE SANCTUM"
+	if floor_no >= 51:
+		return "VOID CITADEL"
 	if floor_no >= 41:
 		return "STARLESS SPIRE"
 	if floor_no >= 31:
@@ -12,6 +20,17 @@ func area_for_floor(floor_no: int) -> String:
 	if floor_no >= 11:
 		return "CRYPT"
 	return "DUNGEON"
+
+func endgame_realm_tier(floor_no: int) -> int:
+	if floor_no >= 200:
+		return 4
+	if floor_no >= 150:
+		return 3
+	if floor_no >= 100:
+		return 2
+	if floor_no >= 51:
+		return 1
+	return 0
 
 func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 	if floor_no % 5 == 0:
@@ -24,22 +43,23 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 			"hazard": "none"
 		}
 
-	# The deeper the climb, the less often the tower gives away a soft Treasure
-	# room. Ambush, Elite and Miniboss rooms become steadily more common.
+	# The tower stops handing out soft rooms as the player climbs. Deep realms
+	# replace raw repetition with more Ambush/Elite/Miniboss pressure while still
+	# leaving an occasional Treasure room worth chasing.
 	var treasure_cut := 0.14
 	var ambush_cut := 0.32
 	var elite_cut := 0.46
 	var miniboss_cut := 0.54
+	if floor_no >= 6:
+		treasure_cut = 0.12
+		ambush_cut = 0.36
+		elite_cut = 0.54
+		miniboss_cut = 0.64
 	if floor_no >= 16:
 		treasure_cut = 0.10
 		ambush_cut = 0.38
 		elite_cut = 0.60
 		miniboss_cut = 0.72
-	elif floor_no >= 6:
-		treasure_cut = 0.12
-		ambush_cut = 0.36
-		elite_cut = 0.54
-		miniboss_cut = 0.64
 	if floor_no >= 31:
 		treasure_cut = 0.08
 		ambush_cut = 0.38
@@ -50,6 +70,21 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 		ambush_cut = 0.40
 		elite_cut = 0.66
 		miniboss_cut = 0.82
+	if floor_no >= 100:
+		treasure_cut = 0.055
+		ambush_cut = 0.43
+		elite_cut = 0.70
+		miniboss_cut = 0.87
+	if floor_no >= 150:
+		treasure_cut = 0.045
+		ambush_cut = 0.45
+		elite_cut = 0.73
+		miniboss_cut = 0.90
+	if floor_no >= 200:
+		treasure_cut = 0.035
+		ambush_cut = 0.47
+		elite_cut = 0.76
+		miniboss_cut = 0.93
 
 	var roll := rng.randf()
 	var room_type := "COMBAT"
@@ -87,6 +122,14 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 		hazard = "void_lanes" if rng.randf() < 0.52 else "arcane_pulse"
 	elif area == "STARLESS SPIRE":
 		hazard = "gravity_well" if rng.randf() < 0.50 else "starfall"
+	elif area == "VOID CITADEL":
+		hazard = "void_crossfire" if rng.randf() < 0.52 else "collapsing_runes"
+	elif area == "ECLIPSE SANCTUM":
+		hazard = "eclipse_beams" if rng.randf() < 0.50 else "shadow_orbit"
+	elif area == "BLOODSTAR KEEP":
+		hazard = "blood_rain" if rng.randf() < 0.50 else "chain_sweep"
+	elif area == "CELESTIAL GRAVE":
+		hazard = "comet_storm" if rng.randf() < 0.50 else "singularity"
 
 	return {
 		"area": area,
@@ -98,6 +141,30 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 	}
 
 func enemy_pool(area: String, floor_no: int) -> Array[String]:
+	if area == "CELESTIAL GRAVE":
+		var celestial_pool: Array[String] = ["star_devourer", "crownless", "cosmic_eye"]
+		if floor_no >= 220:
+			celestial_pool.append("blood_seraph")
+		if floor_no >= 250:
+			celestial_pool.append("chain_titan")
+		return celestial_pool
+	if area == "BLOODSTAR KEEP":
+		var bloodstar_pool: Array[String] = ["blood_seraph", "chain_titan", "hemomancer"]
+		if floor_no >= 175:
+			bloodstar_pool.append("shade_duelist")
+		return bloodstar_pool
+	if area == "ECLIPSE SANCTUM":
+		var eclipse_pool: Array[String] = ["eclipse_oracle", "shade_duelist", "sunless_guard"]
+		if floor_no >= 125:
+			eclipse_pool.append("soul_cannon")
+		return eclipse_pool
+	if area == "VOID CITADEL":
+		var void_pool: Array[String] = ["void_lancer", "rift_hound", "soul_cannon"]
+		if floor_no >= 70:
+			void_pool.append("phase_stalker")
+		if floor_no >= 85:
+			void_pool.append("oathbreaker")
+		return void_pool
 	if area == "STARLESS SPIRE":
 		var spire_pool: Array[String] = ["phase_stalker", "oathbreaker", "rift_mage"]
 		if floor_no >= 43:
