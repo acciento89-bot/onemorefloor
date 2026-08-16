@@ -1,10 +1,9 @@
 extends RefCounted
 
 # v1.20 — Monetization foundation.
-# This deliberately does NOT pretend that a native StoreKit/Google Billing or ad
-# SDK is connected. In editor/debug builds purchases and rewarded ads can be
-# simulated so the game/UI/reward plumbing can be tested. Release builds return
-# provider_required until a native provider is wired later.
+# No native StoreKit/Google Billing/ad SDK is faked here. Editor/debug builds can
+# simulate purchases and rewarded ads; release builds return provider_required
+# until the real native provider is connected.
 
 const SAVE_PATH := "user://save.cfg"
 const PRODUCT_REMOVE_ADS := "com.kamilunavo.onemorefloor.removeads"
@@ -17,13 +16,17 @@ const REWARDED_COOLDOWN_SECONDS := 60
 
 var remove_ads := false
 var starter_claimed := false
-var premium_pass := false
+var premium_pass_season := ""
 var purchase_count := 0
 var rewarded_count := 0
 var rewarded_daily_count := 0
 var rewarded_day_key := ""
 var last_rewarded_unix := 0
 var native_provider_ready := false
+
+func current_season_key() -> String:
+	var dt := Time.get_datetime_dict_from_system()
+	return "%04d-%02d" % [int(dt.get("year", 2026)), int(dt.get("month", 1))]
 
 func load_data() -> void:
 	var cfg := ConfigFile.new()
@@ -32,7 +35,9 @@ func load_data() -> void:
 		return
 	remove_ads = bool(cfg.get_value("monetization", "remove_ads", false))
 	starter_claimed = bool(cfg.get_value("monetization", "starter_claimed", false))
-	premium_pass = bool(cfg.get_value("monetization", "premium_pass", false))
+	premium_pass_season = String(cfg.get_value("monetization", "premium_pass_season", ""))
+	if premium_pass_season == "" and bool(cfg.get_value("monetization", "premium_pass", false)):
+		premium_pass_season = current_season_key()
 	purchase_count = int(cfg.get_value("monetization", "purchase_count", 0))
 	rewarded_count = int(cfg.get_value("monetization", "rewarded_count", 0))
 	rewarded_daily_count = int(cfg.get_value("monetization", "rewarded_daily_count", 0))
@@ -45,7 +50,8 @@ func save_data() -> void:
 	cfg.load(SAVE_PATH)
 	cfg.set_value("monetization", "remove_ads", remove_ads)
 	cfg.set_value("monetization", "starter_claimed", starter_claimed)
-	cfg.set_value("monetization", "premium_pass", premium_pass)
+	cfg.set_value("monetization", "premium_pass_season", premium_pass_season)
+	cfg.set_value("monetization", "premium_pass", premium_pass_unlocked())
 	cfg.set_value("monetization", "purchase_count", purchase_count)
 	cfg.set_value("monetization", "rewarded_count", rewarded_count)
 	cfg.set_value("monetization", "rewarded_daily_count", rewarded_daily_count)
@@ -63,7 +69,7 @@ func _refresh_rewarded_day() -> void:
 	save_data()
 
 func premium_pass_unlocked() -> bool:
-	return premium_pass
+	return premium_pass_season == current_season_key()
 
 func is_debug_simulation() -> bool:
 	return OS.is_debug_build()
@@ -113,9 +119,9 @@ func _complete_debug_purchase(product_id: String) -> Dictionary:
 			save_data()
 			return {"status":"granted", "product_id":product_id, "coins":1200, "shards":90}
 		PRODUCT_PREMIUM_PASS:
-			if premium_pass:
+			if premium_pass_unlocked():
 				return {"status":"owned", "product_id":product_id}
-			premium_pass = true
+			premium_pass_season = current_season_key()
 			purchase_count += 1
 			save_data()
 			return {"status":"granted", "product_id":product_id, "coins":250, "shards":20}
@@ -131,7 +137,7 @@ func _complete_debug_purchase(product_id: String) -> Dictionary:
 
 func product_catalog() -> Array[Dictionary]:
 	return [
-		{"id":PRODUCT_PREMIUM_PASS,"title":"PREMIUM TOWER PASS","subtitle":"Extra seasonal reward track"},
+		{"id":PRODUCT_PREMIUM_PASS,"title":"PREMIUM TOWER PASS","subtitle":"Extra rewards for the current season"},
 		{"id":PRODUCT_STARTER,"title":"STARTER CACHE","subtitle":"One-time 1200 coins + 90 shards"},
 		{"id":PRODUCT_REMOVE_ADS,"title":"REMOVE ADS","subtitle":"Permanent ad-free entitlement"},
 		{"id":PRODUCT_COINS_SMALL,"title":"COIN CACHE","subtitle":"900 permanent coins"},
