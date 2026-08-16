@@ -1,14 +1,5 @@
 extends "res://scripts/main_v06.gd"
 
-const TEX_WANDERER = preload("res://assets/art/wanderer.svg")
-const TEX_GOBLIN = preload("res://assets/art/goblin.svg")
-const TEX_BAT = preload("res://assets/art/bat.svg")
-const TEX_SKELETON = preload("res://assets/art/skeleton.svg")
-const TEX_GHOUL = preload("res://assets/art/ghoul.svg")
-const TEX_NECROMANCER = preload("res://assets/art/necromancer.svg")
-const TEX_WARDEN = preload("res://assets/art/warden.svg")
-const TEX_KEEPER = preload("res://assets/art/crypt_keeper.svg")
-
 const V7_EQUIP := Rect2(54, 916, 188, 58)
 const V7_DISMANTLE := Rect2(266, 916, 188, 58)
 const V7_PREV := Rect2(478, 916, 84, 58)
@@ -18,17 +9,36 @@ const V7_CRAFT_ARMOR := Rect2(266, 996, 188, 58)
 const V7_CRAFT_RELIC := Rect2(478, 996, 188, 58)
 const VAULT_PAGE_SIZE := 5
 
+var tex_wanderer: Texture2D
+var tex_goblin: Texture2D
+var tex_bat: Texture2D
+var tex_skeleton: Texture2D
+var tex_ghoul: Texture2D
+var tex_necromancer: Texture2D
+var tex_warden: Texture2D
+var tex_keeper: Texture2D
 var vault_page: int = 0
 var selected_vault_index: int = -1
 
+func _ready() -> void:
+	super._ready()
+	tex_wanderer = load("res://assets/art/wanderer.svg") as Texture2D
+	tex_goblin = load("res://assets/art/goblin.svg") as Texture2D
+	tex_bat = load("res://assets/art/bat.svg") as Texture2D
+	tex_skeleton = load("res://assets/art/skeleton.svg") as Texture2D
+	tex_ghoul = load("res://assets/art/ghoul.svg") as Texture2D
+	tex_necromancer = load("res://assets/art/necromancer.svg") as Texture2D
+	tex_warden = load("res://assets/art/warden.svg") as Texture2D
+	tex_keeper = load("res://assets/art/crypt_keeper.svg") as Texture2D
+
 func draw_wanderer(pos: Vector2, scale: float, combat: bool) -> void:
-	if TEX_WANDERER == null:
+	if tex_wanderer == null:
 		super.draw_wanderer(pos, scale, combat)
 		return
 	var bob: float = sin(elapsed * (6.5 if combat else 2.8)) * (2.2 if combat else 1.5)
 	var size := Vector2(88.0, 88.0) * scale
 	var rect := Rect2(pos.x - size.x * 0.5, pos.y - size.y * 0.58 + bob, size.x, size.y)
-	draw_texture_rect(rect, TEX_WANDERER, false)
+	draw_texture_rect(tex_wanderer, rect, false)
 	if combat:
 		draw_arc(pos + Vector2(0, 10), 31.0 * scale, -0.55, 0.85, 18, Color(1.0, 0.75, 0.30, 0.32), 2.4 * scale)
 
@@ -53,7 +63,7 @@ func draw_enemy(e: Dictionary) -> void:
 		modulate = Color(1.0, 0.55, 0.55, 1.0)
 	if bool(e.get("elite", false)):
 		modulate = modulate.lerp(C_GOLD, 0.18)
-	draw_texture_rect(rect, tex, false, modulate)
+	draw_texture_rect(tex, rect, false, modulate)
 	if bool(e.get("elite", false)):
 		_draw_elite_mark(e)
 	if kind == "warden" and bool(e.get("phase2", false)):
@@ -65,12 +75,12 @@ func draw_enemy(e: Dictionary) -> void:
 
 func _enemy_texture(kind: String, variant: String):
 	match kind:
-		"goblin": return TEX_GOBLIN
-		"bat": return TEX_BAT
-		"skeleton": return TEX_SKELETON
-		"ghoul": return TEX_GHOUL
-		"necromancer": return TEX_NECROMANCER
-		"warden": return TEX_KEEPER if variant == "crypt_keeper" else TEX_WARDEN
+		"goblin": return tex_goblin
+		"bat": return tex_bat
+		"skeleton": return tex_skeleton
+		"ghoul": return tex_ghoul
+		"necromancer": return tex_necromancer
+		"warden": return tex_keeper if variant == "crypt_keeper" else tex_warden
 	return null
 
 func pointer(pos: Vector2, pressed: bool, id: int) -> void:
