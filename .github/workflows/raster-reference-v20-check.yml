@@ -26,13 +26,14 @@ jobs:
         run: |
           ./godot --headless --path . --script res://scripts/main_v21.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v22.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v23.gd --check-only
           ./godot --headless --path . --script res://scripts/v21_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v22_smoke_test.gd --check-only
 
       - name: Assert no full-screen screenshot UI
         run: |
           set -euo pipefail
-          grep -q 'main_v22.gd' scenes/main.tscn
+          grep -Eq 'main_v(22|23)\.gd' scenes/main.tscn
           ! grep -q 'main_v20.gd' scenes/main.tscn
           ! grep -q 'include_filter="assets/art/reference/\*.b64"' export_presets.cfg
           ! grep -q '_v20_load_chunked_webp' scripts/main_v22.gd

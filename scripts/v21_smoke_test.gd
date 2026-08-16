@@ -21,7 +21,7 @@ func _run() -> void:
 		return
 
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	var live_renderer := scene_text.contains("main_v21.gd") or scene_text.contains("main_v22.gd")
+	var live_renderer := scene_text.contains("main_v21.gd") or scene_text.contains("main_v22.gd") or scene_text.contains("main_v23.gd")
 	if not live_renderer or scene_text.contains("main_v20.gd"):
 		_fail(1003,"v1.9+ main scene is not using the live UI renderer")
 		return

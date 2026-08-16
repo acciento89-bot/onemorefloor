@@ -36,7 +36,7 @@ static func make_enemy(kind: String, floor_no: int, rng: RandomNumberGenerator, 
 		hexer["blink_cd"] = rng.randf_range(2.6, 4.2)
 		return hexer
 
-	# Floors 31+ — Deep Tower roster.
+	# Floors 31-40 — Deep Tower roster.
 	if kind == "void_knight":
 		var knight: Dictionary = _base_enemy("void_knight", pos, base_hp * 1.92, 56.0 + floor_no * 0.78, 30.0, 15.0 + floor_no * 0.68, 18 + floor_no, rng)
 		knight["guard"] = 0.18
@@ -55,6 +55,24 @@ static func make_enemy(kind: String, floor_no: int, rng: RandomNumberGenerator, 
 		reaver["lunge_time"] = 0.0
 		reaver["rage"] = 0.0
 		return reaver
+
+	# Floors 41-50 — Starless Spire. These intentionally reuse existing actor
+	# art in the renderer; the differentiation is in behavior, pressure and stats.
+	if kind == "phase_stalker":
+		var stalker: Dictionary = _base_enemy("phase_stalker", pos, base_hp * 1.14, 126.0 + floor_no * 1.08, 23.0, 14.0 + floor_no * 0.62, 24 + floor_no, rng)
+		stalker["phase_cd"] = rng.randf_range(1.4, 2.5)
+		stalker["phase_time"] = 0.0
+		return stalker
+	if kind == "orb_weaver":
+		var weaver: Dictionary = _base_enemy("orb_weaver", pos, base_hp * 1.08, 57.0 + floor_no * 0.74, 24.0, 12.0 + floor_no * 0.54, 26 + floor_no, rng)
+		weaver["attack_cd"] = rng.randf_range(0.25, 0.75)
+		weaver["orbit_angle"] = rng.randf_range(0.0, TAU)
+		return weaver
+	if kind == "oathbreaker":
+		var oath: Dictionary = _base_enemy("oathbreaker", pos, base_hp * 2.18, 52.0 + floor_no * 0.68, 31.0, 17.0 + floor_no * 0.72, 28 + floor_no, rng)
+		oath["guard"] = 0.22
+		oath["slam_cd"] = rng.randf_range(1.5, 2.8)
+		return oath
 
 	if kind == "crypt_keeper":
 		var keeper_hp: float = 520.0 + float(floor_no) * 58.0
@@ -78,6 +96,14 @@ static func make_enemy(kind: String, floor_no: int, rng: RandomNumberGenerator, 
 		astral["teleport_cd"] = 2.8
 		astral["rift_angle"] = 0.0
 		return astral
+	if kind == "null_sovereign":
+		var null_hp: float = 1540.0 + float(floor_no) * 105.0
+		var sovereign: Dictionary = _base_enemy("warden", pos, null_hp, 84.0 + floor_no * 0.50, 66.0, 38.0 + floor_no * 1.15, 340 + floor_no * 15, rng)
+		sovereign["boss_variant"] = "null_sovereign"
+		sovereign["attack_cd"] = 0.58
+		sovereign["teleport_cd"] = 2.4
+		sovereign["eclipse_angle"] = 0.0
+		return sovereign
 
 	var boss_hp: float = 310.0 + float(floor_no) * 48.0
 	var boss: Dictionary = _base_enemy("warden", pos, boss_hp, 62.0 + floor_no * 0.5, 48.0, 22.0 + floor_no * 0.8, 70 + floor_no * 7, rng)
