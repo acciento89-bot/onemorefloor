@@ -8,10 +8,10 @@ Mobile hybrid-casual roguelite by **Kamilunavo Games**.
 
 1. Enter a generated floor room.
 2. Move, dodge and auto-attack enemies.
-3. Clear the room and collect coins and possible gear.
+3. Clear the room and collect coins and gear.
 4. Pick one of three random run upgrades.
-5. Decide to cash out or climb one more floor.
-6. Spend secured coins, equip loot, complete missions and progress the Tower Pass.
+5. Cash out or climb one more floor.
+6. Spend secured resources, equip/craft gear, complete missions and progress the Tower Pass.
 
 ## Tech
 
@@ -19,25 +19,26 @@ Mobile hybrid-casual roguelite by **Kamilunavo Games**.
 - GDScript
 - Portrait-first mobile UI (720 × 1280 reference canvas)
 - iOS / iPadOS and Android targets
-- GitHub Actions validation with direct script checks, headless project load, main-scene launch and gameplay smoke test
+- GitHub Actions validation with direct script checks, headless import, main-scene launch and gameplay smoke test
 
-## Current playable slice — v0.6
+## Current playable slice — v0.7
 
-v0.6 is the first dedicated visual-production pass. It keeps the verified v0.5 gameplay systems and replaces the flat prototype presentation with a stronger procedural art baseline that can later be swapped for external sprite sheets without changing gameplay architecture.
+v0.7 starts moving ONE MORE FLOOR from procedural placeholder rendering to a real external art pipeline while completing the first equipment-material loop.
 
-### Visual production baseline
+### External character art pipeline
 
-- Reworked **Wanderer** silhouette with cape, armor, face, shadow and directional sword presentation.
-- Reworked Goblin, Bat, Skeleton, Ghoul, Necromancer and Warden presentation.
-- Animated bob/flap/aura details that make roles more readable during motion.
-- Soft character shadows to separate units from the floor.
-- Brighter player projectiles, critical trails, enemy-orb pulses and coin glows.
-- Rarity-colored vertical **loot beams** with orbiting sparks.
-- Stronger NOVA / boss-cast visual hierarchy.
-- Dungeon torch pillars, Crypt bone pillars, floor patterning and area-specific rune details.
-- Animated room-transition overlay between floors.
-- Compact room-type badge and refreshed combat HUD.
-- Shared art-direction document at `docs/art-direction.md`.
+The current combat roster now has standalone SVG textures under `assets/art/`:
+
+- Wanderer
+- Goblin
+- Bat
+- Skeleton
+- Ghoul
+- Necromancer
+- The Warden
+- The Crypt Keeper
+
+`main_v07.gd` loads these imported textures at runtime and uses the older procedural drawing as a fallback if an asset is unavailable. Motion is currently driven by runtime bob/flap/tint effects; multi-frame sprite-sheet animation is still a later production pass.
 
 ### Areas and rooms
 
@@ -45,84 +46,73 @@ v0.6 is the first dedicated visual-production pass. It keeps the verified v0.5 g
 - **Crypt** — Floors 11–20
 - **Deep Tower** — reserved routing for Floor 21+
 
-Non-boss floors can roll Combat, Ambush, Elite and Treasure encounters. Boss rooms remain milestone encounters every fifth floor.
+Non-boss floors can roll Combat, Ambush, Elite and Treasure encounters. Crypt rooms keep Soul Mist / Bone Rune hazards and their colder cyan-purple visual language.
 
-Crypt rooms include Soul Mist / Bone Rune hazards and a colder cyan-purple environment language distinct from the warm Dungeon.
-
-### Combat and enemies
+### Combat and bosses
 
 - Touch virtual joystick plus WASD / arrow-key desktop fallback
 - Auto-targeting projectile attacks
 - Critical hits, damage numbers, hit/death effects and screen shake
 - Mobile haptics
-- NOVA active ability that damages enemies and clears hostile projectiles
+- NOVA active ability
 - Procedural first-pass audio feedback
+- Rarity-colored loot beams and room transitions
+- **The Warden** as the recurring milestone boss
+- **The Crypt Keeper** as the dedicated Floor-20 boss with custom cyan-purple attack patterns
 
-Enemy roster:
-
-- **Goblin** — melee chaser
-- **Bat** — fast wobble movement
-- **Skeleton** — ranged kiter
-- **Ghoul** — durable melee enemy that enrages below 40% HP
-- **Necromancer** — ranged Crypt caster that can summon weakened Skeletons
-- **The Warden** — recurring milestone boss with telegraphs and Phase II
-- **The Crypt Keeper** — dedicated Floor-20 boss with a unique cold-blue silhouette and custom projectile patterns
-
-### Boss progression
-
-The Warden remains the recurring early-tower boss. Floor 20 now replaces the standard Warden encounter with **The Crypt Keeper**:
-
-- unique factory variant and visuals
-- dedicated intro presentation
-- stronger base HP / contact pressure
-- custom cyan-purple radial pattern
-- custom aimed fan pattern
-- Phase II still uses the existing telegraph / transition framework
-
-### Run building
-
-Ten temporary run upgrades remain available, including Power Surge, Blood Pact, Multishot, Quick Hands, Deadly Edge and Nova Core. Each cleared floor rolls three choices.
-
-Room clears can also grant room-specific coin and Tower Pass XP bonuses.
-
-### Permanent Camp progression
+### Permanent progression
 
 - **Hero** — permanent HP and damage training
 - **Forge** — permanent weapon-damage upgrades
 - **Talents** — Vitality, Precision and Fortune
-- **Vault** — persistent equipment inventory and tap-to-equip UI
+- **Vault + Forge** — persistent equipment, selection, equip, dismantling and targeted crafting
 - **Missions** — daily and weekly contracts
 - **Tower Pass** — 20-level free progression track
 
-### Loot, traits and sets
+### Loot, traits, sets and Soul Shards
 
-Equipment has Common, Uncommon, Rare, Epic and Legendary rarity tiers across Weapon, Armor and Relic slots.
+Equipment uses Common, Uncommon, Rare, Epic and Legendary rarities across Weapon, Armor and Relic slots.
 
-Rare+ equipment can roll Executioner, Frenzy, Bulwark, Vital Core, Vampiric or Fortune traits. Equipment can belong to Ember, Crypt or Warden sets with real two-piece and three-piece run bonuses.
+Rare+ equipment can roll Executioner, Frenzy, Bulwark, Vital Core, Vampiric or Fortune traits. Ember, Crypt and Warden sets provide real two-piece and three-piece run bonuses.
+
+v0.7 adds **Soul Shards**:
+
+- Common dismantle: 5 Shards
+- Uncommon: 12
+- Rare: 30
+- Epic: 70
+- Legendary: 160
+- Craft cost: 120 Shards
+- Crafting is slot-targeted: Weapon, Armor or Relic
+- Crafted equipment is guaranteed **Rare+**, with a chance for Epic or Legendary
+- Equipped items cannot be dismantled accidentally
+- Shards persist in the existing save file
 
 ### Risk / reward
 
 - Cash out to secure all run coins.
 - Continue to push the tower higher.
 - Death currently secures 60% of unsecured run coins.
-- Camp progression, equipped gear, traits and set bonuses strengthen future runs.
+- Camp progression, equipped gear, traits, sets and crafted equipment strengthen future runs.
 
 ## Validation
 
 The Godot 4.7.1 CI pipeline validates:
 
-1. Direct parser checks for critical gameplay scripts including the active v0.6 controller.
-2. Headless project/editor load with logged script errors treated as failures.
-3. Main-scene launch with logged script errors treated as failures.
-4. Gameplay smoke test covering permanent upgrades, Warden loot, three-piece Crypt equipment bonuses, Ghoul / Necromancer creation, Crypt Floor 11 routing, room transition state, Treasure rewards, Missions, Tower Pass, Floor-20 Crypt Keeper, standard Floor-5 Warden, boss Phase II and cash-out.
+1. Direct parser checks for critical gameplay scripts including `main_v07.gd`.
+2. Headless project/editor import with script errors treated as failures.
+3. Main-scene runtime launch.
+4. Import of all eight external SVG character assets as `Texture2D` resources.
+5. Soul Shard dismantling and guaranteed Rare+ crafting.
+6. Existing Crypt routing, Treasure rewards, Missions, Tower Pass, Crypt Keeper, standard Warden, equipment bonuses and cash-out.
 
 ## Run locally
 
 1. Install Godot 4.7.1 Standard.
 2. Import `project.godot`.
-3. Press **F5** to run the project.
-4. On desktop, use WASD/arrow keys or drag the lower-left joystick area with the mouse.
-5. Press **Space** to trigger NOVA while testing on desktop.
+3. Press **F5**.
+4. Desktop testing: WASD/arrow keys or drag the lower-left joystick area with the mouse.
+5. Press **Space** for NOVA.
 
 ## Roadmap
 
@@ -130,10 +120,11 @@ The Godot 4.7.1 CI pipeline validates:
 - [x] Project foundation and vertical-slice loop
 - [x] Touch movement / auto attack / projectile combat
 - [x] Run upgrades and risk/reward decision
-- [x] Warden boss with telegraphs and Phase II
-- [x] Haptics and first procedural audio-feedback pass
-- [x] Procedural visual-production baseline
-- [ ] External production sprite sheets / frame animations
+- [x] Warden + Crypt Keeper boss encounters
+- [x] Haptics and first procedural audio feedback
+- [x] Procedural visual baseline
+- [x] First external production vector asset pass
+- [ ] Multi-frame sprite sheets / authored frame animations
 - [ ] Production audio / music
 
 ### Phase 2 — Meta progression
@@ -142,7 +133,8 @@ The Godot 4.7.1 CI pipeline validates:
 - [x] Daily / weekly Missions
 - [x] Free Tower Pass
 - [x] Item traits and set bonuses
-- [ ] Equipment dismantling / crafting
+- [x] Equipment dismantling / Soul Shards / targeted crafting
+- [ ] Item locking, sorting and comparison UI
 
 ### Phase 3 — Release systems
 - [ ] Analytics
@@ -155,9 +147,9 @@ The Godot 4.7.1 CI pipeline validates:
 ### Phase 4 — Content
 - [x] Dungeon area prototype
 - [x] Crypt area prototype
-- [x] Combat / Ambush / Elite / Treasure room roles
+- [x] Combat / Ambush / Elite / Treasure rooms
 - [x] Ghoul and Necromancer
-- [x] Second authored boss: The Crypt Keeper
+- [x] The Crypt Keeper
 - [ ] Forgotten Castle
 - [ ] More heroes
 - [ ] Upgrade synergies and room events
@@ -167,20 +159,20 @@ The Godot 4.7.1 CI pipeline validates:
 ```text
 .github/                  CI validation
 scenes/                   Godot scenes
-scripts/main_v03.gd       Verified combat/meta controller
+assets/art/               External character/boss SVG textures
+scripts/main_v03.gd       Combat/meta controller
 scripts/main_v04.gd       Loot/Missions/Tower Pass extension
-scripts/main_v05.gd       Crypt/rooms/traits content extension
-scripts/main_v06.gd       Active visual-production / Crypt Keeper extension
+scripts/main_v05.gd       Crypt/rooms/traits extension
+scripts/main_v06.gd       Visual baseline / Crypt Keeper extension
+scripts/main_v07.gd       External asset renderer + crafting Vault UI
 scripts/progression.gd    Permanent Camp progression and save data
 scripts/run_profile.gd    Per-run player/build state
 scripts/enemy_factory.gd  Enemy creation, scaling, elites and boss variants
 scripts/room_system.gd    Area routing and room generation
-scripts/loot_system.gd    Persistent gear, traits and set bonuses
+scripts/loot_system.gd    Gear, traits, sets, Soul Shards and crafting
 scripts/mission_system.gd Daily/weekly mission progress and claims
 scripts/tower_pass.gd     Free Tower Pass XP and rewards
 scripts/audio_feedback.gd Procedural first-pass sound feedback
 scripts/smoke_test.gd     Headless gameplay validation
-assets/                   External production art/audio target
-scripts/                   Runtime gameplay/UI code
 docs/art-direction.md     Visual north star and production rules
 ```
