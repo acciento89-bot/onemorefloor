@@ -67,6 +67,7 @@ func _run_v18_smoke() -> void:
 		or scene_text.contains("main_v20.gd")
 		or scene_text.contains("main_v21.gd")
 		or scene_text.contains("main_v22.gd")
+		or scene_text.contains("main_v23.gd")
 	)
 	if not compatible_renderer:
 		_fail(811, "v1.6.2 premium reference: compatible main renderer is not active")
