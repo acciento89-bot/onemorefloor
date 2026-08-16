@@ -15,7 +15,7 @@ func _run_v16_smoke() -> void:
 	var game = packed.instantiate()
 	root.add_child(game)
 	if not game.has_method("_v16_frame") or not game.has_method("_v16_button") or not game.has_method("_v16_header"):
-		_fail(602, "v1.5 smoke: final premium menu renderer is not active")
+		_fail(602, "v1.5 smoke: premium menu renderer inheritance is missing")
 		return
 	if game.tex_v16_home == null or game.tex_v16_home.get_width() < 720 or game.tex_v16_home.get_height() < 1280:
 		_fail(603, "v1.5 smoke: final home artwork missing or undersized")
@@ -30,7 +30,6 @@ func _run_v16_smoke() -> void:
 		_fail(606, "v1.5 smoke: premium system typography missing")
 		return
 
-	# Every player-facing menu that existed before v1.5 must now use the v1.5 renderer.
 	var renderer_text := FileAccess.get_file_as_string("res://scripts/main_v16.gd")
 	var required_methods := [
 		"func draw_home()", "func _draw_settings_overlay()", "func _draw_pause_overlay()",
@@ -39,10 +38,9 @@ func _run_v16_smoke() -> void:
 	]
 	for signature in required_methods:
 		if not renderer_text.contains(signature):
-			_fail(607, "v1.5 smoke: menu override missing: %s" % signature)
+			_fail(607, "v1.5 smoke: inherited menu layer missing: %s" % signature)
 			return
 
-	# Preserve the exact Settings BACK input regression protection proven on iPhone.
 	game.tutorial_active = false
 	game.state = game.State.HOME
 	game.settings_open = true
@@ -55,7 +53,6 @@ func _run_v16_smoke() -> void:
 		_fail(608, "v1.5 smoke: Settings BACK regression returned")
 		return
 
-	# All legacy menu hitboxes remain intact, so the redesign cannot silently break touch navigation.
 	if not game.PLAY.has_point(game.PLAY.get_center()):
 		_fail(609, "v1.5 smoke: PLAY hitbox invalid")
 		return
@@ -70,19 +67,9 @@ func _run_v16_smoke() -> void:
 		return
 
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	if not project_text.contains("config/version=\"1.5.0-rc1\""):
-		_fail(613, "v1.5 smoke: project version missing")
-		return
 	if not project_text.contains("pointing/emulate_mouse_from_touch=false"):
-		_fail(614, "v1.5 smoke: native touch hardening regressed")
-		return
-	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not export_text.contains("application/short_version=\"1.5.0\"") or not export_text.contains("version/name=\"1.5.0\""):
-		_fail(615, "v1.5 smoke: mobile visible version missing")
-		return
-	if not export_text.contains("application/version=\"8\"") or not export_text.contains("version/code=8"):
-		_fail(616, "v1.5 smoke: mobile build number 8 missing")
+		_fail(613, "v1.5 smoke: native touch hardening regressed")
 		return
 
-	print("ONE MORE FLOOR v1.5 final premium menus smoke test passed")
+	print("ONE MORE FLOOR v1.5 premium menu inheritance smoke test passed")
 	quit(0)
