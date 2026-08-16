@@ -68,6 +68,7 @@ func _run_v18_smoke() -> void:
 		or scene_text.contains("main_v21.gd")
 		or scene_text.contains("main_v22.gd")
 		or scene_text.contains("main_v23.gd")
+		or scene_text.contains("main_v35.gd")
 	)
 	if not compatible_renderer:
 		_fail(811, "v1.6.2 premium reference: compatible main renderer is not active")
@@ -79,6 +80,7 @@ func _run_v18_smoke() -> void:
 		or project_text.contains("config/version=\"1.8.0-raster-reference\"")
 		or project_text.contains("config/version=\"1.9.0-runtime-ui\"")
 		or project_text.contains("config/version=\"1.10.0-premium-components\"")
+		or project_text.contains("config/version=\"1.24.0\"")
 	)
 	if not compatible_version:
 		_fail(812, "v1.6.2 premium reference: compatible project version missing")
@@ -93,6 +95,7 @@ func _run_v18_smoke() -> void:
 		or (export_text.contains("application/short_version=\"1.8.0\"") and export_text.contains("version/name=\"1.8.0\""))
 		or (export_text.contains("application/short_version=\"1.9.0\"") and export_text.contains("version/name=\"1.9.0\""))
 		or (export_text.contains("application/short_version=\"1.10.0\"") and export_text.contains("version/name=\"1.10.0\""))
+		or (export_text.contains("application/short_version=\"1.24.0\"") and export_text.contains("version/name=\"1.24.0\""))
 	)
 	if not compatible_mobile:
 		_fail(814, "v1.6.2 premium reference: compatible mobile version missing")
@@ -103,6 +106,7 @@ func _run_v18_smoke() -> void:
 		or (export_text.contains("application/version=\"13\"") and export_text.contains("version/code=13"))
 		or (export_text.contains("application/version=\"14\"") and export_text.contains("version/code=14"))
 		or (export_text.contains("application/version=\"15\"") and export_text.contains("version/code=15"))
+		or (export_text.contains("application/version=\"16\"") and export_text.contains("version/code=16"))
 	)
 	if not compatible_build:
 		_fail(815, "v1.6.2 premium reference: compatible build missing")
