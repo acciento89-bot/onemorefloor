@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - agent/v1.0-ios-testflight
+      - main
     paths:
       - 'export_presets.cfg'
       - 'project.godot'
