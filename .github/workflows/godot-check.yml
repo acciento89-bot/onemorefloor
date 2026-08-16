@@ -52,8 +52,11 @@ jobs:
           ./godot --headless --path . --script res://scripts/main_v17.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v22.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v23.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v24.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v25.gd --check-only
           ./godot --headless --path . --script res://scripts/deep_tower_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v23_gameplay_smoke_test.gd --check-only
+          ./godot --headless --path . --script res://scripts/v25_gameplay_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v16_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v17_smoke_test.gd --check-only
 
@@ -92,6 +95,12 @@ jobs:
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v23_gameplay_smoke_test.gd --quit-after 120 | tee v23-gameplay-smoke.log
           grep -q "ONE MORE FLOOR v1.11 Run System 2.0 smoke test passed" v23-gameplay-smoke.log
+
+      - name: Run v1.13 gameplay depth smoke script
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v25_gameplay_smoke_test.gd --quit-after 120 | tee v25-gameplay-smoke.log
+          grep -q "ONE MORE FLOOR v1.13 gameplay depth smoke test passed" v25-gameplay-smoke.log
 
       - name: Run v1.0 release smoke script
         run: |
