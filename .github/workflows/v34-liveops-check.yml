@@ -1,0 +1,46 @@
+name: Liveops Economy v1.21 Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+  pull_request:
+
+jobs:
+  validate-liveops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+
+      - name: Parse v1.19-v1.21 systems
+        run: |
+          ./godot --headless --path . --script res://scripts/mission_system_v2.gd --check-only
+          ./godot --headless --path . --script res://scripts/tower_pass_v2.gd --check-only
+          ./godot --headless --path . --script res://scripts/monetization_service.gd --check-only
+          ./godot --headless --path . --script res://scripts/economy_balance_v2.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v34.gd --check-only
+          ./godot --headless --path . --script res://scripts/v34_liveops_smoke_test.gd --check-only
+
+      - name: Import project
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script" import.log; then
+            exit 1
+          fi
+
+      - name: Run liveops smoke
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v34_liveops_smoke_test.gd --quit-after 120 | tee v34.log
+          grep -q "ONE MORE FLOOR v1.19-v1.21 liveops/economy smoke test passed" v34.log
