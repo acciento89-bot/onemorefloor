@@ -1,7 +1,7 @@
 [gd_scene load_steps=2 format=3]
 
 ; Compatibility baseline retained for regression checks: res://scripts/main_v23.gd
-[ext_resource type="Script" path="res://scripts/main_v24.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/main_v25.gd" id="1_main"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
