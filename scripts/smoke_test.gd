@@ -35,6 +35,14 @@ func _run_smoke() -> void:
 	if atlas == null or atlas.get_width() < 500 or atlas.get_height() < 800 or game.tex_combat_atlas == null:
 		_fail(23, "Smoke test: v0.8 combat animation atlas failed to import")
 		return
+	var motion_atlas := load("res://assets/art/motion_atlas.svg") as Texture2D
+	if motion_atlas == null or motion_atlas.get_width() < 1600 or motion_atlas.get_height() < 1200 or game.tex_motion_atlas == null:
+		_fail(34, "Smoke test: v0.9 directional motion atlas failed to import")
+		return
+	var move_frame: int = int(game._motion_frame("move", 0.0, false))
+	if move_frame < 1 or move_frame > 3 or int(game._motion_row("warden", "hollow_king")) != 11:
+		_fail(35, "Smoke test: v0.9 motion frame mapping invalid")
+		return
 
 	game.meta.coins = 100000
 	game.buy_meta("hero")
@@ -98,6 +106,11 @@ func _run_smoke() -> void:
 	if not ("ghoul" in crypt_pool) or not ("necromancer" in crypt_pool):
 		_fail(5, "Smoke test: Crypt enemy pool missing new archetypes")
 		return
+	var castle_pool_21: Array[String] = game.room_system.enemy_pool("FORGOTTEN CASTLE", 21)
+	var castle_pool_23: Array[String] = game.room_system.enemy_pool("FORGOTTEN CASTLE", 23)
+	if game.room_system.area_for_floor(21) != "FORGOTTEN CASTLE" or not ("gargoyle" in castle_pool_21) or not ("sentinel" in castle_pool_21) or not ("hexer" in castle_pool_23):
+		_fail(36, "Smoke test: Forgotten Castle routing or enemy pool invalid")
+		return
 	var enemy_factory = load("res://scripts/enemy_factory.gd")
 	var ghoul: Dictionary = enemy_factory.make_enemy("ghoul", 13, game.rng, Vector2(360, 700))
 	var necro: Dictionary = enemy_factory.make_enemy("necromancer", 13, game.rng, Vector2(360, 700))
@@ -107,6 +120,16 @@ func _run_smoke() -> void:
 		return
 	if String(keeper_factory["type"]) != "warden" or String(keeper_factory.get("boss_variant", "")) != "crypt_keeper":
 		_fail(7, "Smoke test: Crypt Keeper factory output invalid")
+		return
+	var gargoyle: Dictionary = enemy_factory.make_enemy("gargoyle", 21, game.rng, Vector2(360, 700))
+	var sentinel: Dictionary = enemy_factory.make_enemy("sentinel", 21, game.rng, Vector2(360, 700))
+	var hexer: Dictionary = enemy_factory.make_enemy("hexer", 23, game.rng, Vector2(360, 700))
+	var king_factory: Dictionary = enemy_factory.make_enemy("hollow_king", 30, game.rng, Vector2(360, 700))
+	if not gargoyle.has("dive_cd") or float(sentinel.get("guard", 0.0)) < 0.29 or not hexer.has("blink_cd"):
+		_fail(37, "Smoke test: Forgotten Castle enemy factory output invalid")
+		return
+	if String(king_factory["type"]) != "warden" or String(king_factory.get("boss_variant", "")) != "hollow_king" or not king_factory.has("teleport_cd"):
+		_fail(38, "Smoke test: Hollow King factory output invalid")
 		return
 
 	game.missions.record("kills", 25)
@@ -140,8 +163,13 @@ func _run_smoke() -> void:
 	game.enemies.clear()
 	game.enemies.append(anim_enemy)
 	game.fire_auto_attack()
-	if String(game.player_anim_state) != "attack":
-		_fail(29, "Smoke test: player attack animation state did not trigger")
+	if String(game.player_anim_state) != "attack" or int(game.player_facing) != 1:
+		_fail(29, "Smoke test: player attack animation or right-facing state did not trigger")
+		return
+	game.enemies[0]["pos"] = game.player_pos + Vector2(-60, 0)
+	game.fire_auto_attack()
+	if int(game.player_facing) != -1:
+		_fail(39, "Smoke test: directional left-facing attack state did not trigger")
 		return
 	game.apply_damage_to_enemy(0, 1.0, false, game.enemies[0]["pos"])
 	if float(game.enemies[0].get("anim_hit", 0.0)) <= 0.0:
@@ -184,7 +212,7 @@ func _run_smoke() -> void:
 		_fail(14, "Smoke test: Floor 11 did not enter Crypt area")
 		return
 	if float(game.room_transition) <= 0.0:
-		_fail(15, "Smoke test: v0.6 room transition was not triggered")
+		_fail(15, "Smoke test: room transition was not triggered")
 		return
 
 	game.run.floor_no = 20
@@ -202,6 +230,62 @@ func _run_smoke() -> void:
 		_fail(17, "Smoke test: Crypt Keeper intro was not triggered")
 		return
 	game.update_enemies(0.016)
+
+	game.run.floor_no = 21
+	game.spawn_floor()
+	if String(game.current_room.get("area", "")) != "FORGOTTEN CASTLE":
+		_fail(40, "Smoke test: Floor 21 did not enter Forgotten Castle")
+		return
+	var castle_enemy_found: bool = false
+	for e in game.enemies:
+		if String(e["type"]) in ["gargoyle", "sentinel", "hexer"]:
+			castle_enemy_found = true
+			break
+	if not castle_enemy_found:
+		_fail(41, "Smoke test: Floor 21 did not spawn a Castle archetype")
+		return
+	game.current_room = {"area":"FORGOTTEN CASTLE","type":"COMBAT","reward_bonus":0,"hazard":"falling_masonry"}
+	game.hazard_timer = 0.0
+	var shots_before_hazard: int = game.enemy_shots.size()
+	game.update_room_hazard(0.016)
+	if game.enemy_shots.size() <= shots_before_hazard:
+		_fail(42, "Smoke test: Forgotten Castle falling masonry hazard did not fire")
+		return
+
+	var test_sentinel: Dictionary = enemy_factory.make_enemy("sentinel", 21, game.rng, game.player_pos)
+	game.enemies.clear()
+	game.enemies.append(test_sentinel)
+	var sentinel_hp_before: float = float(game.enemies[0]["hp"])
+	game.apply_damage_to_enemy(0, 100.0, false, game.enemies[0]["pos"])
+	var sentinel_damage_taken: float = sentinel_hp_before - float(game.enemies[0]["hp"])
+	if sentinel_damage_taken < 69.0 or sentinel_damage_taken > 71.0:
+		_fail(43, "Smoke test: Royal Sentinel guard reduction invalid")
+		return
+
+	game.run.floor_no = 30
+	game.spawn_floor()
+	var king_index: int = -1
+	for i in range(game.enemies.size()):
+		var e: Dictionary = game.enemies[i]
+		if String(e["type"]) == "warden" and String(e.get("boss_variant", "")) == "hollow_king":
+			king_index = i
+			break
+	if king_index < 0:
+		_fail(44, "Smoke test: Hollow King did not spawn on floor 30")
+		return
+	if float(game.hollow_intro) <= 0.0:
+		_fail(45, "Smoke test: Hollow King intro was not triggered")
+		return
+	game.enemies[king_index]["hp"] = float(game.enemies[king_index]["max_hp"]) * 0.50
+	game.update_enemies(0.016)
+	var king_phase2: bool = false
+	for e in game.enemies:
+		if String(e.get("boss_variant", "")) == "hollow_king":
+			king_phase2 = bool(e.get("phase2", false))
+			break
+	if not king_phase2:
+		_fail(46, "Smoke test: Hollow King phase two did not trigger")
+		return
 
 	game.run.floor_no = 5
 	game.spawn_floor()

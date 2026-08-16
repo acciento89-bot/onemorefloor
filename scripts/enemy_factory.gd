@@ -20,12 +20,35 @@ static func make_enemy(kind: String, floor_no: int, rng: RandomNumberGenerator, 
 		necro["attack_cd"] = rng.randf_range(0.4, 1.0)
 		necro["summon_cd"] = rng.randf_range(2.8, 4.2)
 		return necro
+	if kind == "gargoyle":
+		var gargoyle: Dictionary = _base_enemy("gargoyle", pos, base_hp * 1.06, 92.0 + floor_no * 1.25, 25.0, 12.0 + floor_no * 0.58, 10 + floor_no, rng)
+		gargoyle["dive_cd"] = rng.randf_range(1.4, 2.8)
+		gargoyle["dive_time"] = 0.0
+		return gargoyle
+	if kind == "sentinel":
+		var sentinel: Dictionary = _base_enemy("sentinel", pos, base_hp * 1.72, 48.0 + floor_no * 0.7, 28.0, 14.0 + floor_no * 0.62, 13 + floor_no, rng)
+		sentinel["guard"] = 0.30
+		sentinel["attack_cd"] = rng.randf_range(0.4, 1.0)
+		return sentinel
+	if kind == "hexer":
+		var hexer: Dictionary = _base_enemy("hexer", pos, base_hp * 0.92, 60.0 + floor_no * 0.9, 22.0, 10.0 + floor_no * 0.46, 14 + floor_no, rng)
+		hexer["attack_cd"] = rng.randf_range(0.35, 0.9)
+		hexer["blink_cd"] = rng.randf_range(2.6, 4.2)
+		return hexer
 	if kind == "crypt_keeper":
 		var keeper_hp: float = 520.0 + float(floor_no) * 58.0
 		var keeper: Dictionary = _base_enemy("warden", pos, keeper_hp, 68.0 + floor_no * 0.48, 54.0, 26.0 + floor_no * 0.9, 120 + floor_no * 9, rng)
 		keeper["boss_variant"] = "crypt_keeper"
 		keeper["attack_cd"] = 0.95
 		return keeper
+	if kind == "hollow_king":
+		var king_hp: float = 860.0 + float(floor_no) * 72.0
+		var king: Dictionary = _base_enemy("warden", pos, king_hp, 74.0 + floor_no * 0.52, 60.0, 30.0 + floor_no * 1.0, 185 + floor_no * 11, rng)
+		king["boss_variant"] = "hollow_king"
+		king["attack_cd"] = 0.75
+		king["teleport_cd"] = 3.3
+		king["crown_angle"] = 0.0
+		return king
 	var boss_hp: float = 310.0 + float(floor_no) * 48.0
 	var boss: Dictionary = _base_enemy("warden", pos, boss_hp, 62.0 + floor_no * 0.5, 48.0, 22.0 + floor_no * 0.8, 70 + floor_no * 7, rng)
 	boss["attack_cd"] = 1.15

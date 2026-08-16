@@ -3,9 +3,11 @@ extends RefCounted
 const ROOM_TYPES := ["COMBAT", "AMBUSH", "ELITE", "TREASURE"]
 
 func area_for_floor(floor_no: int) -> String:
+	if floor_no >= 21 and floor_no <= 30:
+		return "FORGOTTEN CASTLE"
 	if floor_no >= 11 and floor_no <= 20:
 		return "CRYPT"
-	if floor_no >= 21:
+	if floor_no >= 31:
 		return "DEEP TOWER"
 	return "DUNGEON"
 
@@ -39,10 +41,13 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 	elif room_type == "ELITE":
 		enemy_bonus = -1
 		reward_bonus = 18 + floor_no * 2
-	if area_for_floor(floor_no) == "CRYPT":
+	var area: String = area_for_floor(floor_no)
+	if area == "CRYPT":
 		hazard = "soul_mist" if rng.randf() < 0.55 else "bone_runes"
+	elif area == "FORGOTTEN CASTLE":
+		hazard = "falling_masonry" if rng.randf() < 0.52 else "cursed_banners"
 	return {
-		"area": area_for_floor(floor_no),
+		"area": area,
 		"type": room_type,
 		"enemy_bonus": enemy_bonus,
 		"reward_bonus": reward_bonus,
@@ -51,6 +56,11 @@ func roll_room(floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 	}
 
 func enemy_pool(area: String, floor_no: int) -> Array[String]:
+	if area == "FORGOTTEN CASTLE":
+		var castle_pool: Array[String] = ["gargoyle", "sentinel", "skeleton"]
+		if floor_no >= 23:
+			castle_pool.append("hexer")
+		return castle_pool
 	if area == "CRYPT":
 		var crypt_pool: Array[String] = ["skeleton", "ghoul", "bat"]
 		if floor_no >= 13:
