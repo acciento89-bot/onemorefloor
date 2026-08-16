@@ -93,7 +93,7 @@ func _run_v11_smoke() -> void:
 		_fail(215, "v1.1 smoke: home did not restore menu music")
 		return
 
-	var translated := game.screen_to_design(game.v11_layout_offset + Vector2(222, 333))
+	var translated: Vector2 = game.screen_to_design(game.v11_layout_offset + Vector2(222, 333))
 	if translated.distance_to(Vector2(222, 333)) > 0.01:
 		_fail(216, "v1.1 smoke: touch coordinate translation is incorrect")
 		return
