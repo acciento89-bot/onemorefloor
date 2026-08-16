@@ -1,0 +1,50 @@
+name: Release Polish v1.24 Check
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'scenes/**'
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - '.github/workflows/release-polish-v124-check.yml'
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/**'
+      - 'scenes/**'
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - '.github/workflows/release-polish-v124-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-release-polish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+      - name: Parse v1.22-v1.24 systems
+        run: |
+          ./godot --headless --path . --script res://scripts/release_audio.gd --check-only
+          ./godot --headless --path . --script res://scripts/telemetry.gd --check-only
+          ./godot --headless --path . --script res://scripts/release_guard.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v35.gd --check-only
+          ./godot --headless --path . --script res://scripts/v35_release_polish_smoke_test.gd --check-only
+      - name: Import project
+        run: ./godot --headless --editor --path . --quit
+      - name: Run v1.24 smoke
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v35_release_polish_smoke_test.gd --quit-after 120 | tee v124.log
+          grep -q 'ONE MORE FLOOR v1.24 polish/release smoke test passed' v124.log
