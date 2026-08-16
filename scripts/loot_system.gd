@@ -1,10 +1,10 @@
 extends RefCounted
 
 const SAVE_PATH := "user://save.cfg"
-const RARITIES := ["COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY"]
-const RARITY_MULT := [1.0, 1.35, 1.85, 2.6, 3.8]
-const SETS := ["EMBER", "CRYPT", "WARDEN"]
-const DISMANTLE_VALUES := [5, 12, 30, 70, 160]
+const RARITIES := ["COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC", "ASCENDANT"]
+const RARITY_MULT := [1.0, 1.35, 1.85, 2.6, 3.8, 5.4, 7.5]
+const SETS := ["EMBER", "CRYPT", "WARDEN", "VOID", "ECLIPSE", "BLOODSTAR", "CELESTIAL"]
+const DISMANTLE_VALUES := [5, 12, 30, 70, 160, 360, 800]
 const CRAFT_COST := 120
 
 var inventory: Array = []
@@ -34,6 +34,10 @@ func save_data() -> void:
 
 func roll_drop(enemy_type: String, floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
 	var chance: float = 0.055 + minf(0.08, float(floor_no) * 0.002)
+	if floor_no >= 100:
+		chance += 0.025
+	if floor_no >= 200:
+		chance += 0.025
 	if enemy_type == "warden":
 		chance = 1.0
 	if rng.randf() > chance:
@@ -54,10 +58,27 @@ func craft_item(slot: String, floor_no: int, rng: RandomNumberGenerator) -> Dict
 	shards -= CRAFT_COST
 	var roll: float = rng.randf()
 	var rarity_index: int = 2
-	if roll < 0.035:
-		rarity_index = 4
-	elif roll < 0.22:
-		rarity_index = 3
+	if floor_no >= 200:
+		if roll < 0.015:
+			rarity_index = 6
+		elif roll < 0.085:
+			rarity_index = 5
+		elif roll < 0.22:
+			rarity_index = 4
+		elif roll < 0.55:
+			rarity_index = 3
+	elif floor_no >= 100:
+		if roll < 0.035:
+			rarity_index = 5
+		elif roll < 0.14:
+			rarity_index = 4
+		elif roll < 0.44:
+			rarity_index = 3
+	else:
+		if roll < 0.035:
+			rarity_index = 4
+		elif roll < 0.22:
+			rarity_index = 3
 	var item: Dictionary = _make_item(slot, rarity_index, maxi(5, floor_no), rng)
 	_store_item(item)
 	save_data()
@@ -90,12 +111,65 @@ func _store_item(item: Dictionary) -> void:
 
 func _roll_rarity(warden: bool, floor_no: int, rng: RandomNumberGenerator) -> int:
 	var roll: float = rng.randf()
-	var bonus: float = minf(0.12, float(floor_no) * 0.0025)
+	# Mythic starts to appear in the Void Citadel; Ascendant is an actual
+	# endgame chase tier rather than something that can drop on Floor 1.
 	if warden:
-		if roll < 0.04 + bonus * 0.35: return 4
-		if roll < 0.20 + bonus: return 3
+		if floor_no >= 200:
+			if roll < 0.055: return 6
+			if roll < 0.190: return 5
+			if roll < 0.430: return 4
+			if roll < 0.760: return 3
+			return 2
+		if floor_no >= 150:
+			if roll < 0.025: return 6
+			if roll < 0.135: return 5
+			if roll < 0.360: return 4
+			if roll < 0.720: return 3
+			return 2
+		if floor_no >= 100:
+			if roll < 0.008: return 6
+			if roll < 0.080: return 5
+			if roll < 0.300: return 4
+			if roll < 0.680: return 3
+			return 2
+		if floor_no >= 51:
+			if roll < 0.025: return 5
+			if roll < 0.220: return 4
+			if roll < 0.610: return 3
+			return 2
+		var boss_bonus: float = minf(0.12, float(floor_no) * 0.0025)
+		if roll < 0.04 + boss_bonus * 0.35: return 4
+		if roll < 0.20 + boss_bonus: return 3
 		if roll < 0.58: return 2
 		return 1
+
+	if floor_no >= 200:
+		if roll < 0.012: return 6
+		if roll < 0.075: return 5
+		if roll < 0.190: return 4
+		if roll < 0.420: return 3
+		if roll < 0.690: return 2
+		return 1
+	if floor_no >= 150:
+		if roll < 0.005: return 6
+		if roll < 0.050: return 5
+		if roll < 0.155: return 4
+		if roll < 0.390: return 3
+		if roll < 0.670: return 2
+		return 1
+	if floor_no >= 100:
+		if roll < 0.025: return 5
+		if roll < 0.125: return 4
+		if roll < 0.360: return 3
+		if roll < 0.650: return 2
+		return 1
+	if floor_no >= 51:
+		if roll < 0.008: return 5
+		if roll < 0.095: return 4
+		if roll < 0.300: return 3
+		if roll < 0.600: return 2
+		return 1
+	var bonus: float = minf(0.12, float(floor_no) * 0.0025)
 	if roll < 0.008 + bonus * 0.15: return 4
 	if roll < 0.045 + bonus * 0.35: return 3
 	if roll < 0.16 + bonus: return 2
@@ -103,6 +177,7 @@ func _roll_rarity(warden: bool, floor_no: int, rng: RandomNumberGenerator) -> in
 	return 0
 
 func _make_item(slot: String, rarity_index: int, floor_no: int, rng: RandomNumberGenerator) -> Dictionary:
+	rarity_index = clampi(rarity_index, 0, RARITIES.size() - 1)
 	var rarity: String = String(RARITIES[rarity_index])
 	var mult: float = float(RARITY_MULT[rarity_index])
 	var level: int = maxi(1, floor_no)
@@ -112,6 +187,22 @@ func _make_item(slot: String, rarity_index: int, floor_no: int, rng: RandomNumbe
 		"armor": ["Ironhide", "Crypt Guard", "Tower Plate", "Warden Shell", "Grave Mantle"],
 		"relic": ["Ember Eye", "Lucky Sigil", "Void Charm", "Warden Seal", "Bone Lantern"]
 	}
+	if floor_no >= 51:
+		names["weapon"].append_array(["Rift Pike", "Soulcutter"])
+		names["armor"].append_array(["Void Carapace", "Citadel Plate"])
+		names["relic"].append_array(["Black Prism", "Rift Heart"])
+	if floor_no >= 100:
+		names["weapon"].append_array(["Eclipse Fang", "Nightglass Edge"])
+		names["armor"].append_array(["Eclipse Aegis", "Sunless Mail"])
+		names["relic"].append_array(["Black Sun", "Oracle Eye"])
+	if floor_no >= 150:
+		names["weapon"].append_array(["Bloodstar Edge", "Chainbreaker"])
+		names["armor"].append_array(["Bloodstar Plate", "Titan Husk"])
+		names["relic"].append_array(["Crimson Halo", "Heart of Chains"])
+	if floor_no >= 200:
+		names["weapon"].append_array(["Grave of Suns", "Worldsplitter"])
+		names["armor"].append_array(["Celestial Husk", "Crownless Plate"])
+		names["relic"].append_array(["Dead Star", "World Eater Eye"])
 	var item: Dictionary = {
 		"id": item_id, "slot": slot,
 		"name": names[slot][rng.randi_range(0, names[slot].size() - 1)],
@@ -129,14 +220,40 @@ func _make_item(slot: String, rarity_index: int, floor_no: int, rng: RandomNumbe
 		else:
 			item["coin_pct"] = (0.018 + float(level) * 0.0013) * mult
 	if rarity_index >= 2:
-		item["trait"] = _roll_trait(slot, rng)
+		item["trait"] = _roll_trait(slot, floor_no, rarity_index, rng)
 	if rarity_index >= 1:
-		var set_chance: float = 0.82 if rarity_index >= 2 else 0.35
+		var set_chance: float = 0.92 if rarity_index >= 5 else (0.82 if rarity_index >= 2 else 0.35)
 		if rng.randf() < set_chance:
-			item["set"] = String(SETS[rng.randi_range(0, SETS.size() - 1)])
+			var set_pool := _set_pool_for_floor(floor_no)
+			item["set"] = String(set_pool[rng.randi_range(0, set_pool.size() - 1)])
 	return item
 
-func _roll_trait(slot: String, rng: RandomNumberGenerator) -> String:
+func _set_pool_for_floor(floor_no: int) -> Array[String]:
+	var pool: Array[String] = ["EMBER", "CRYPT", "WARDEN"]
+	if floor_no >= 51:
+		pool.append("VOID")
+	if floor_no >= 100:
+		pool.append("ECLIPSE")
+	if floor_no >= 150:
+		pool.append("BLOODSTAR")
+	if floor_no >= 200:
+		pool.append("CELESTIAL")
+	return pool
+
+func _roll_trait(slot: String, floor_no: int, rarity_index: int, rng: RandomNumberGenerator) -> String:
+	var deep_trait_chance := 0.0
+	if floor_no >= 100:
+		deep_trait_chance = 0.16
+	if rarity_index >= 5:
+		deep_trait_chance += 0.24
+	if rarity_index >= 6:
+		deep_trait_chance += 0.20
+	if rng.randf() < deep_trait_chance:
+		if slot == "weapon":
+			return "RIFTBORN"
+		if slot == "armor":
+			return "IMMORTAL"
+		return "STARHEART"
 	if slot == "weapon":
 		return "EXECUTIONER" if rng.randf() < 0.55 else "FRENZY"
 	if slot == "armor":
@@ -233,12 +350,18 @@ func equipped_items() -> Array:
 			result.append(item)
 	return result
 
+func _empty_set_counts() -> Dictionary:
+	return {
+		"EMBER":0, "CRYPT":0, "WARDEN":0, "VOID":0,
+		"ECLIPSE":0, "BLOODSTAR":0, "CELESTIAL":0
+	}
+
 func equipped_bonuses() -> Dictionary:
 	var result: Dictionary = {
 		"damage_pct":0.0, "hp":0.0, "crit_pct":0.0, "coin_pct":0.0,
 		"lifesteal":0.0, "armor":0.0, "attack_speed":0.0, "nova_mult":0.0
 	}
-	var set_counts: Dictionary = {"EMBER":0, "CRYPT":0, "WARDEN":0}
+	var set_counts: Dictionary = _empty_set_counts()
 	var items: Array = equipped_items()
 	for raw_item in items:
 		var item: Dictionary = raw_item
@@ -254,6 +377,15 @@ func equipped_bonuses() -> Dictionary:
 			"VITAL CORE": result["hp"] = float(result["hp"]) + 18.0
 			"VAMPIRIC": result["lifesteal"] = float(result["lifesteal"]) + 0.025
 			"FORTUNE": result["coin_pct"] = float(result["coin_pct"]) + 0.06
+			"RIFTBORN":
+				result["damage_pct"] = float(result["damage_pct"]) + 0.10
+				result["attack_speed"] = float(result["attack_speed"]) + 0.05
+			"IMMORTAL":
+				result["hp"] = float(result["hp"]) + 42.0
+				result["armor"] = float(result["armor"]) + 0.045
+			"STARHEART":
+				result["crit_pct"] = float(result["crit_pct"]) + 0.055
+				result["nova_mult"] = float(result["nova_mult"]) + 0.22
 		var set_name: String = String(item.get("set", ""))
 		if set_counts.has(set_name):
 			set_counts[set_name] = int(set_counts[set_name]) + 1
@@ -273,9 +405,28 @@ func _apply_set_bonus(result: Dictionary, counts: Dictionary) -> void:
 		result["armor"] = float(result["armor"]) + 0.035
 	if int(counts["WARDEN"]) >= 3:
 		result["nova_mult"] = float(result["nova_mult"]) + 0.20
+	if int(counts["VOID"]) >= 2:
+		result["damage_pct"] = float(result["damage_pct"]) + 0.10
+	if int(counts["VOID"]) >= 3:
+		result["lifesteal"] = float(result["lifesteal"]) + 0.035
+	if int(counts["ECLIPSE"]) >= 2:
+		result["crit_pct"] = float(result["crit_pct"]) + 0.07
+	if int(counts["ECLIPSE"]) >= 3:
+		result["nova_mult"] = float(result["nova_mult"]) + 0.28
+	if int(counts["BLOODSTAR"]) >= 2:
+		result["hp"] = float(result["hp"]) + 40.0
+		result["damage_pct"] = float(result["damage_pct"]) + 0.08
+	if int(counts["BLOODSTAR"]) >= 3:
+		result["lifesteal"] = float(result["lifesteal"]) + 0.045
+	if int(counts["CELESTIAL"]) >= 2:
+		result["armor"] = float(result["armor"]) + 0.05
+		result["attack_speed"] = float(result["attack_speed"]) + 0.08
+	if int(counts["CELESTIAL"]) >= 3:
+		result["damage_pct"] = float(result["damage_pct"]) + 0.14
+		result["nova_mult"] = float(result["nova_mult"]) + 0.35
 
 func equipped_set_counts() -> Dictionary:
-	var counts: Dictionary = {"EMBER":0, "CRYPT":0, "WARDEN":0}
+	var counts: Dictionary = _empty_set_counts()
 	var items: Array = equipped_items()
 	for raw_item in items:
 		var item: Dictionary = raw_item
