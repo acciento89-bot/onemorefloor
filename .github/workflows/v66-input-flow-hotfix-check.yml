@@ -1,0 +1,54 @@
+name: v1.52.1 Tutorial and Game Over Input Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/main_v66.gd'
+      - 'scripts/v66_input_flow_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v66-input-flow-hotfix-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/main_v66.gd'
+      - 'scripts/v66_input_flow_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v66-input-flow-hotfix-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-input-flow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Parse project headlessly
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee parse.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script" parse.log; then
+            echo "Godot reported script/resource errors during v1.52.1 parse"
+            exit 1
+          fi
+
+      - name: Run tutorial and game-over input regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee input-flow.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" input-flow.log
