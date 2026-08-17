@@ -96,7 +96,7 @@ func _v51_apply_route(screen: String) -> bool:
 func _v51_route_to(screen: String, play_audio: bool = true) -> bool:
 	if not _v51_apply_route(screen):
 		return false
-	var previous := v51_navigation.current_screen
+	var previous: String = String(v51_navigation.current_screen)
 	var changed: bool = bool(v51_navigation.navigate(screen))
 	if changed:
 		v51_explicit_routes += 1
@@ -118,10 +118,10 @@ func _v51_route_home(play_audio: bool = true) -> bool:
 func _v51_sync_navigation(emit_telemetry: bool = false) -> void:
 	if v51_navigation == null:
 		return
-	var desired := _v51_screen_from_legacy()
+	var desired: String = _v51_screen_from_legacy()
 	if desired == v51_navigation.current_screen:
 		return
-	var previous := v51_navigation.current_screen
+	var previous: String = String(v51_navigation.current_screen)
 	v51_navigation.replace(desired)
 	if emit_telemetry and telemetry != null:
 		telemetry.event("screen_sync", {"from": previous, "to": desired})
