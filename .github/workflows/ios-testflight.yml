@@ -2,6 +2,11 @@ name: ONE MORE FLOOR iOS Playtest
 
 on:
   workflow_dispatch:
+    inputs:
+      build:
+        description: 'App Store Connect build number'
+        required: false
+        default: '21'
   push:
     branches:
       - main
@@ -44,6 +49,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Apply TestFlight build override
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          TESTFLIGHT_BUILD: ${{ inputs.build }}
+        run: |
+          set -euo pipefail
+          [[ "$TESTFLIGHT_BUILD" =~ ^[0-9]+$ ]]
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          path = Path('export_presets.cfg')
+          text = path.read_text()
+          build = os.environ['TESTFLIGHT_BUILD']
+          updated, count = re.subn(r'application/version="[0-9]+"', f'application/version="{build}"', text, count=1)
+          if count != 1:
+              raise SystemExit('Could not update iOS application/version')
+          path.write_text(updated)
+          PY
+          grep -q "application/version=\"${TESTFLIGHT_BUILD}\"" export_presets.cfg
+          echo "EFFECTIVE_IOS_BUILD=$TESTFLIGHT_BUILD" >> "$GITHUB_ENV"
+          echo "Preparing TestFlight build $TESTFLIGHT_BUILD"
 
       - name: Xcode version
         run: |
@@ -168,7 +196,7 @@ jobs:
           ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
         run: |
           set -euo pipefail
-          # TestFlight upload is intentionally manual. Normal pushes/PRs only build/test.
+          # Only explicit workflow_dispatch runs on main may upload to TestFlight.
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF" == "refs/heads/main" && -n "$ASC_ISSUER_ID" && -n "$ASC_KEY_ID" && -n "$ASC_PRIVATE_KEY_B64" ]]; then
             echo 'available=true' >> "$GITHUB_OUTPUT"
           else
