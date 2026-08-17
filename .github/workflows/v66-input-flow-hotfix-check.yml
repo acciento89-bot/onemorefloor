@@ -1,0 +1,88 @@
+name: v1.52.1 Tutorial and Game Over Input Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/main_v66.gd'
+      - 'scripts/v66_input_flow_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v66-input-flow-hotfix-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/main_v66.gd'
+      - 'scripts/v66_input_flow_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v66-input-flow-hotfix-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-input-flow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Parse project headlessly
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee parse.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script" parse.log; then
+            echo "Godot reported script/resource errors during v1.52.1 parse"
+            exit 1
+          fi
+
+      - name: Tutorial upgrade click-through
+        env:
+          OMF_V66_SCENARIO: tutorial_upgrade
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee tutorial-upgrade.log
+          grep -q "V66_SCENARIO_PASS: tutorial_upgrade" tutorial-upgrade.log
+
+      - name: Tutorial death RETRY and HOME
+        env:
+          OMF_V66_SCENARIO: tutorial_death
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee tutorial-death.log
+          grep -q "V66_SCENARIO_PASS: tutorial_death" tutorial-death.log
+
+      - name: Normal GAME OVER RETRY
+        env:
+          OMF_V66_SCENARIO: game_over_retry
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee game-over-retry.log
+          grep -q "V66_SCENARIO_PASS: game_over_retry" game-over-retry.log
+
+      - name: 3D NOVA presentation hooks
+        env:
+          OMF_V66_SCENARIO: nova
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee nova.log
+          grep -q "V66_SCENARIO_PASS: nova" nova.log
+
+      - name: Full input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee input-flow.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" input-flow.log

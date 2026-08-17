@@ -25,7 +25,10 @@ jobs:
           chmod +x godot
           ./godot --version
 
-      - name: Check critical scripts
+      # Only standalone-safe library scripts belong here. Historical main_*.gd
+      # files intentionally use relative inheritance and are validated by the
+      # project-wide parse + actual smoke tests below instead of --script mode.
+      - name: Check critical standalone scripts
         run: |
           ./godot --headless --path . --script res://scripts/progression.gd --check-only
           ./godot --headless --path . --script res://scripts/run_profile.gd --check-only
@@ -36,37 +39,6 @@ jobs:
           ./godot --headless --path . --script res://scripts/telemetry.gd --check-only
           ./godot --headless --path . --script res://scripts/balance_profile.gd --check-only
           ./godot --headless --path . --script res://scripts/release_audio.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v04.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v05.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v06.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v07.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v08.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v09.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v10.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v11.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v12.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v13.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v14.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v15.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v16.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v17.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v22.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v23.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v24.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v25.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v26.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v27.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v28.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v40.gd --check-only
-          ./godot --headless --path . --script res://scripts/main_v41.gd --check-only
-          ./godot --headless --path . --script res://scripts/deep_tower_smoke_test.gd --check-only
-          ./godot --headless --path . --script res://scripts/v23_gameplay_smoke_test.gd --check-only
-          ./godot --headless --path . --script res://scripts/v25_gameplay_smoke_test.gd --check-only
-          ./godot --headless --path . --script res://scripts/v27_endless_smoke_test.gd --check-only
-          ./godot --headless --path . --script res://scripts/v28_endgame_smoke_test.gd --check-only
-          ./godot --headless --path . --script res://scripts/v16_smoke_test.gd --check-only
-          ./godot --headless --path . --script res://scripts/v17_smoke_test.gd --check-only
-          ./godot --headless --path . --script res://scripts/v41_progression_ui_smoke_test.gd --check-only
 
       - name: Parse project headlessly
         run: |

@@ -1,4 +1,4 @@
-name: v1.50-v1.51 3D Authority Check
+name: v1.50-v1.52 3D Authority Check
 
 on:
   push:
@@ -8,31 +8,41 @@ on:
     paths:
       - 'scripts/main_v63.gd'
       - 'scripts/main_v64.gd'
+      - 'scripts/main_v65.gd'
       - 'scripts/world3d_chamber_v150.gd'
       - 'scripts/world3d_chamber_v151.gd'
+      - 'scripts/world3d_chamber_v152.gd'
       - 'scripts/world3d_gameplay_authority_v150.gd'
       - 'scripts/world3d_gameplay_authority_v151.gd'
       - 'scripts/world3d_projectile_authority_v151.gd'
+      - 'scripts/world3d_combat_query_authority_v152.gd'
       - 'scripts/v63_3d_gameplay_authority_smoke_test.gd'
       - 'scripts/v64_3d_combat_authority_smoke_test.gd'
+      - 'scripts/v65_3d_combat_core_smoke_test.gd'
       - 'scenes/main.tscn'
       - 'docs/v1.50-3d-gameplay-authority.md'
       - 'docs/v1.51-3d-combat-authority.md'
+      - 'docs/v1.52-3d-combat-core.md'
       - '.github/workflows/v63-3d-gameplay-authority-check.yml'
   pull_request:
     paths:
       - 'scripts/main_v63.gd'
       - 'scripts/main_v64.gd'
+      - 'scripts/main_v65.gd'
       - 'scripts/world3d_chamber_v150.gd'
       - 'scripts/world3d_chamber_v151.gd'
+      - 'scripts/world3d_chamber_v152.gd'
       - 'scripts/world3d_gameplay_authority_v150.gd'
       - 'scripts/world3d_gameplay_authority_v151.gd'
       - 'scripts/world3d_projectile_authority_v151.gd'
+      - 'scripts/world3d_combat_query_authority_v152.gd'
       - 'scripts/v63_3d_gameplay_authority_smoke_test.gd'
       - 'scripts/v64_3d_combat_authority_smoke_test.gd'
+      - 'scripts/v65_3d_combat_core_smoke_test.gd'
       - 'scenes/main.tscn'
       - 'docs/v1.50-3d-gameplay-authority.md'
       - 'docs/v1.51-3d-combat-authority.md'
+      - 'docs/v1.52-3d-combat-core.md'
       - '.github/workflows/v63-3d-gameplay-authority-check.yml'
 
 permissions:
@@ -78,3 +88,9 @@ jobs:
         run: |
           set -euo pipefail
           "$GODOT" --headless --path . --script res://scripts/v64_3d_combat_authority_smoke_test.gd
+
+      - name: Run v1.52 combat core smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --path . --script res://scripts/v65_3d_combat_core_smoke_test.gd
