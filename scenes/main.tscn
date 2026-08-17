@@ -23,8 +23,9 @@
 ; v1.40 authored 3D actor baseline retained: res://scripts/main_v53.gd
 ; v1.41 production-quality 3D baseline retained: res://scripts/main_v54.gd
 ; v1.42 rigged/imported model-pipeline baseline retained: res://scripts/main_v55.gd
-; v1.43 production 3D now covers Lower Halls and Ossuary, floors 1-20.
-[ext_resource type="Script" path="res://scripts/main_v56.gd" id="1_main"]
+; v1.43 Lower Halls + Ossuary 3D baseline retained: res://scripts/main_v56.gd
+; v1.44 production 3D now covers Lower Halls, Ossuary and Iron Bastion, floors 1-30.
+[ext_resource type="Script" path="res://scripts/main_v57.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
