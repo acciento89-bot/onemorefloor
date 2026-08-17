@@ -1,8 +1,9 @@
-extends "res://scripts/world3d_model_registry.gd"
+extends "res://scripts/world3d_model_registry_v147.gd"
 
 # ONE MORE FLOOR v1.54 — real-model intake.
 # Production actors can arrive as either binary GLB or text glTF. Animation
-# lookup also tolerates common exporter naming conventions.
+# lookup also tolerates common exporter naming conventions while preserving the
+# v1.47 production socket/animation contract used by the actor factory.
 
 const REGISTRY_VERSION := "1.54.0-real-model-intake"
 const DEFAULT_MODEL_ROOT := "res://assets/models/actors"
@@ -68,6 +69,12 @@ func instantiate_model(kind: String) -> Node3D:
 	return root
 
 func resolve_animation_clip(player: AnimationPlayer, state: String) -> String:
+	return _resolve_clip(player, state)
+
+# world3d_actor_factory_v147 drives imported models through the production
+# registry API. Keep that path on the v1.54 fuzzy resolver instead of falling
+# back to the older exact-name-only clip lookup.
+func _resolve_production_clip(player: AnimationPlayer, state: String) -> String:
 	return _resolve_clip(player, state)
 
 func snapshot() -> Dictionary:
