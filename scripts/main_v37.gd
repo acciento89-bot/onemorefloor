@@ -6,16 +6,22 @@ extends "res://scripts/main_v36.gd"
 
 const VisualPackManager = preload("res://scripts/visual_pack_manager.gd")
 const V37_VERSION := "1.25.0-visual-packs"
+const V37_BUILD := "18"
 const V37_PACK_SELECTOR := Rect2(96, 724, 528, 52)
 
 var visual_pack
-var _v37_known_pack_count := 1
 
 func _ready() -> void:
 	super._ready()
 	visual_pack = VisualPackManager.new()
 	visual_pack.load_data(int(meta.best_floor))
-	_v37_known_pack_count = visual_pack.unlocked_count()
+	if telemetry != null:
+		telemetry.set_build_context(V37_VERSION, V37_BUILD)
+		telemetry.event("visual_pack_ready", {
+			"pack": visual_pack.selected,
+			"unlocked": visual_pack.unlocked_count(),
+			"best_floor": int(meta.best_floor)
+		})
 	queue_redraw()
 
 func spawn_floor() -> void:
@@ -32,7 +38,12 @@ func spawn_floor() -> void:
 		loot_notice_color = visual_pack.primary()
 		loot_notice_time = 2.8
 		_audio("milestone")
-	_v37_known_pack_count = current_count
+		if telemetry != null:
+			telemetry.event("visual_pack_unlock", {
+				"pack": visual_pack.selected,
+				"floor": int(run.floor_no),
+				"unlocked": current_count
+			})
 
 # -----------------------------------------------------------------------------
 # Global menu identity. Every inherited menu still uses the same working live
@@ -81,7 +92,7 @@ func draw_home() -> void:
 
 func draw_game() -> void:
 	super.draw_game()
-	if visual_pack == null or settings_open:
+	if visual_pack == null or settings_open or release_paused:
 		return
 	var p := visual_pack.primary()
 	var s := visual_pack.secondary()
@@ -124,6 +135,8 @@ func _pointer_settings(pos: Vector2) -> void:
 		loot_notice_time = 1.5
 		_audio("menu")
 		haptic(12)
+		if telemetry != null:
+			telemetry.event("visual_pack_select", {"pack": visual_pack.selected})
 		queue_redraw()
 		return
 	super._pointer_settings(pos)
