@@ -28,8 +28,9 @@
 ; v1.45 full five-realm 3D tower baseline retained: res://scripts/main_v58.gd
 ; v1.46 production vertical slice baseline retained: res://scripts/main_v59.gd
 ; v1.47 production actor/model contract baseline retained: res://scripts/main_v60.gd
-; v1.48 adds socket-driven archetype combat VFX and stronger animation presentation.
-[ext_resource type="Script" path="res://scripts/main_v61.gd" id="1_main"]
+; v1.48 character combat VFX baseline retained: res://scripts/main_v61.gd
+; v1.49 production art, asset QA, grounding and realm-adaptive lookdev.
+[ext_resource type="Script" path="res://scripts/main_v62.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
