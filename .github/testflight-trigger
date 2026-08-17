@@ -1,4 +1,4 @@
-build=22
+build=23
 version=1.26.0
-requested=2026-08-17T06:16:00+02:00
-reason=Retry visual completion after build-number dispatch fix
+requested=2026-08-17T10:23:00+02:00
+reason=v1.37 release candidate hardening
