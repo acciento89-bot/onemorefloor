@@ -1,0 +1,45 @@
+name: v1.52 TestFlight Build 24 Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/main_v65.gd'
+      - 'scenes/main.tscn'
+      - 'export_presets.cfg'
+      - '.github/workflows/v65-testflight-release.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: onemorefloor-v152-testflight-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch-testflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout merged release
+        uses: actions/checkout@v5
+
+      - name: Gate exact v1.52 build 24 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'V65_VERSION := "1.52.0-3d-combat-core"' scripts/main_v65.gd
+          grep -q 'res://scripts/main_v65.gd' scenes/main.tscn
+          grep -q 'application/short_version="1.26.0"' export_presets.cfg
+          grep -q 'application/version="24"' export_presets.cfg
+          grep -q 'config/version="1.26.0"' project.godot
+          echo 'v1.52 TestFlight release gate passed.'
+
+      - name: Dispatch existing signed TestFlight workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run ios-testflight.yml --repo "$GITHUB_REPOSITORY" --ref main -f build=24
+          echo 'Dispatched ONE MORE FLOOR TestFlight build 24.'
