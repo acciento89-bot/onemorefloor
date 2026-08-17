@@ -1,0 +1,42 @@
+name: Cash-out Navigation Build 20 Check
+
+on:
+  push:
+    paths:
+      - 'scripts/main_v39.gd'
+      - 'scripts/v39_cashout_navigation_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - 'export_presets.cfg'
+      - '.github/workflows/v39-cashout-navigation-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/main_v39.gd'
+      - 'scripts/v39_cashout_navigation_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - 'export_presets.cfg'
+      - '.github/workflows/v39-cashout-navigation-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cashout-navigation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/godot.zip" \
+            "https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          chmod +x "$RUNNER_TEMP/godot/Godot_v4.7.1-stable_linux.x86_64"
+          echo "GODOT=$RUNNER_TEMP/godot/Godot_v4.7.1-stable_linux.x86_64" >> "$GITHUB_ENV"
+      - name: Parse cash-out hotfix runtime
+        run: "$GODOT --headless --path . --script res://scripts/main_v39.gd --check-only"
+      - name: Import project
+        run: "$GODOT --headless --editor --path . --quit"
+      - name: Run cash-out navigation regression test
+        run: "$GODOT --headless --path . --script res://scripts/v39_cashout_navigation_smoke_test.gd --quit-after 120"

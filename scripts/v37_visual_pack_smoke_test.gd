@@ -38,7 +38,7 @@ func _init() -> void:
 		_fail(2508, "v1.25 runtime: visual pack renderer not active")
 		return
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	if not (scene_text.contains("main_v37.gd") or scene_text.contains("main_v38.gd")):
+	if not (scene_text.contains("main_v37.gd") or scene_text.contains("main_v38.gd") or scene_text.contains("main_v39.gd")):
 		_fail(2509, "v1.25+ runtime: visual pack successor is not active")
 		return
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
@@ -49,6 +49,7 @@ func _init() -> void:
 	var mobile_ok := (
 		(export_text.contains("application/short_version=\"1.25.0\"") and export_text.contains("application/version=\"18\""))
 		or (export_text.contains("application/short_version=\"1.26.0\"") and export_text.contains("application/version=\"19\""))
+		or (export_text.contains("application/short_version=\"1.26.0\"") and export_text.contains("application/version=\"20\""))
 	)
 	if not mobile_ok:
 		_fail(2511, "v1.25+ mobile build config missing")

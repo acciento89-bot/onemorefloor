@@ -60,8 +60,8 @@ func _init() -> void:
 			return
 
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	if not scene_text.contains("main_v38.gd"):
-		_fail(2609,"v1.26 runtime: main_v38 is not active")
+	if not (scene_text.contains("main_v38.gd") or scene_text.contains("main_v39.gd")):
+		_fail(2609,"v1.26 runtime: graphics-pack renderer/successor is not active")
 		return
 	if not scene_text.contains("visual_pack_fx_overlay.gd") or not scene_text.contains("VisualPackFX"):
 		_fail(2617,"v1.26 runtime: atmospheric FX scene wiring missing")
@@ -71,11 +71,13 @@ func _init() -> void:
 		_fail(2610,"v1.26 project version missing")
 		return
 	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not export_text.contains("application/short_version=\"1.26.0\"") or not export_text.contains("application/version=\"19\""):
-		_fail(2611,"v1.26 iOS build 19 config missing")
+	var ios_ok := export_text.contains("application/short_version=\"1.26.0\"") and (export_text.contains("application/version=\"19\"") or export_text.contains("application/version=\"20\""))
+	if not ios_ok:
+		_fail(2611,"v1.26 iOS build config missing")
 		return
-	if not export_text.contains("version/name=\"1.26.0\"") or not export_text.contains("version/code=19"):
-		_fail(2612,"v1.26 Android build 19 config missing")
+	var android_ok := export_text.contains("version/name=\"1.26.0\"") and (export_text.contains("version/code=19") or export_text.contains("version/code=20"))
+	if not android_ok:
+		_fail(2612,"v1.26 Android build config missing")
 		return
 
 	print("ONE MORE FLOOR v1.26 graphics packs 2 + atmospheric FX smoke test passed")
