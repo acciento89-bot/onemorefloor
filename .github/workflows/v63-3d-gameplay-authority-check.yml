@@ -1,4 +1,4 @@
-name: v1.50 3D Gameplay Authority Check
+name: v1.50-v1.51 3D Authority Check
 
 on:
   push:
@@ -7,20 +7,32 @@ on:
       - agent/**
     paths:
       - 'scripts/main_v63.gd'
+      - 'scripts/main_v64.gd'
       - 'scripts/world3d_chamber_v150.gd'
+      - 'scripts/world3d_chamber_v151.gd'
       - 'scripts/world3d_gameplay_authority_v150.gd'
+      - 'scripts/world3d_gameplay_authority_v151.gd'
+      - 'scripts/world3d_projectile_authority_v151.gd'
       - 'scripts/v63_3d_gameplay_authority_smoke_test.gd'
+      - 'scripts/v64_3d_combat_authority_smoke_test.gd'
       - 'scenes/main.tscn'
       - 'docs/v1.50-3d-gameplay-authority.md'
+      - 'docs/v1.51-3d-combat-authority.md'
       - '.github/workflows/v63-3d-gameplay-authority-check.yml'
   pull_request:
     paths:
       - 'scripts/main_v63.gd'
+      - 'scripts/main_v64.gd'
       - 'scripts/world3d_chamber_v150.gd'
+      - 'scripts/world3d_chamber_v151.gd'
       - 'scripts/world3d_gameplay_authority_v150.gd'
+      - 'scripts/world3d_gameplay_authority_v151.gd'
+      - 'scripts/world3d_projectile_authority_v151.gd'
       - 'scripts/v63_3d_gameplay_authority_smoke_test.gd'
+      - 'scripts/v64_3d_combat_authority_smoke_test.gd'
       - 'scenes/main.tscn'
       - 'docs/v1.50-3d-gameplay-authority.md'
+      - 'docs/v1.51-3d-combat-authority.md'
       - '.github/workflows/v63-3d-gameplay-authority-check.yml'
 
 permissions:
@@ -49,14 +61,20 @@ jobs:
           "$GODOT" --version
           echo "GODOT=$GODOT" >> "$GITHUB_ENV"
 
-      - name: Parse 3D gameplay authority runtime
+      - name: Parse 3D authority runtime
         shell: bash
         run: |
           set -euo pipefail
           "$GODOT" --headless --editor --path . --quit
 
-      - name: Run 3D gameplay authority smoke test
+      - name: Run v1.50 locomotion authority smoke test
         shell: bash
         run: |
           set -euo pipefail
           "$GODOT" --headless --path . --script res://scripts/v63_3d_gameplay_authority_smoke_test.gd
+
+      - name: Run v1.51 combat authority smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --path . --script res://scripts/v64_3d_combat_authority_smoke_test.gd
