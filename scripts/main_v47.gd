@@ -84,12 +84,12 @@ func draw_enemy(e: Dictionary) -> void:
 	var aim := player_pos - p
 	var aim_dir := aim.normalized() if aim.length_squared() > 1.0 else Vector2.DOWN
 	var visual_p := p - aim_dir * tell * (9.0 if boss else 4.0) + Vector2(0,bob + hit*2.0)
-	var scale := radius * (3.15 if boss else _v47_scale(actor_id)) * (1.0 + tell*0.035 - hit*0.05)
+	var size := radius * (3.15 if boss else _v47_scale(actor_id)) * (1.0 + tell*0.035 - hit*0.05)
 	var accent := _v47_accent(actor_id)
 	draw_circle(visual_p, radius*(1.62 if boss else 1.30), Color(accent, 0.045 if boss else 0.026))
 	if bool(e.get("elite", false)):
 		draw_arc(visual_p, radius*1.58+8.0, elapsed*0.5, elapsed*0.5+PI*1.65, 42, Color(C_GOLD,0.78), 3.0)
-	_v47_draw_actor_cell(actor_id, visual_p, Vector2(scale,scale), sin(elapsed*1.6+phase)*0.018, Color.WHITE)
+	_v47_draw_actor_cell(actor_id, visual_p, Vector2(size,size), sin(elapsed*1.6+phase)*0.018, Color.WHITE)
 	_v47_draw_actor_live_fx(actor_id, visual_p, radius, accent, tell)
 	_v47_draw_health(e, p, radius, accent)
 	if tell > 0.08:
@@ -142,20 +142,15 @@ func _v47_draw_tell(p: Vector2, radius: float, accent: Color, aim: Vector2, amou
 func _v47_draw_actor_live_fx(actor_id: String, p: Vector2, radius: float, accent: Color, tell: float) -> void:
 	var pulse := 0.5+0.5*sin(elapsed*3.5)
 	match actor_id:
-		"bat":
-			draw_arc(p,radius*1.42,-2.8,-0.35,22,Color(accent,0.18+0.16*pulse),2.0)
-		"necromancer", "hexer", "rift_mage":
-			draw_circle(p+Vector2(radius*1.45,-radius*0.5),4.0+3.0*pulse,Color(accent,0.30+0.30*pulse))
+		"bat": draw_arc(p,radius*1.42,-2.8,-0.35,22,Color(accent,0.18+0.16*pulse),2.0)
+		"necromancer", "hexer", "rift_mage": draw_circle(p+Vector2(radius*1.45,-radius*0.5),4.0+3.0*pulse,Color(accent,0.30+0.30*pulse))
 		"orb_weaver":
 			for n in range(3):
 				var a := elapsed*(0.9+float(n)*0.1)+TAU*float(n)/3.0
 				draw_circle(p+Vector2.from_angle(a)*radius*1.55,3.5,Color(accent,0.42))
-		"phase_stalker":
-			draw_line(p+Vector2(-radius*1.4,0),p+Vector2(radius*1.4,0),Color(accent,0.10+0.18*pulse),2.0)
-		"crypt_keeper", "astral_warden":
-			draw_arc(p,radius*1.55,elapsed*0.3,elapsed*0.3+PI*1.55,34,Color(accent,0.22),2.0)
-		"null_sovereign":
-			draw_arc(p,radius*1.65,-elapsed*0.24,-elapsed*0.24+PI*1.72,38,Color(accent,0.28+0.12*tell),3.0)
+		"phase_stalker": draw_line(p+Vector2(-radius*1.4,0),p+Vector2(radius*1.4,0),Color(accent,0.10+0.18*pulse),2.0)
+		"crypt_keeper", "astral_warden": draw_arc(p,radius*1.55,elapsed*0.3,elapsed*0.3+PI*1.55,34,Color(accent,0.22),2.0)
+		"null_sovereign": draw_arc(p,radius*1.65,-elapsed*0.24,-elapsed*0.24+PI*1.72,38,Color(accent,0.28+0.12*tell),3.0)
 
 func apply_damage_to_enemy(index: int, amount: float, crit: bool, hit_pos: Vector2) -> void:
 	if index < 0 or index >= enemies.size():
@@ -185,7 +180,7 @@ func fire_auto_attack() -> void:
 	super.fire_auto_attack()
 
 func use_skill() -> void:
-	var ready := skill_cd <= 0.0
+	var ready: bool = run != null and float(run.skill_cd) <= 0.0
 	super.use_skill()
 	if ready:
 		v47_player_skill_stamp = elapsed
@@ -239,7 +234,8 @@ func draw_effect(fx: Dictionary) -> void:
 			return
 		"v47_nova":
 			var t := clampf(float(fx.get("age",0.0))/maxf(0.01,float(fx.get("dur",0.42))),0.0,1.0)
-			_v47_draw_projectile_cell(3,fx.get("pos",Vector2.ZERO),Vector2.ONE*lerpf(90.0,nova_radius*1.65,t),t*0.45,Color(1,1,1,0.72*(1.0-t)))
+			var nova_r := float(run.nova_radius) if run != null else 250.0
+			_v47_draw_projectile_cell(3,fx.get("pos",Vector2.ZERO),Vector2.ONE*lerpf(90.0,nova_r*1.65,t),t*0.45,Color(1,1,1,0.72*(1.0-t)))
 			return
 		_:
 			super.draw_effect(fx)
@@ -252,8 +248,9 @@ func _v47_draw_death(fx: Dictionary) -> void:
 	var boss := bool(fx.get("boss",false))
 	var c: Color = fx.get("color",C_PURPLE)
 	_v47_draw_actor_cell(actor_id,p+Vector2(0,-12*t),Vector2.ONE*radius*(3.05 if boss else _v47_scale(actor_id))*(1.0-0.16*t),(t-0.5)*0.15,Color(1,1,1,0.70*(1.0-t)))
-	for n in range(12 if boss else 7):
-		var a := TAU*float(n)/float(12 if boss else 7)
+	var shard_count := 12 if boss else 7
+	for n in range(shard_count):
+		var a := TAU*float(n)/float(shard_count)
 		draw_line(p+Vector2.from_angle(a)*radius*0.55,p+Vector2.from_angle(a)*radius*(1.1+t*(2.0 if boss else 1.4)),Color(c,0.55*(1.0-t)),3.0 if boss else 2.0)
 
 func _v47_draw_projectile_cell(cell: int, center: Vector2, size: Vector2, rotation: float, modulate: Color) -> void:
