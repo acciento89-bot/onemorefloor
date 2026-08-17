@@ -17,7 +17,8 @@
 ; v1.34 foundation actor-art baseline retained: res://scripts/main_v47.gd
 ; v1.35 foundation environment baseline retained: res://scripts/main_v48.gd
 ; v1.36 run-progression baseline retained: res://scripts/main_v49.gd
-[ext_resource type="Script" path="res://scripts/main_v50.gd" id="1_main"]
+; v1.37 release-candidate baseline retained: res://scripts/main_v50.gd
+[ext_resource type="Script" path="res://scripts/main_v51.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 
