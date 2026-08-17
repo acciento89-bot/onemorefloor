@@ -7,11 +7,13 @@ extends Node2D
 
 const CANVAS := Vector2(720.0, 1280.0)
 const FULL_RECT := Rect2(Vector2.ZERO, CANVAS)
+const REDRAW_INTERVAL := 1.0 / 30.0
 
 var game: Node = null
 var fx_time: float = 0.0
 var last_pack: String = ""
 var transition: float = 0.0
+var redraw_accum: float = 0.0
 
 func _ready() -> void:
 	game = get_parent()
@@ -25,7 +27,13 @@ func _process(delta: float) -> void:
 		last_pack = current
 		transition = 1.0
 	transition = maxf(0.0, transition - delta * 1.15)
-	queue_redraw()
+	# Decorative particles do not need a redraw for every gameplay frame. Keeping
+	# their time continuous but painting at 30 fps halves CanvasItem draw pressure
+	# on 60 Hz mobile displays while combat/input remain fully 60 fps.
+	redraw_accum += delta
+	if redraw_accum >= REDRAW_INTERVAL:
+		redraw_accum = 0.0
+		queue_redraw()
 
 func _draw() -> void:
 	var packs := _pack_manager()
@@ -117,7 +125,6 @@ func _draw_citadel_sparks(primary: Color, secondary: Color) -> void:
 		var pos := Vector2(x + drift, y)
 		draw_circle(pos, 1.2, Color(secondary, 0.20))
 		draw_line(pos + Vector2(0, 8), pos + Vector2(0, 1), Color(primary, 0.09), 1.0)
-	# faint architectural light shafts echo the dark-citadel references
 	draw_colored_polygon(PackedVector2Array([Vector2(58, 220), Vector2(138, 220), Vector2(214, 880), Vector2(150, 880)]), Color(secondary, 0.016))
 	draw_colored_polygon(PackedVector2Array([Vector2(662, 220), Vector2(582, 220), Vector2(506, 880), Vector2(570, 880)]), Color(secondary, 0.016))
 

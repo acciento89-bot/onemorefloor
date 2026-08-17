@@ -1,0 +1,67 @@
+name: Release Candidate v1.37 Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/main_v50.gd'
+      - 'scripts/v50_release_candidate_smoke_test.gd'
+      - 'scripts/fullscreen_backdrop.gd'
+      - 'scripts/visual_pack_fx_overlay.gd'
+      - 'scenes/main.tscn'
+      - 'export_presets.cfg'
+      - 'project.godot'
+      - '.github/workflows/ios-testflight.yml'
+      - '.github/workflows/v50-release-candidate-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/main_v50.gd'
+      - 'scripts/v50_release_candidate_smoke_test.gd'
+      - 'scripts/fullscreen_backdrop.gd'
+      - 'scripts/visual_pack_fx_overlay.gd'
+      - 'scenes/main.tscn'
+      - 'export_presets.cfg'
+      - 'project.godot'
+      - '.github/workflows/ios-testflight.yml'
+      - '.github/workflows/v50-release-candidate-check.yml'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: '4.7.1'
+  GODOT_TAG: '4.7.1-stable'
+
+jobs:
+  validate-v50:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/godot.zip" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP"
+          GODOT="$RUNNER_TEMP/Godot_v${GODOT_TAG}_linux.x86_64"
+          chmod +x "$GODOT"
+          "$GODOT" --version
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+
+      - name: Parse release-candidate runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --editor --path . --quit
+
+      - name: Run v1.37 release-candidate smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --path . --script res://scripts/v50_release_candidate_smoke_test.gd

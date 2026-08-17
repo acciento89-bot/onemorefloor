@@ -6,7 +6,7 @@ on:
       build:
         description: 'App Store Connect build number'
         required: false
-        default: '21'
+        default: '23'
   push:
     branches:
       - main
@@ -72,6 +72,33 @@ jobs:
           grep -q "application/version=\"${TESTFLIGHT_BUILD}\"" export_presets.cfg
           echo "EFFECTIVE_IOS_BUILD=$TESTFLIGHT_BUILD" >> "$GITHUB_ENV"
           echo "Preparing TestFlight build $TESTFLIGHT_BUILD"
+
+      - name: Verify release metadata
+        shell: bash
+        env:
+          REQUESTED_BUILD: ${{ inputs.build }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          preset = Path('export_presets.cfg').read_text()
+          project = Path('project.godot').read_text()
+          short = re.search(r'application/short_version="([^"]+)"', preset)
+          build = re.search(r'application/version="([0-9]+)"', preset)
+          appver = re.search(r'config/version="([^"]+)"', project)
+          if not short or not build or not appver:
+              raise SystemExit('Missing release metadata')
+          if short.group(1) != appver.group(1):
+              raise SystemExit(f'Marketing version mismatch: export={short.group(1)} project={appver.group(1)}')
+          if not build.group(1).isdigit():
+              raise SystemExit('iOS build is not numeric')
+          if os.environ.get('GITHUB_EVENT_NAME') == 'workflow_dispatch' and os.environ.get('GITHUB_REF') == 'refs/heads/main':
+              requested = os.environ.get('REQUESTED_BUILD', '')
+              if build.group(1) != requested:
+                  raise SystemExit(f'Requested build {requested} but export contains {build.group(1)}')
+          print(f'Release metadata OK: {short.group(1)} ({build.group(1)})')
+          PY
 
       - name: Xcode version
         run: |
