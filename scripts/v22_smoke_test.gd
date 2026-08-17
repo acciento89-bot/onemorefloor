@@ -30,7 +30,13 @@ func _run() -> void:
 		return
 
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	var component_renderer := scene_text.contains("main_v22.gd") or scene_text.contains("main_v23.gd") or scene_text.contains("main_v35.gd")
+	var component_renderer := (
+		scene_text.contains("main_v22.gd")
+		or scene_text.contains("main_v23.gd")
+		or scene_text.contains("main_v35.gd")
+		or scene_text.contains("main_v36.gd")
+		or scene_text.contains("main_v37.gd")
+	)
 	if not component_renderer or scene_text.contains("main_v20.gd"):
 		_fail(1106,"v1.10+ main scene is not using component runtime renderer")
 		return
@@ -46,16 +52,28 @@ func _run() -> void:
 			return
 
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	var version_ok := project_text.contains("config/version=\"1.10.0-premium-components\"") or project_text.contains("config/version=\"1.24.0\"")
+	var version_ok := (
+		project_text.contains("config/version=\"1.10.0-premium-components\"")
+		or project_text.contains("config/version=\"1.24.0\"")
+		or project_text.contains("config/version=\"1.25.0\"")
+	)
 	if not version_ok:
 		_fail(1109,"v1.10+ project version missing")
 		return
 	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	var ios_ok := (export_text.contains("application/short_version=\"1.10.0\"") and export_text.contains("application/version=\"15\"")) or (export_text.contains("application/short_version=\"1.24.0\"") and export_text.contains("application/version=\"16\""))
+	var ios_ok := (
+		(export_text.contains("application/short_version=\"1.10.0\"") and export_text.contains("application/version=\"15\""))
+		or (export_text.contains("application/short_version=\"1.24.0\"") and (export_text.contains("application/version=\"16\"") or export_text.contains("application/version=\"17\"")))
+		or (export_text.contains("application/short_version=\"1.25.0\"") and export_text.contains("application/version=\"18\""))
+	)
 	if not ios_ok:
 		_fail(1110,"v1.10+ iOS version/build missing")
 		return
-	var android_ok := (export_text.contains("version/name=\"1.10.0\"") and export_text.contains("version/code=15")) or (export_text.contains("version/name=\"1.24.0\"") and export_text.contains("version/code=16"))
+	var android_ok := (
+		(export_text.contains("version/name=\"1.10.0\"") and export_text.contains("version/code=15"))
+		or (export_text.contains("version/name=\"1.24.0\"") and (export_text.contains("version/code=16") or export_text.contains("version/code=17")))
+		or (export_text.contains("version/name=\"1.25.0\"") and export_text.contains("version/code=18"))
+	)
 	if not android_ok:
 		_fail(1111,"v1.10+ Android version/build missing")
 		return
