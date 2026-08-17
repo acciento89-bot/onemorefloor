@@ -29,6 +29,7 @@ func _run() -> void:
 		or scene_text.contains("main_v36.gd")
 		or scene_text.contains("main_v37.gd")
 		or scene_text.contains("main_v38.gd")
+		or scene_text.contains("main_v39.gd")
 	)
 	if not live_renderer or scene_text.contains("main_v20.gd"):
 		_fail(1003,"v1.9+ main scene is not using the live UI renderer")
@@ -62,7 +63,7 @@ func _run() -> void:
 		or (export_text.contains("application/short_version=\"1.10.0\"") and export_text.contains("application/version=\"15\""))
 		or (export_text.contains("application/short_version=\"1.24.0\"") and (export_text.contains("application/version=\"16\"") or export_text.contains("application/version=\"17\"")))
 		or (export_text.contains("application/short_version=\"1.25.0\"") and export_text.contains("application/version=\"18\""))
-		or (export_text.contains("application/short_version=\"1.26.0\"") and export_text.contains("application/version=\"19\""))
+		or (export_text.contains("application/short_version=\"1.26.0\"") and (export_text.contains("application/version=\"19\"") or export_text.contains("application/version=\"20\"")))
 	)
 	if not ios_ok:
 		_fail(1007,"v1.9+ iOS version/build missing")
