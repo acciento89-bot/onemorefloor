@@ -26,8 +26,9 @@
 ; v1.43 Lower Halls + Ossuary 3D baseline retained: res://scripts/main_v56.gd
 ; v1.44 Lower Halls + Ossuary + Iron Bastion 3D baseline retained: res://scripts/main_v57.gd
 ; v1.45 full five-realm 3D tower baseline retained: res://scripts/main_v58.gd
-; v1.46 production vertical slice adds camera, transition, boss, combat and loot presentation.
-[ext_resource type="Script" path="res://scripts/main_v59.gd" id="1_main"]
+; v1.46 production vertical slice baseline retained: res://scripts/main_v59.gd
+; v1.47 production actor/model contract, fallback art and weapon presentation.
+[ext_resource type="Script" path="res://scripts/main_v60.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
