@@ -1,4 +1,4 @@
-build=23
+build=24
 version=1.26.0
-requested=2026-08-17T10:23:00+02:00
-reason=v1.37 release candidate hardening
+requested=2026-08-17T11:17:00+02:00
+reason=v1.37 rc3 screenshot polish
