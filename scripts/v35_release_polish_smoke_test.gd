@@ -49,7 +49,9 @@ func _init() -> void:
 			_fail(2407, "v1.23-v1.24 runtime marker missing: %s" % marker)
 			return
 
-	print("ONE MORE FLOOR v1.24+ polish/release smoke test passed")
+	# Keep the legacy log marker because the workflow intentionally validates the
+	# retained v1.24 release contract even when a successor renderer is active.
+	print("ONE MORE FLOOR v1.24 polish/release smoke test passed")
 	quit(0)
 
 func _fail(code: int, message: String) -> void:
