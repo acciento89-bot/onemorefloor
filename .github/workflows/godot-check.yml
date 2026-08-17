@@ -10,7 +10,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 7
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -57,6 +57,8 @@ jobs:
           ./godot --headless --path . --script res://scripts/main_v26.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v27.gd --check-only
           ./godot --headless --path . --script res://scripts/main_v28.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v40.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v41.gd --check-only
           ./godot --headless --path . --script res://scripts/deep_tower_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v23_gameplay_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v25_gameplay_smoke_test.gd --check-only
@@ -64,6 +66,7 @@ jobs:
           ./godot --headless --path . --script res://scripts/v28_endgame_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v16_smoke_test.gd --check-only
           ./godot --headless --path . --script res://scripts/v17_smoke_test.gd --check-only
+          ./godot --headless --path . --script res://scripts/v41_progression_ui_smoke_test.gd --check-only
 
       - name: Parse project headlessly
         run: |
@@ -166,3 +169,9 @@ jobs:
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v17_smoke_test.gd --quit-after 120 | tee v17-smoke.log
           grep -q "ONE MORE FLOOR v1.6 exact concept menus smoke test passed" v17-smoke.log
+
+      - name: Run v1.28 progression UI art-pass smoke script
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v41_progression_ui_smoke_test.gd --quit-after 120 | tee v41-progression-ui-smoke.log
+          grep -q "ONE MORE FLOOR v1.28 progression UI art pass smoke test passed" v41-progression-ui-smoke.log
