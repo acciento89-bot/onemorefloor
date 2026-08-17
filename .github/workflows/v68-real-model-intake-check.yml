@@ -1,0 +1,78 @@
+name: v1.54 Real Model Intake Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/main_v68.gd'
+      - 'scripts/world3d_chamber_v154.gd'
+      - 'scripts/world3d_actor_factory_v154.gd'
+      - 'scripts/world3d_model_registry_v154.gd'
+      - 'scripts/v68_real_model_intake_smoke_test.gd'
+      - 'tests/fixtures/models/actors/**'
+      - 'assets/models/actors/**'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v68-real-model-intake-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/main_v68.gd'
+      - 'scripts/world3d_chamber_v154.gd'
+      - 'scripts/world3d_actor_factory_v154.gd'
+      - 'scripts/world3d_model_registry_v154.gd'
+      - 'scripts/v68_real_model_intake_smoke_test.gd'
+      - 'tests/fixtures/models/actors/**'
+      - 'assets/models/actors/**'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v68-real-model-intake-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-real-model-intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Import and parse project headlessly
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee parse.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script" parse.log; then
+            echo "Godot reported script/resource errors during v1.54 parse"
+            exit 1
+          fi
+
+      - name: Validate actual glTF intake and animation aliases
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v68_real_model_intake_smoke_test.gd --quit-after 120 2>&1 | tee v68-model-intake.log
+          grep -q "v1.54 real GLB/glTF model intake smoke test passed" v68-model-intake.log
+
+      - name: Re-run v1.53 visual presentation regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v67_3d_visual_presentation_smoke_test.gd --quit-after 120 2>&1 | tee v67-presentation.log
+          grep -q "v1.53 3D visual presentation smoke test passed" v67-presentation.log
+
+      - name: Re-run v1.52.1 input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee v66-input-flow.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" v66-input-flow.log
