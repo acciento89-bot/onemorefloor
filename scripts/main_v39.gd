@@ -52,11 +52,55 @@ func _v39_restore_home_navigation_after_cashout() -> void:
 	settings_return_to_pause = false
 	release_paused = false
 
+func _v39_open_home_destination(destination: String) -> void:
+	match destination:
+		"missions":
+			home_overlay = "missions"
+		"pass":
+			home_overlay = "pass"
+		"hero":
+			state = State.HERO
+		"forge":
+			state = State.FORGE
+		"talents":
+			state = State.TALENTS
+		"vault":
+			state = State.VAULT
+		_:
+			return
+	_audio("menu")
+	haptic(10)
+	queue_redraw()
+
 func pointer(pos: Vector2, pressed: bool, id: int) -> void:
 	# Defensive recovery for migrated saves/session state: no invisible modal is
 	# ever allowed to swallow Home navigation in the current renderer.
 	if state == State.HOME and summary_open:
 		summary_open = false
+
+	# The current Home layout is owned by the newer renderer, while its original
+	# input routing lives several inheritance layers below. Route the visible
+	# buttons here before any legacy modal/input guard can swallow the tap.
+	if pressed and state == State.HOME and home_overlay == "" and not settings_open and not tutorial_active:
+		if MISSIONS_BTN.has_point(pos):
+			_v39_open_home_destination("missions")
+			return
+		if PASS_BTN.has_point(pos):
+			_v39_open_home_destination("pass")
+			return
+		if HERO_TAB.has_point(pos):
+			_v39_open_home_destination("hero")
+			return
+		if FORGE_TAB.has_point(pos):
+			_v39_open_home_destination("forge")
+			return
+		if TALENTS_TAB.has_point(pos):
+			_v39_open_home_destination("talents")
+			return
+		if VAULT_TAB.has_point(pos):
+			_v39_open_home_destination("vault")
+			return
+
 	super.pointer(pos, pressed, id)
 
 func draw_home() -> void:
