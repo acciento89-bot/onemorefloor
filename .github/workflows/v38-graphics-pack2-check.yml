@@ -1,0 +1,46 @@
+name: Graphics Packs v1.26 Check
+
+on:
+  push:
+    paths:
+      - 'scripts/main_v38.gd'
+      - 'scripts/visual_pack_manager.gd'
+      - 'scripts/v38_graphics_pack2_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - '.github/workflows/v38-graphics-pack2-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/main_v38.gd'
+      - 'scripts/visual_pack_manager.gd'
+      - 'scripts/v38_graphics_pack2_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - '.github/workflows/v38-graphics-pack2-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  graphics-packs-2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/godot.zip" \
+            "https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          chmod +x "$RUNNER_TEMP/godot/Godot_v4.7.1-stable_linux.x86_64"
+          echo "GODOT=$RUNNER_TEMP/godot/Godot_v4.7.1-stable_linux.x86_64" >> "$GITHUB_ENV"
+      - name: Parse graphics pack renderer
+        run: "$GODOT --headless --path . --script res://scripts/main_v38.gd --check-only"
+      - name: Import project
+        run: "$GODOT --headless --editor --path . --quit"
+      - name: Run v1.26 graphics pack smoke test
+        run: "$GODOT --headless --path . --script res://scripts/v38_graphics_pack2_smoke_test.gd"
