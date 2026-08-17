@@ -38,7 +38,7 @@ func _run() -> void:
 		return
 
 	var renderer := FileAccess.get_file_as_string("res://scripts/main_v50.gd")
-	for marker in ["1.26.0-rc2", "V50_BUILD := \"23\"", "PURCHASES CURRENTLY UNAVAILABLE", "NOTIFICATION_APPLICATION_PAUSED", "V50_MAX_FPS := 60", "V50_COMBAT_VISUAL_SCALE := 1.12"]:
+	for marker in ["1.26.0-rc3", "V50_BUILD := \"24\"", "PURCHASES CURRENTLY UNAVAILABLE", "NOTIFICATION_APPLICATION_PAUSED", "V50_MAX_FPS := 60", "V50_COMBAT_VISUAL_SCALE := 1.12"]:
 		if not renderer.contains(marker):
 			_fail(5009, "v1.37 renderer marker missing: %s" % marker)
 			return
@@ -73,11 +73,11 @@ func _run() -> void:
 		_fail(5015, "v1.37 checked-in export baseline changed unexpectedly")
 		return
 	var workflow := FileAccess.get_file_as_string("res://.github/workflows/ios-testflight.yml")
-	if not workflow.contains("Apply TestFlight build override") or not workflow.contains("default: '23'"):
-		_fail(5016, "v1.37 TestFlight build-23 release path is not armed")
+	if not workflow.contains("Apply TestFlight build override") or not workflow.contains("Requested build"):
+		_fail(5016, "v1.37 TestFlight build override / metadata guard is not armed")
 		return
 
-	print("ONE MORE FLOOR v1.37 rc2 screenshot-polish smoke test passed")
+	print("ONE MORE FLOOR v1.37 rc3 Build 24 smoke test passed")
 	quit(0)
 
 func _fail(code: int, message: String) -> void:
