@@ -42,12 +42,13 @@ func _run() -> void:
 	game.settings_open = false
 	game.v31_mastery_open = true
 	game.pointer((game.V31_MASTERY_RECTS[0] as Rect2).get_center(), true, 41001)
-	if int(game.meta.mastery_level("warpath")) != original_warpath + 1:
-		_fail(4107, "v1.28 mastery tree tap did not reach live progression logic")
-		return
-	game.meta.mastery_levels["warpath"] = original_warpath
+	var upgraded := int(game.meta.mastery_level("warpath")) == original_warpath + 1
+	game.meta.warpath_mastery = original_warpath
 	game.meta.ascension_sigils = original_sigils
 	game.meta.save_data()
+	if not upgraded:
+		_fail(4107, "v1.28 mastery tree tap did not reach live progression logic")
+		return
 
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
 	if not scene_text.contains("main_v41.gd") or not scene_text.contains("main_v40.gd"):
