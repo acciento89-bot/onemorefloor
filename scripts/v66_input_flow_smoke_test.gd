@@ -1,5 +1,7 @@
 extends SceneTree
 
+const SCENARIO_ENV := "OMF_V66_SCENARIO"
+
 func _init() -> void:
 	call_deferred("_run")
 
@@ -20,8 +22,48 @@ func _run() -> void:
 		_fail("v1.52 3D combat core is not ready under the input hotfix")
 		return
 
-	# Regression 1: the tutorial's final instruction says to choose an upgrade.
-	# The actual upgrade card must therefore be clickable while tutorial_step=4.
+	var scenario := OS.get_environment(SCENARIO_ENV).strip_edges().to_lower()
+	if scenario.is_empty():
+		scenario = "all"
+	print("V66_SCENARIO_BEGIN: %s" % scenario)
+
+	var error := ""
+	match scenario:
+		"tutorial_upgrade":
+			error = _scenario_tutorial_upgrade(game)
+		"tutorial_death":
+			error = _scenario_tutorial_death(game)
+		"game_over_retry":
+			error = _scenario_game_over_retry(game)
+		"nova":
+			error = _scenario_nova(game)
+		"all":
+			error = _scenario_tutorial_upgrade(game)
+			if error.is_empty():
+				error = _scenario_tutorial_death(game)
+			if error.is_empty():
+				error = _scenario_game_over_retry(game)
+			if error.is_empty():
+				error = _scenario_nova(game)
+			if error.is_empty():
+				error = _validate_aggregate_telemetry(game)
+		_:
+			error = "unknown scenario '%s'" % scenario
+
+	if not error.is_empty():
+		_fail("[%s] %s" % [scenario, error])
+		return
+
+	print("V66_SCENARIO_PASS: %s" % scenario)
+	if scenario == "all":
+		print("v1.52.1 tutorial/game-over input-flow smoke test passed")
+	game.queue_free()
+	await process_frame
+	quit(0)
+
+func _scenario_tutorial_upgrade(game) -> String:
+	# The final tutorial instruction says to choose an upgrade. The actual card
+	# must be clickable while tutorial_step=4 and must finish onboarding.
 	game.settings.reset_tutorial()
 	game.tutorial_active = true
 	game.tutorial_step = 4
@@ -35,80 +77,92 @@ func _run() -> void:
 	]
 	game.pointer(game.upgrade_rect(0).get_center(), true, 61)
 	if game.state != game.State.DECISION:
-		_fail("tutorial upgrade tap did not advance to the decision screen")
-		return
+		return "tutorial upgrade tap did not advance to the decision screen"
 	if bool(game.tutorial_active) or not bool(game.settings.tutorial_done):
-		_fail("tutorial upgrade tap did not complete/persist onboarding")
-		return
+		return "tutorial upgrade tap did not complete/persist onboarding"
+	var snap: Dictionary = game.call("_v66_input_flow_snapshot")
+	if int(snap.get("tutorial_upgrade_completions", 0)) < 1:
+		return "tutorial upgrade completion telemetry counter is wrong"
+	return ""
 
-	# Regression 2: dying during tutorial step 3 used to leave tutorial_active on
-	# GAME_OVER, causing _pointer_tutorial() to swallow RETRY/HOME forever.
+func _scenario_tutorial_death(game) -> String:
+	# A tutorial death must release modal capture before GAME_OVER, then both
+	# terminal actions must be reachable and leave the input stack clean.
 	game.settings.reset_tutorial()
 	game.tutorial_active = true
 	game.tutorial_step = 3
 	game.start_run()
 	game.die()
 	if game.state != game.State.GAME_OVER:
-		_fail("tutorial death did not enter GAME_OVER")
-		return
+		return "tutorial death did not enter GAME_OVER"
 	if bool(game.tutorial_active) or not bool(game.v66_tutorial_retry_pending):
-		_fail("tutorial death did not release modal capture for GAME_OVER")
-		return
+		return "tutorial death did not release modal capture for GAME_OVER"
+
 	game.pointer(game.RETRY.get_center(), true, 62)
 	if game.state != game.State.RUNNING or not bool(game.tutorial_active) or int(game.tutorial_step) != 2:
-		_fail("RETRY after tutorial death did not restart the tutorial run")
-		return
+		return "RETRY after tutorial death did not restart the tutorial run"
+	if bool(game.release_paused) or bool(game.settings_open) or bool(game.summary_open) or bool(game.joy_active):
+		return "RETRY after tutorial death left a modal/input blocker active"
 
-	# HOME must also be reachable after a tutorial death and restart onboarding at
-	# the first visible tutorial card rather than trapping the terminal screen.
 	game.tutorial_step = 3
 	game.die()
+	if game.state != game.State.GAME_OVER:
+		return "second tutorial death did not enter GAME_OVER"
 	game.pointer(game.HOME_BTN.get_center(), true, 63)
 	if game.state != game.State.HOME or not bool(game.tutorial_active) or int(game.tutorial_step) != 0:
-		_fail("HOME after tutorial death did not return to a usable tutorial Home")
-		return
-
-	# Regression 3: normal GAME_OVER controls stay reachable after onboarding.
-	game._complete_tutorial()
-	game.start_run()
-	game.die()
-	game.pointer(game.RETRY.get_center(), true, 64)
-	if game.state != game.State.RUNNING:
-		_fail("normal GAME_OVER RETRY is not clickable")
-		return
-
-	# Regression 4: v1.52's 3D NOVA query must not bypass the inherited player
-	# animation/audio/VFX hooks. The generic gameplay smoke previously caught this
-	# as exit code 32 (NOVA animation state missing).
-	game.tutorial_active = false
-	game.run.skill_cd = 0.0
-	game.use_skill()
-	if String(game.player_anim_state) != "nova" or float(game.player_anim_timer) <= 0.0:
-		_fail("3D NOVA did not restore the inherited NOVA animation state")
-		return
-	if float(game.v47_player_skill_stamp) < float(game.elapsed) - 0.1:
-		_fail("3D NOVA did not update the production skill animation stamp")
-		return
-	if int(game.v65_nova_queries) <= 0:
-		_fail("NOVA did not use the v1.52 3D volume authority")
-		return
+		return "HOME after tutorial death did not return to a usable tutorial Home"
+	if bool(game.release_paused) or bool(game.settings_open) or bool(game.summary_open) or bool(game.joy_active):
+		return "HOME after tutorial death left a modal/input blocker active"
 
 	var snap: Dictionary = game.call("_v66_input_flow_snapshot")
 	if int(snap.get("tutorial_deaths", 0)) < 2:
-		_fail("tutorial death recovery telemetry counter is wrong")
-		return
-	if int(snap.get("tutorial_upgrade_completions", 0)) < 1:
-		_fail("tutorial upgrade completion counter is wrong")
-		return
+		return "tutorial death recovery telemetry counter is wrong"
 	if int(snap.get("terminal_input_recoveries", 0)) < 3:
-		_fail("terminal input recovery counter is wrong")
-		return
+		return "terminal input recovery counter is wrong after tutorial death routes"
+	return ""
 
-	print("v1.52.1 tutorial/game-over input-flow smoke test passed")
-	game.queue_free()
-	await process_frame
-	quit(0)
+func _scenario_game_over_retry(game) -> String:
+	# Normal post-onboarding GAME_OVER must remain directly clickable too.
+	game._complete_tutorial()
+	game.tutorial_active = false
+	game.v66_tutorial_retry_pending = false
+	game.start_run()
+	game.die()
+	if game.state != game.State.GAME_OVER:
+		return "normal death did not enter GAME_OVER"
+	game.pointer(game.RETRY.get_center(), true, 64)
+	if game.state != game.State.RUNNING:
+		return "normal GAME_OVER RETRY is not clickable"
+	if bool(game.release_paused) or bool(game.settings_open) or bool(game.summary_open) or bool(game.joy_active):
+		return "normal GAME_OVER RETRY left a modal/input blocker active"
+	return ""
+
+func _scenario_nova(game) -> String:
+	# v1.52's 3D NOVA membership query must retain inherited presentation hooks.
+	game._complete_tutorial()
+	game.tutorial_active = false
+	if game.state != game.State.RUNNING:
+		game.start_run()
+	game.run.skill_cd = 0.0
+	game.use_skill()
+	if String(game.player_anim_state) != "nova" or float(game.player_anim_timer) <= 0.0:
+		return "3D NOVA did not restore the inherited NOVA animation state"
+	if float(game.v47_player_skill_stamp) < float(game.elapsed) - 0.1:
+		return "3D NOVA did not update the production skill animation stamp"
+	if int(game.v65_nova_queries) <= 0:
+		return "NOVA did not use the v1.52 3D volume authority"
+	return ""
+
+func _validate_aggregate_telemetry(game) -> String:
+	var snap: Dictionary = game.call("_v66_input_flow_snapshot")
+	if int(snap.get("tutorial_deaths", 0)) < 2:
+		return "aggregate tutorial death recovery telemetry counter is wrong"
+	if int(snap.get("tutorial_upgrade_completions", 0)) < 1:
+		return "aggregate tutorial upgrade completion counter is wrong"
+	if int(snap.get("terminal_input_recoveries", 0)) < 3:
+		return "aggregate terminal input recovery counter is wrong"
+	return ""
 
 func _fail(message: String) -> void:
-	push_error("v1.52.1 input-flow smoke test: %s" % message)
+	push_error("V66_SMOKE_FAIL: %s" % message)
 	quit(1)
