@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 ; Compatibility baseline retained for regression checks: res://scripts/main_v23.gd
 ; v1.21 baseline retained: res://scripts/main_v34.gd
@@ -6,6 +6,11 @@
 ; v1.24 UX baseline retained: res://scripts/main_v36.gd
 ; v1.25 visual-pack baseline retained: res://scripts/main_v37.gd
 [ext_resource type="Script" path="res://scripts/main_v38.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="2_fx"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
+
+[node name="VisualPackFX" type="Node2D" parent="."]
+script = ExtResource("2_fx")
+z_index = 40
