@@ -28,9 +28,9 @@ func spawn_floor() -> void:
 	super.spawn_floor()
 	if visual_pack == null or run == null:
 		return
-	var previous_count := visual_pack.unlocked_count()
+	var previous_count: int = int(visual_pack.unlocked_count())
 	visual_pack.refresh_unlocks(maxi(int(meta.best_floor), int(run.floor_no)))
-	var current_count := visual_pack.unlocked_count()
+	var current_count: int = int(visual_pack.unlocked_count())
 	if current_count > previous_count:
 		visual_pack.selected = visual_pack.highest_unlocked()
 		visual_pack.save_data()
@@ -54,20 +54,20 @@ func _v16_backdrop(kind: String = "arcane", dim: float = 0.0) -> void:
 	super._v16_backdrop(kind, dim)
 	if visual_pack == null:
 		return
-	var p := visual_pack.primary()
-	var s := visual_pack.secondary()
+	var p: Color = Color(visual_pack.primary())
+	var s: Color = Color(visual_pack.secondary())
 	# A very light tint keeps text and button contrast unchanged.
 	draw_rect(Rect2(Vector2.ZERO, SIZE), Color(p, 0.025))
 	_v37_corner_runes(p, s)
 
 func _v37_corner_runes(primary: Color, secondary: Color) -> void:
-	var centers := [Vector2(52,148), Vector2(668,148), Vector2(52,1126), Vector2(668,1126)]
+	var centers: Array[Vector2] = [Vector2(52,148), Vector2(668,148), Vector2(52,1126), Vector2(668,1126)]
 	for i in range(centers.size()):
 		var c: Vector2 = centers[i]
-		var flip := -1.0 if i % 2 == 0 else 1.0
+		var flip: float = -1.0 if i % 2 == 0 else 1.0
 		draw_arc(c, 31.0, -1.3 + elapsed*0.025*flip, 1.3 + elapsed*0.025*flip, 24, Color(primary,0.24), 1.5)
 		draw_arc(c, 22.0, 1.8 - elapsed*0.018*flip, 4.5 - elapsed*0.018*flip, 20, Color(secondary,0.15), 1.0)
-		var gem := c + Vector2(0,-31)
+		var gem: Vector2 = c + Vector2(0,-31)
 		draw_colored_polygon(PackedVector2Array([
 			gem+Vector2(0,-5), gem+Vector2(4,0), gem+Vector2(0,5), gem+Vector2(-4,0)
 		]), Color(primary,0.65))
@@ -77,9 +77,9 @@ func draw_home() -> void:
 	if home_overlay != "" or settings_open or tutorial_active or visual_pack == null:
 		return
 	# Tiny visual signature only; no extra button clutter on Home.
-	var p := visual_pack.primary()
-	var s := visual_pack.secondary()
-	var c := Vector2(360, 1193)
+	var p: Color = Color(visual_pack.primary())
+	var s: Color = Color(visual_pack.secondary())
+	var c: Vector2 = Vector2(360, 1193)
 	draw_colored_polygon(PackedVector2Array([
 		c+Vector2(0,-9), c+Vector2(8,0), c+Vector2(0,9), c+Vector2(-8,0)
 	]), Color(p,0.86))
@@ -94,10 +94,16 @@ func draw_game() -> void:
 	super.draw_game()
 	if visual_pack == null or settings_open or release_paused:
 		return
-	var p := visual_pack.primary()
-	var s := visual_pack.secondary()
+	var p: Color = Color(visual_pack.primary())
+	var s: Color = Color(visual_pack.secondary())
 	draw_rect(ARENA.grow(-3), Color(p,0.18), false, 2.0)
-	for c in [ARENA.position+Vector2(18,18), Vector2(ARENA.end.x-18,ARENA.position.y+18), Vector2(ARENA.position.x+18,ARENA.end.y-18), ARENA.end-Vector2(18,18)]:
+	var corners: Array[Vector2] = [
+		ARENA.position+Vector2(18,18),
+		Vector2(ARENA.end.x-18,ARENA.position.y+18),
+		Vector2(ARENA.position.x+18,ARENA.end.y-18),
+		ARENA.end-Vector2(18,18)
+	]
+	for c: Vector2 in corners:
 		draw_colored_polygon(PackedVector2Array([
 			c+Vector2(0,-6), c+Vector2(6,0), c+Vector2(0,6), c+Vector2(-6,0)
 		]), Color(p,0.56))
@@ -113,15 +119,15 @@ func _draw_settings_overlay() -> void:
 	super._draw_settings_overlay()
 	if visual_pack == null:
 		return
-	var p := visual_pack.primary()
-	var next_floor := visual_pack.next_unlock_floor()
+	var p: Color = Color(visual_pack.primary())
+	var next_floor: int = int(visual_pack.next_unlock_floor())
 	# Fill the deliberate gap between Replay Tutorial and Back.
 	draw_rect(V37_PACK_SELECTOR, Color("070b14"))
 	draw_rect(V37_PACK_SELECTOR, Color(p,0.46), false, 1.5)
 	_v16_medallion(Vector2(V37_PACK_SELECTOR.position.x+31,V37_PACK_SELECTOR.get_center().y), 16, p, 1)
 	_v16_text("GRAPHICS PACK", Vector2(V37_PACK_SELECTOR.position.x+58,V37_PACK_SELECTOR.position.y+23), 11, V16_MUTED, true)
-	_v16_text(visual_pack.label(), Vector2(V37_PACK_SELECTOR.position.x+58,V37_PACK_SELECTOR.position.y+43), 15, V17_IVORY, true)
-	var status := "%d/5" % visual_pack.unlocked_count()
+	_v16_text(String(visual_pack.label()), Vector2(V37_PACK_SELECTOR.position.x+58,V37_PACK_SELECTOR.position.y+43), 15, V17_IVORY, true)
+	var status: String = "%d/5" % int(visual_pack.unlocked_count())
 	if next_floor > 0:
 		status += "  •  NEXT F%d" % next_floor
 	draw_string(v16_body_font, Vector2(V37_PACK_SELECTOR.end.x-188,V37_PACK_SELECTOR.position.y+33), status, HORIZONTAL_ALIGNMENT_RIGHT, 166, 10, Color(p,0.92))
