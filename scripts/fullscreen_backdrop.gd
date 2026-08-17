@@ -19,8 +19,9 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_elapsed += delta
 	_redraw_accum += delta
-	# 20 fps is plenty for the almost-static ambience and keeps mobile cost tiny.
-	if _redraw_accum >= 0.05:
+	# 15 fps is enough for nearly-static ambience and cuts decorative redraw work
+	# on iPhone/iPad without changing gameplay timing or input responsiveness.
+	if _redraw_accum >= 0.0667:
 		_redraw_accum = 0.0
 		queue_redraw()
 
