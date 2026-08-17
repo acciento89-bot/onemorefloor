@@ -87,7 +87,7 @@ func navigate(screen: String, remember: bool = true) -> bool:
 	current_screen = screen
 	revision += 1
 	if remember:
-		if history.is_empty() or history[-1] != screen:
+		if history.is_empty() or history[history.size() - 1] != screen:
 			history.append(screen)
 			while history.size() > 16:
 				history.pop_front()
