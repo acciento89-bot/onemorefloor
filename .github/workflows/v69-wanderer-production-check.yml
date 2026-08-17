@@ -1,0 +1,74 @@
+name: v1.55 Wanderer Production Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'assets/models/actors/wanderer.gltf'
+      - 'scripts/main_v69.gd'
+      - 'scripts/v69_wanderer_production_smoke_test.gd'
+      - 'scripts/world3d_model_registry_v154.gd'
+      - 'scripts/world3d_actor_factory_v154.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v69-wanderer-production-check.yml'
+  pull_request:
+    paths:
+      - 'assets/models/actors/wanderer.gltf'
+      - 'scripts/main_v69.gd'
+      - 'scripts/v69_wanderer_production_smoke_test.gd'
+      - 'scripts/world3d_model_registry_v154.gd'
+      - 'scripts/world3d_actor_factory_v154.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v69-wanderer-production-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-wanderer-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Import production Wanderer and parse project
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee parse.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|glTF:.*ERROR" parse.log; then
+            echo "Godot reported errors while importing the production Wanderer"
+            exit 1
+          fi
+
+      - name: Validate imported Wanderer takeover and animations
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v69_wanderer_production_smoke_test.gd --quit-after 120 2>&1 | tee v69-wanderer.log
+          grep -q "v1.55 production Wanderer model takeover smoke test passed" v69-wanderer.log
+
+      - name: Re-run v1.54 real-model intake regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v68_real_model_intake_smoke_test.gd --quit-after 120 2>&1 | tee v68-model-intake.log
+          grep -q "v1.54 real GLB/glTF model intake smoke test passed" v68-model-intake.log
+
+      - name: Re-run v1.52.1 input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee v66-input-flow.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" v66-input-flow.log
