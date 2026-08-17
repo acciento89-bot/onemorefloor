@@ -45,7 +45,7 @@ func production_quality_ready() -> bool:
 		and production_details_root != null
 
 func debug_snapshot() -> Dictionary:
-	var data := super.debug_snapshot()
+	var data: Dictionary = super.debug_snapshot()
 	data["production_quality"] = production_quality_ready()
 	data["player_trails"] = player_trail_pool.size()
 	data["enemy_trails"] = enemy_trail_pool.size()
@@ -56,7 +56,7 @@ func debug_snapshot() -> Dictionary:
 func _upgrade_environment_grade() -> void:
 	var world_env := get_node_or_null("WorldEnvironment") as WorldEnvironment
 	if world_env != null and world_env.environment != null:
-		var env := world_env.environment
+		var env: Environment = world_env.environment
 		env.background_color = Color("02040a")
 		env.ambient_light_color = Color("6e6784")
 		env.ambient_light_energy = 0.29
@@ -84,10 +84,11 @@ func _upgrade_environment_grade() -> void:
 	_add_omni("GateGoldPool", Vector3(0.0, 2.15, -5.85), Color("ffc76b"), 2.2, 4.8, false)
 
 func _upgrade_actor_grounding() -> void:
-	var shadow_material := _shadow_material()
+	var shadow_material: StandardMaterial3D = _shadow_material()
 	_add_contact_shadow(player_root, 0.48, shadow_material)
-	for enemy in enemy_pool:
-		_add_contact_shadow(enemy as Node3D, 0.43, shadow_material)
+	for enemy_value in enemy_pool:
+		var enemy := enemy_value as Node3D
+		_add_contact_shadow(enemy, 0.43, shadow_material)
 
 func _add_contact_shadow(root: Node3D, radius: float, material: Material) -> void:
 	if root == null or root.get_node_or_null("ContactShadow") != null:
@@ -107,8 +108,8 @@ func _add_contact_shadow(root: Node3D, radius: float, material: Material) -> voi
 	root.add_child(shadow)
 
 func _build_projectile_trails() -> void:
-	var player_mat := _transparent_emissive(Color("ffd978", 0.62), 2.35)
-	var enemy_mat := _transparent_emissive(Color("9b65ff", 0.54), 2.10)
+	var player_mat: StandardMaterial3D = _transparent_emissive(Color("ffd978", 0.62), 2.35)
+	var enemy_mat: StandardMaterial3D = _transparent_emissive(Color("9b65ff", 0.54), 2.10)
 	for i in range(MAX_PLAYER_SHOTS):
 		player_trail_pool.append(_make_trail("PlayerTrail%02d" % i, player_mat))
 		player_prev_positions.append(Vector3.ZERO)
@@ -132,9 +133,9 @@ func _make_trail(name_value: String, material: Material) -> MeshInstance3D:
 
 func _sync_projectiles(shots: Array, pool: Array, friendly: bool) -> void:
 	super._sync_projectiles(shots, pool, friendly)
-	var trails := player_trail_pool if friendly else enemy_trail_pool
-	var prev_positions := player_prev_positions if friendly else enemy_prev_positions
-	var prev_valid := player_prev_valid if friendly else enemy_prev_valid
+	var trails: Array = player_trail_pool if friendly else enemy_trail_pool
+	var prev_positions: Array = player_prev_positions if friendly else enemy_prev_positions
+	var prev_valid: Array = player_prev_valid if friendly else enemy_prev_valid
 	if trails.is_empty():
 		return
 
@@ -143,15 +144,16 @@ func _sync_projectiles(shots: Array, pool: Array, friendly: bool) -> void:
 		if i >= shots.size():
 			trail.visible = false
 			if bool(prev_valid[i]):
-				_spawn_impact(prev_positions[i] as Vector3, friendly)
+				var final_position: Vector3 = prev_positions[i]
+				_spawn_impact(final_position, friendly)
 			prev_valid[i] = false
 			continue
 
 		var projectile := pool[i] as MeshInstance3D
-		var current := projectile.position
+		var current: Vector3 = projectile.position
 		if bool(prev_valid[i]):
-			var previous := prev_positions[i] as Vector3
-			var distance := current.distance_to(previous)
+			var previous: Vector3 = prev_positions[i]
+			var distance: float = current.distance_to(previous)
 			if distance > 0.015:
 				trail.visible = true
 				trail.position = (previous + current) * 0.5
@@ -190,7 +192,7 @@ func _build_impact_pool() -> void:
 func _spawn_impact(pos: Vector3, friendly: bool) -> void:
 	if impact_pool.is_empty():
 		return
-	var index := impact_cursor % impact_pool.size()
+	var index: int = impact_cursor % impact_pool.size()
 	impact_cursor += 1
 	var ring := impact_pool[index] as MeshInstance3D
 	ring.position = Vector3(pos.x, 0.035, pos.z)
@@ -202,7 +204,7 @@ func _spawn_impact(pos: Vector3, friendly: bool) -> void:
 func _animate_impacts(delta: float) -> void:
 	for i in range(impact_pool.size()):
 		var state: Dictionary = impact_state[i]
-		var age := float(state.get("age", 99.0))
+		var age: float = float(state.get("age", 99.0))
 		if age >= 0.22:
 			(impact_pool[i] as MeshInstance3D).visible = false
 			continue
@@ -211,8 +213,8 @@ func _animate_impacts(delta: float) -> void:
 		impact_state[i] = state
 		var ring := impact_pool[i] as MeshInstance3D
 		ring.visible = true
-		var p := clampf(age / 0.22, 0.0, 1.0)
-		var scale_value := 0.55 + p * 2.35
+		var p: float = clampf(age / 0.22, 0.0, 1.0)
+		var scale_value: float = 0.55 + p * 2.35
 		ring.scale = Vector3(scale_value, 1.0, scale_value)
 		ring.rotation.y += delta * 4.0
 
@@ -221,30 +223,35 @@ func _build_production_details() -> void:
 	production_details_root.name = "ProductionDetails"
 	add_child(production_details_root)
 
-	var stone_dark := _material(Color("11141b"), 0.08, 0.92)
-	var stone_edge := _material(Color("3d3945"), 0.24, 0.66)
-	var ember := _emissive_material(Color("ff8e47"), 2.5)
-	var rune := _emissive_material(Color("9f68ff"), 1.9)
+	var stone_dark: StandardMaterial3D = _material(Color("11141b"), 0.08, 0.92)
+	var stone_edge: StandardMaterial3D = _material(Color("3d3945"), 0.24, 0.66)
+	var ember: StandardMaterial3D = _emissive_material(Color("ff8e47"), 2.5)
+	var rune: StandardMaterial3D = _emissive_material(Color("9f68ff"), 1.9)
 
 	# Side-wall buttresses and arch-like lintels make the room read as a tower,
 	# not a flat rectangle, while staying cheap enough for mobile.
-	for side in [-1.0, 1.0]:
-		for z in [-4.9, -1.7, 1.5, 4.7]:
-			var x := side * 4.90
+	for side_value in [-1.0, 1.0]:
+		var side: float = float(side_value)
+		for z_value in [-4.9, -1.7, 1.5, 4.7]:
+			var z: float = float(z_value)
+			var x: float = side * 4.90
 			_add_box(production_details_root, "Buttress", Vector3(0.42, 2.25, 0.72), Vector3(x, 0.95, z), stone_dark)
 			_add_box(production_details_root, "ButtressCap", Vector3(0.58, 0.20, 0.92), Vector3(x, 2.02, z), stone_edge)
 
 	# Four braziers define depth lanes and provide emissive landmarks.
-	for pos in [Vector3(-3.65, 0.0, -3.6), Vector3(3.65, 0.0, -3.6), Vector3(-3.65, 0.0, 3.4), Vector3(3.65, 0.0, 3.4)]:
+	for pos_value in [Vector3(-3.65, 0.0, -3.6), Vector3(3.65, 0.0, -3.6), Vector3(-3.65, 0.0, 3.4), Vector3(3.65, 0.0, 3.4)]:
+		var pos: Vector3 = pos_value
 		_add_brazier(pos, stone_edge, ember)
 
 	# Floor sigils guide the eye to the gate and reinforce the arcane tower ID.
-	for z in [-4.8, -0.2, 4.2]:
+	for z_value in [-4.8, -0.2, 4.2]:
+		var z: float = float(z_value)
 		var sigil := _add_cylinder_local(production_details_root, "FloorSigil", 0.68, 0.68, 0.018, Vector3(0.0, 0.018, z), rune, 28)
 		sigil.scale = Vector3(1.0, 1.0, 0.46)
 
 	# Sparse rubble breaks perfect symmetry without turning the room into clutter.
-	for rubble in [Vector3(-4.0,0.07,-5.4), Vector3(4.1,0.06,-0.8), Vector3(-3.9,0.06,2.2), Vector3(3.8,0.07,5.1), Vector3(-2.9,0.05,5.5), Vector3(2.8,0.05,-5.6)]:
+	for rubble_value in [Vector3(-4.0,0.07,-5.4), Vector3(4.1,0.06,-0.8), Vector3(-3.9,0.06,2.2), Vector3(3.8,0.07,5.1), Vector3(-2.9,0.05,5.5), Vector3(2.8,0.05,-5.6)]:
+		var rubble: Vector3 = rubble_value
 		var rock := _add_box(production_details_root, "Rubble", Vector3(0.34, 0.18, 0.28), rubble, stone_edge)
 		rock.rotation = Vector3(0.08, rubble.x * 0.17, 0.12)
 
@@ -263,12 +270,13 @@ func _animate_room_details() -> void:
 	if production_details_root == null:
 		return
 	var brazier_index := 0
-	for child in production_details_root.get_children():
-		if child.name != "Brazier":
+	for child_value in production_details_root.get_children():
+		var child := child_value as Node3D
+		if child == null or child.name != "Brazier":
 			continue
 		var flame := child.get_node_or_null("Flame") as MeshInstance3D
 		if flame != null:
-			var pulse := 1.0 + sin(runtime_elapsed * 8.0 + float(brazier_index) * 1.7) * 0.10
+			var pulse: float = 1.0 + sin(runtime_elapsed * 8.0 + float(brazier_index) * 1.7) * 0.10
 			flame.scale = Vector3(0.72 * pulse, 1.55 + (pulse - 1.0) * 1.2, 0.72 * pulse)
 		brazier_index += 1
 
