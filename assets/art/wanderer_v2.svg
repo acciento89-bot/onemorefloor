@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="480" viewBox="0 0 320 480">
+<defs>
+ <linearGradient id="cloak" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a8436f"/><stop offset=".28" stop-color="#6e2c53"/><stop offset=".62" stop-color="#321a3c"/><stop offset="1" stop-color="#130f1d"/></linearGradient>
+ <linearGradient id="cloak2" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d05a85"/><stop offset=".46" stop-color="#7b3158"/><stop offset="1" stop-color="#33172e"/></linearGradient>
+ <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fbfdff"/><stop offset=".12" stop-color="#c9d7e3"/><stop offset=".37" stop-color="#78899e"/><stop offset=".64" stop-color="#39465a"/><stop offset="1" stop-color="#131a26"/></linearGradient>
+ <linearGradient id="steel2" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#687b91"/><stop offset=".5" stop-color="#303d50"/><stop offset="1" stop-color="#101722"/></linearGradient>
+ <linearGradient id="leather" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a56c3f"/><stop offset=".42" stop-color="#624028"/><stop offset="1" stop-color="#251914"/></linearGradient>
+ <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#edc197"/><stop offset=".48" stop-color="#cb8f69"/><stop offset="1" stop-color="#80533f"/></linearGradient>
+ <linearGradient id="blade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset=".16" stop-color="#dff5ff"/><stop offset=".42" stop-color="#b899ff"/><stop offset=".72" stop-color="#7138d6"/><stop offset="1" stop-color="#25104f"/></linearGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff2ae"/><stop offset=".32" stop-color="#d8aa48"/><stop offset=".7" stop-color="#7d4a14"/><stop offset="1" stop-color="#e8c263"/></linearGradient>
+ <radialGradient id="aura"><stop stop-color="#a665ff" stop-opacity=".25"/><stop offset=".56" stop-color="#6130b2" stop-opacity=".08"/><stop offset="1" stop-color="#250f4c" stop-opacity="0"/></radialGradient>
+</defs>
+<ellipse cx="160" cy="434" rx="88" ry="20" fill="#010205" opacity=".78"/>
+<ellipse cx="160" cy="245" rx="145" ry="182" fill="url(#aura)"/>
+<!-- cape silhouette -->
+<path d="M82 365 100 186 138 150 159 141 183 151 220 187 240 365 213 430 111 430Z" fill="url(#cloak)" stroke="#140f1e" stroke-width="8"/>
+<path d="M95 208 118 186 127 374 105 414 86 360Z" fill="url(#cloak2)" opacity=".85"/>
+<path d="M221 205 236 360 215 408 193 368 198 187Z" fill="#21122c" opacity=".86"/>
+<path d="M105 196 131 171 151 159 171 159 190 171 216 197 200 299 120 299Z" fill="#233148" stroke="#718199" stroke-width="5"/>
+<!-- layered cuirass -->
+<path d="M124 207 160 187 196 207 185 268 136 268Z" fill="url(#steel)" stroke="#171f2d" stroke-width="5"/>
+<path d="M136 219 160 205 184 220 178 250 142 250Z" fill="url(#steel2)"/>
+<path d="M124 257h72l11 48h-94Z" fill="#1f2a3c" stroke="#526277" stroke-width="4"/>
+<path d="M141 183 160 174 179 184 160 204Z" fill="url(#gold)" stroke="#624014" stroke-width="3"/>
+<path d="M160 215 170 234 160 254 150 234Z" fill="#f4d776" stroke="#8b5b1a" stroke-width="2"/>
+<path d="M160 219v31M153 234h14" stroke="#fff8c9" stroke-opacity=".68" stroke-width="2"/>
+<!-- pauldrons -->
+<path d="M103 204 132 181 148 205 129 234 98 223Z" fill="url(#steel)" stroke="#1a2330" stroke-width="4"/>
+<path d="M217 204 188 181 172 205 191 234 222 223Z" fill="url(#steel)" stroke="#1a2330" stroke-width="4"/>
+<path d="M106 201 129 187M214 201 191 187" stroke="#f4fbff" stroke-opacity=".42" stroke-width="2"/>
+<!-- hood and head, slimmer than v1 -->
+<path d="M118 190 126 111 157 67 192 102 213 188 190 211 140 209Z" fill="#111827" stroke="#070b12" stroke-width="8"/>
+<path d="M131 126c4-31 42-49 62-9l-4 52c-9 27-42 33-58 4Z" fill="url(#skin)"/>
+<path d="M126 128 139 94 159 67 183 82 207 126 188 112 160 123 140 113Z" fill="#0c121f"/>
+<path d="M133 117 154 91 178 94 198 115 181 103 159 103 141 123Z" fill="#3a465c" opacity=".66"/>
+<path d="M141 140q9-6 18 0M171 140q9-6 18 0" fill="none" stroke="#17171f" stroke-width="3.5" stroke-linecap="round"/>
+<circle cx="151" cy="141" r="2.8" fill="#edf7ff"/><circle cx="181" cy="141" r="2.8" fill="#edf7ff"/>
+<circle cx="151" cy="141" r="1.2" fill="#33465d"/><circle cx="181" cy="141" r="1.2" fill="#33465d"/>
+<path d="M164 145 160 158 168 160" fill="none" stroke="#98644d" stroke-width="2.3" stroke-linecap="round"/>
+<path d="M152 169q13 5 27-1" fill="none" stroke="#704637" stroke-width="3" stroke-linecap="round"/>
+<path d="M138 127c13-10 34-14 53-4" fill="none" stroke="#121824" stroke-width="7" stroke-linecap="round"/>
+<!-- arms -->
+<path d="M113 237 72 286 89 319 132 279Z" fill="url(#leather)" stroke="#281a16" stroke-width="5"/>
+<path d="M207 237 248 284 231 319 188 279Z" fill="url(#leather)" stroke="#281a16" stroke-width="5"/>
+<path d="M77 286 91 313 106 297 93 270Z" fill="url(#steel2)" stroke="#19212d" stroke-width="3"/>
+<path d="M243 284 229 313 215 297 228 269Z" fill="url(#steel2)" stroke="#19212d" stroke-width="3"/>
+<!-- belt and legs -->
+<path d="M116 286h88v22h-88Z" fill="#39271e" stroke="#6b4930" stroke-width="3"/>
+<circle cx="160" cy="297" r="11" fill="url(#gold)" stroke="#684114" stroke-width="3"/>
+<path d="M154 297h12M160 291v12" stroke="#fff3b0" stroke-opacity=".55" stroke-width="2"/>
+<path d="M125 305 117 413h46l7-108M190 305l12 108h46l-19-112" fill="#242f40" stroke="#0f1621" stroke-width="7"/>
+<path d="M121 339h40M194 339h39" stroke="#607086" stroke-opacity=".38" stroke-width="3"/>
+<path d="M113 412h52l-12 34h-53Z" fill="url(#leather)" stroke="#1b1411" stroke-width="4"/>
+<path d="M197 412h52l13 34h-55Z" fill="url(#leather)" stroke="#1b1411" stroke-width="4"/>
+<!-- sword -->
+<path d="M199 225 244 168" stroke="#533520" stroke-width="16" stroke-linecap="round"/>
+<path d="M204 216 278 105" stroke="url(#blade)" stroke-width="11" stroke-linecap="round"/>
+<path d="M239 164 273 187" stroke="url(#gold)" stroke-width="10" stroke-linecap="round"/>
+<path d="M271 112 284 93" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+<path d="M221 192 265 128" stroke="#fbf5ff" stroke-opacity=".42" stroke-width="2.2"/>
+<!-- subtle armor etching -->
+<path d="M147 233h26M151 244h18" stroke="#cdd8e6" stroke-opacity=".22" stroke-width="1.3"/>
+<path d="M128 275h64" stroke="#7f91a6" stroke-opacity=".24" stroke-width="1.5"/>
+</svg>
