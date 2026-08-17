@@ -1,0 +1,43 @@
+name: Visual Art Pass v1.27 Check
+
+on:
+  push:
+    branches:
+      - agent/v1.27-fullscreen-home-hero-forge
+      - main
+  pull_request:
+
+jobs:
+  visual-art-pass:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+
+      - name: Parse art-pass runtime
+        run: |
+          ./godot --headless --path . --script res://scripts/fullscreen_backdrop.gd --check-only
+          ./godot --headless --path . --script res://scripts/main_v40.gd --check-only
+          ./godot --headless --path . --script res://scripts/v40_visual_art_pass_smoke_test.gd --check-only
+
+      - name: Import project assets
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee art-pass-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Error.*SVG" art-pass-import.log; then
+            exit 1
+          fi
+
+      - name: Run visual art-pass regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v40_visual_art_pass_smoke_test.gd --quit-after 120 | tee art-pass-v40.log
+          grep -q "ONE MORE FLOOR v1.27 fullscreen/home/hero/forge art pass smoke test passed" art-pass-v40.log
