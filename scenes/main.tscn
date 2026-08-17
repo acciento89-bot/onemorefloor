@@ -13,7 +13,8 @@
 ; v1.30 endgame chamber baseline retained: res://scripts/main_v43.gd
 ; v1.31 boss spectacle baseline retained: res://scripts/main_v44.gd
 ; v1.32 dedicated actor-art baseline retained: res://scripts/main_v45.gd
-[ext_resource type="Script" path="res://scripts/main_v46.gd" id="1_main"]
+; v1.33 combat VFX baseline retained: res://scripts/main_v46.gd
+[ext_resource type="Script" path="res://scripts/main_v47.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 
