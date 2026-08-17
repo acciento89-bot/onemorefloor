@@ -1,10 +1,11 @@
 extends Node3D
 
-# First real 3D combat presentation for ONE MORE FLOOR.
-# Gameplay still belongs to the proven 2D runtime. This node only mirrors the
-# runtime's positions into a lightweight 3D chamber so movement/combat can be
-# migrated incrementally without touching balance, save data or input geometry.
+# ONE MORE FLOOR 3D Lower Halls renderer.
+# Gameplay authority remains in the proven 2D runtime; this layer mirrors that
+# state into real 3D presentation. v1.40 replaces capsule placeholders with
+# authored stylized actor silhouettes while keeping the synchronization API.
 
+const ActorFactory = preload("res://scripts/world3d_actor_factory.gd")
 const DESIGN_ARENA := Rect2(36.0, 160.0, 648.0, 840.0)
 const WORLD_HALF_WIDTH := 4.65
 const WORLD_HALF_DEPTH := 6.05
@@ -15,23 +16,22 @@ const MAX_COINS := 24
 
 var camera: Camera3D
 var player_root: Node3D
+var actor_factory := ActorFactory.new()
 var enemy_pool: Array = []
 var player_shot_pool: Array = []
 var enemy_shot_pool: Array = []
 var coin_pool: Array = []
-var enemy_materials: Dictionary = {}
 var last_floor := -1
 var runtime_elapsed := 0.0
 var attack_amount := 0.0
 var skill_amount := 0.0
+var move_amount := 0.0
+var actor_materials: Dictionary = {}
 
 var mat_floor: StandardMaterial3D
 var mat_wall: StandardMaterial3D
 var mat_trim: StandardMaterial3D
 var mat_gold: StandardMaterial3D
-var mat_player: StandardMaterial3D
-var mat_player_dark: StandardMaterial3D
-var mat_player_skin: StandardMaterial3D
 var mat_player_shot: StandardMaterial3D
 var mat_enemy_shot: StandardMaterial3D
 var mat_coin: StandardMaterial3D
@@ -49,25 +49,16 @@ func _process(delta: float) -> void:
 		return
 	attack_amount = maxf(0.0, attack_amount - delta * 6.5)
 	skill_amount = maxf(0.0, skill_amount - delta * 4.0)
-	var body := player_root.get_node_or_null("Body") as Node3D
-	if body != null:
-		body.position.y = 0.76 + sin(runtime_elapsed * 4.6) * 0.025
-	var sword := player_root.get_node_or_null("Sword") as Node3D
-	if sword != null:
-		sword.rotation.z = -0.38 - attack_amount * 1.18
-		sword.rotation.x = 0.12 + attack_amount * 0.24
-	var skill_ring := player_root.get_node_or_null("SkillRing") as MeshInstance3D
-	if skill_ring != null:
-		skill_ring.visible = skill_amount > 0.01
-		if skill_ring.visible:
-			var s := 1.0 + (1.0 - skill_amount) * 2.6
-			skill_ring.scale = Vector3(s, 1.0, s)
+	actor_factory.animate_player(player_root, runtime_elapsed, move_amount, attack_amount, skill_amount)
 
 func set_active(value: bool) -> void:
 	process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
 
 func world_ready() -> bool:
-	return camera != null and player_root != null and enemy_pool.size() == MAX_ENEMIES
+	return camera != null and player_root != null and enemy_pool.size() == MAX_ENEMIES and bool(player_root.get_meta("authored_3d", false))
+
+func authored_actor_ready() -> bool:
+	return world_ready() and player_root.name == "Wanderer3D" and actor_factory.is_authored_enemy("goblin") and actor_factory.is_authored_enemy("warden")
 
 func design_to_world(pos: Vector2) -> Vector3:
 	var nx := clampf((pos.x - DESIGN_ARENA.get_center().x) / (DESIGN_ARENA.size.x * 0.5), -1.12, 1.12)
@@ -89,10 +80,9 @@ func sync_runtime(
 	if not world_ready():
 		return
 	runtime_elapsed = elapsed_value
-	if attack_flash > 0.0:
-		attack_amount = 1.0
-	if skill_flash > 0.0:
-		skill_amount = 1.0
+	move_amount = clampf(joy.length(), 0.0, 1.0)
+	if attack_flash > 0.0: attack_amount = 1.0
+	if skill_flash > 0.0: skill_amount = 1.0
 	if floor_no != last_floor:
 		last_floor = floor_no
 		_apply_floor_identity(floor_no)
@@ -112,6 +102,7 @@ func sync_runtime(
 func debug_snapshot() -> Dictionary:
 	return {
 		"ready": world_ready(),
+		"authored_actors": authored_actor_ready(),
 		"enemy_pool": enemy_pool.size(),
 		"player_shot_pool": player_shot_pool.size(),
 		"enemy_shot_pool": enemy_shot_pool.size(),
@@ -121,29 +112,50 @@ func debug_snapshot() -> Dictionary:
 	}
 
 func _build_materials() -> void:
-	mat_floor = _material(Color("171a22"), 0.08, 0.88)
-	mat_wall = _material(Color("252632"), 0.16, 0.76)
-	mat_trim = _material(Color("5b5166"), 0.34, 0.48)
-	mat_gold = _material(Color("c89b4b"), 0.62, 0.32)
-	mat_player = _material(Color("56356f"), 0.18, 0.58)
-	mat_player_dark = _material(Color("171824"), 0.10, 0.78)
-	mat_player_skin = _material(Color("b98667"), 0.02, 0.92)
+	mat_floor = _material(Color("151820"), 0.10, 0.86)
+	mat_wall = _material(Color("252631"), 0.18, 0.72)
+	mat_trim = _material(Color("66596b"), 0.38, 0.42)
+	mat_gold = _material(Color("d2a653"), 0.68, 0.28)
 	mat_player_shot = _emissive_material(Color("ffd77a"), 1.8)
 	mat_enemy_shot = _emissive_material(Color("a568ff"), 1.45)
 	mat_coin = _emissive_material(Color("e2ae45"), 1.15)
+	actor_materials = {
+		"cloth": _material(Color("573570"), 0.12, 0.62),
+		"cloth_dark": _material(Color("342044"), 0.10, 0.70),
+		"dark": _material(Color("171823"), 0.16, 0.72),
+		"black": _material(Color("08090f"), 0.08, 0.82),
+		"skin": _material(Color("b98769"), 0.02, 0.88),
+		"gold": mat_gold,
+		"steel": _material(Color("7f8691"), 0.72, 0.32),
+		"steel_bright": _material(Color("bbc3ce"), 0.82, 0.20),
+		"steel_dark": _material(Color("434955"), 0.66, 0.38),
+		"leather": _material(Color("5a3a2b"), 0.05, 0.82),
+		"bone": _material(Color("c9c2ad"), 0.02, 0.86),
+		"bone_dark": _material(Color("817b6e"), 0.05, 0.82),
+		"goblin": _material(Color("72944f"), 0.04, 0.82),
+		"goblin_dark": _material(Color("34482c"), 0.06, 0.82),
+		"undead": _material(Color("7f8d71"), 0.04, 0.84),
+		"undead_dark": _material(Color("3b4638"), 0.06, 0.82),
+		"purple": _material(Color("755293"), 0.12, 0.62),
+		"purple_dark": _material(Color("3d2c50"), 0.12, 0.68),
+		"warden": _material(Color("704052"), 0.22, 0.55),
+		"glow_gold": _emissive_material(Color("ffd26b"), 2.2),
+		"glow_purple": _emissive_material(Color("a76cff"), 2.0),
+		"glow_red": _emissive_material(Color("ff5868"), 2.0),
+	}
 
 func _build_environment() -> void:
-	var environment_node := WorldEnvironment.new()
-	environment_node.name = "WorldEnvironment"
-	var environment := Environment.new()
-	environment.background_mode = Environment.BG_COLOR
-	environment.background_color = Color("05070d")
-	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("77708e")
-	environment.ambient_light_energy = 0.38
-	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	environment_node.environment = environment
-	add_child(environment_node)
+	var world_env := WorldEnvironment.new()
+	world_env.name = "WorldEnvironment"
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = Color("04060b")
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color("77708e")
+	env.ambient_light_energy = 0.34
+	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	world_env.environment = env
+	add_child(world_env)
 
 	var key := DirectionalLight3D.new()
 	key.name = "MoonKey"
@@ -153,22 +165,8 @@ func _build_environment() -> void:
 	key.shadow_enabled = true
 	add_child(key)
 
-	var warm := OmniLight3D.new()
-	warm.name = "WarmTorchLight"
-	warm.position = Vector3(-3.75, 2.25, 0.8)
-	warm.light_color = Color("ffae62")
-	warm.light_energy = 4.2
-	warm.omni_range = 7.4
-	warm.shadow_enabled = true
-	add_child(warm)
-
-	var arcane := OmniLight3D.new()
-	arcane.name = "ArcaneLight"
-	arcane.position = Vector3(3.8, 2.1, -2.1)
-	arcane.light_color = Color("9868ff")
-	arcane.light_energy = 3.4
-	arcane.omni_range = 7.0
-	add_child(arcane)
+	_add_omni("WarmTorchLight", Vector3(-3.75,2.25,0.8), Color("ffae62"), 4.2, 7.4, true)
+	_add_omni("ArcaneLight", Vector3(3.8,2.1,-2.1), Color("9868ff"), 3.4, 7.0, false)
 
 	camera = Camera3D.new()
 	camera.name = "IsometricCamera"
@@ -182,329 +180,142 @@ func _build_environment() -> void:
 	camera.current = true
 
 func _build_chamber() -> void:
-	_add_box("Floor", Vector3(10.5, 0.22, 14.2), Vector3(0.0, -0.16, 0.0), mat_floor)
-	_add_box("BackWall", Vector3(10.7, 3.1, 0.32), Vector3(0.0, 1.38, -7.0), mat_wall)
-	_add_box("LeftWall", Vector3(0.32, 2.0, 14.2), Vector3(-5.22, 0.84, 0.0), mat_wall)
-	_add_box("RightWall", Vector3(0.32, 2.0, 14.2), Vector3(5.22, 0.84, 0.0), mat_wall)
-	_add_box("BackTrim", Vector3(10.2, 0.16, 0.42), Vector3(0.0, 2.73, -6.82), mat_trim)
+	_add_box(self,"Floor",Vector3(10.5,0.22,14.2),Vector3(0,-0.16,0),mat_floor)
+	_add_box(self,"BackWall",Vector3(10.7,3.1,0.32),Vector3(0,1.38,-7.0),mat_wall)
+	_add_box(self,"LeftWall",Vector3(0.32,2.0,14.2),Vector3(-5.22,0.84,0),mat_wall)
+	_add_box(self,"RightWall",Vector3(0.32,2.0,14.2),Vector3(5.22,0.84,0),mat_wall)
+	_add_box(self,"BackTrim",Vector3(10.2,0.16,0.42),Vector3(0,2.73,-6.82),mat_trim)
 
-	for side in [-1.0, 1.0]:
-		for z in [-5.35, -1.85, 1.65, 5.15]:
-			_add_pillar(Vector3(side * 4.42, 0.0, z))
+	# Repeating stone bays + inset metallic strips make the chamber feel built,
+	# not like an empty prototype rectangle.
+	for side in [-1.0,1.0]:
+		for z in [-5.35,-1.85,1.65,5.15]:
+			_add_pillar(Vector3(side*4.42,0,z))
+	for z in [-4.5,-1.5,1.5,4.5]:
+		_add_box(self,"FloorBand",Vector3(8.2,0.035,0.10),Vector3(0,-0.02,z),mat_trim)
+	for x in [-3.35,-1.65,0.0,1.65,3.35]:
+		_add_box(self,"FloorSeam",Vector3(0.045,0.028,12.0),Vector3(x,-0.015,0),_material(Color("34313a"),0.20,0.76))
 
-	# Raised gate structure at the far end gives the camera a real destination.
-	_add_box("GateLeft", Vector3(1.15, 3.35, 0.56), Vector3(-2.05, 1.5, -6.52), mat_wall)
-	_add_box("GateRight", Vector3(1.15, 3.35, 0.56), Vector3(2.05, 1.5, -6.52), mat_wall)
-	_add_box("GateHeader", Vector3(5.25, 0.75, 0.60), Vector3(0.0, 2.95, -6.52), mat_trim)
-	_add_box("GateInset", Vector3(2.75, 2.55, 0.18), Vector3(0.0, 1.2, -6.68), mat_player_dark)
-
-	# A few metallic floor strips make the perspective immediately readable.
-	for z in [-4.5, -1.5, 1.5, 4.5]:
-		_add_box("FloorBand", Vector3(8.2, 0.035, 0.10), Vector3(0.0, -0.02, z), mat_trim)
+	# Raised gate and side buttresses.
+	_add_box(self,"GateLeft",Vector3(1.15,3.35,0.56),Vector3(-2.05,1.5,-6.52),mat_wall)
+	_add_box(self,"GateRight",Vector3(1.15,3.35,0.56),Vector3(2.05,1.5,-6.52),mat_wall)
+	_add_box(self,"GateHeader",Vector3(5.25,0.75,0.60),Vector3(0,2.95,-6.52),mat_trim)
+	_add_box(self,"GateInset",Vector3(2.75,2.55,0.18),Vector3(0,1.2,-6.68),actor_materials["black"])
+	for x in [-0.72,0.0,0.72]:
+		_add_box(self,"GateBar",Vector3(0.09,2.20,0.12),Vector3(x,1.18,-6.78),mat_gold)
+	_add_box(self,"Threshold",Vector3(3.4,0.16,0.80),Vector3(0,0.0,-6.20),mat_trim)
 
 func _add_pillar(pos: Vector3) -> void:
 	var root := Node3D.new()
 	root.position = pos
 	root.name = "Pillar"
 	add_child(root)
-	_add_box_to(root, "Base", Vector3(0.92, 0.28, 0.92), Vector3(0.0, 0.02, 0.0), mat_trim)
-	_add_box_to(root, "Column", Vector3(0.62, 2.65, 0.62), Vector3(0.0, 1.43, 0.0), mat_wall)
-	_add_box_to(root, "Cap", Vector3(0.90, 0.24, 0.90), Vector3(0.0, 2.82, 0.0), mat_trim)
-	var ember := OmniLight3D.new()
-	ember.position = Vector3(0.0, 2.25, 0.0)
-	ember.light_color = Color("ff9c4a") if pos.x < 0.0 else Color("9060ff")
-	ember.light_energy = 1.35
-	ember.omni_range = 3.0
-	root.add_child(ember)
+	_add_box(root,"Base",Vector3(0.92,0.28,0.92),Vector3(0,0.02,0),mat_trim)
+	_add_box(root,"Column",Vector3(0.62,2.65,0.62),Vector3(0,1.43,0),mat_wall)
+	_add_box(root,"Cap",Vector3(0.90,0.24,0.90),Vector3(0,2.82,0),mat_trim)
+	_add_box(root,"Rune",Vector3(0.20,0.45,0.03),Vector3(0,1.55,-0.325),mat_gold)
+	_add_omni_to(root,"PillarLight",Vector3(0,2.25,0),Color("ff9c4a") if pos.x < 0.0 else Color("9060ff"),1.2,2.9)
 
 func _build_player() -> void:
-	player_root = Node3D.new()
-	player_root.name = "PlayerProxy"
+	player_root = actor_factory.create_player(actor_materials)
 	add_child(player_root)
-
-	var body_root := Node3D.new()
-	body_root.name = "Body"
-	body_root.position.y = 0.76
-	player_root.add_child(body_root)
-
-	var cloak_mesh := CapsuleMesh.new()
-	cloak_mesh.radius = 0.34
-	cloak_mesh.height = 1.18
-	cloak_mesh.radial_segments = 12
-	cloak_mesh.rings = 5
-	var cloak := MeshInstance3D.new()
-	cloak.name = "Cloak"
-	cloak.mesh = cloak_mesh
-	cloak.material_override = mat_player
-	body_root.add_child(cloak)
-
-	var chest_mesh := BoxMesh.new()
-	chest_mesh.size = Vector3(0.58, 0.52, 0.34)
-	var chest := MeshInstance3D.new()
-	chest.name = "Armor"
-	chest.mesh = chest_mesh
-	chest.position = Vector3(0.0, 0.12, -0.10)
-	chest.material_override = mat_player_dark
-	body_root.add_child(chest)
-
-	var head_mesh := SphereMesh.new()
-	head_mesh.radius = 0.235
-	head_mesh.height = 0.47
-	head_mesh.radial_segments = 12
-	head_mesh.rings = 6
-	var head := MeshInstance3D.new()
-	head.name = "Head"
-	head.mesh = head_mesh
-	head.position = Vector3(0.0, 0.73, 0.0)
-	head.material_override = mat_player_skin
-	body_root.add_child(head)
-
-	var hood_mesh := SphereMesh.new()
-	hood_mesh.radius = 0.285
-	hood_mesh.height = 0.56
-	hood_mesh.radial_segments = 12
-	hood_mesh.rings = 5
-	var hood := MeshInstance3D.new()
-	hood.name = "Hood"
-	hood.mesh = hood_mesh
-	hood.position = Vector3(0.0, 0.78, 0.08)
-	hood.scale = Vector3(1.0, 1.08, 0.86)
-	hood.material_override = mat_player_dark
-	body_root.add_child(hood)
-	# Face remains slightly forward of the hood shell.
-	head.position.z = -0.18
-
-	var sword_root := Node3D.new()
-	sword_root.name = "Sword"
-	sword_root.position = Vector3(0.48, 0.88, -0.30)
-	player_root.add_child(sword_root)
-	var blade_mesh := BoxMesh.new()
-	blade_mesh.size = Vector3(0.085, 0.085, 0.96)
-	var blade := MeshInstance3D.new()
-	blade.mesh = blade_mesh
-	blade.position = Vector3(0.0, 0.0, -0.35)
-	blade.material_override = mat_gold
-	sword_root.add_child(blade)
-	var hilt_mesh := BoxMesh.new()
-	hilt_mesh.size = Vector3(0.42, 0.08, 0.10)
-	var hilt := MeshInstance3D.new()
-	hilt.mesh = hilt_mesh
-	hilt.material_override = mat_trim
-	sword_root.add_child(hilt)
-
-	var skill_mesh := CylinderMesh.new()
-	skill_mesh.top_radius = 0.72
-	skill_mesh.bottom_radius = 0.72
-	skill_mesh.height = 0.025
-	skill_mesh.radial_segments = 36
-	var skill_ring := MeshInstance3D.new()
-	skill_ring.name = "SkillRing"
-	skill_ring.mesh = skill_mesh
-	skill_ring.position = Vector3(0.0, 0.02, 0.0)
-	skill_ring.material_override = _emissive_material(Color("8f62ff"), 0.95)
-	skill_ring.visible = false
-	player_root.add_child(skill_ring)
 
 func _build_pools() -> void:
 	for i in range(MAX_ENEMIES):
-		var proxy := _make_enemy_proxy(i)
+		var proxy := actor_factory.create_enemy_shell(i)
 		enemy_pool.append(proxy)
 		add_child(proxy)
-		_set_enemy_visible(proxy, false)
+		_set_actor_visible(proxy,false)
 
 	var player_sphere := SphereMesh.new()
-	player_sphere.radius = 0.095
-	player_sphere.height = 0.19
-	player_sphere.radial_segments = 8
-	player_sphere.rings = 4
+	player_sphere.radius=0.095; player_sphere.height=0.19; player_sphere.radial_segments=8; player_sphere.rings=4
 	for i in range(MAX_PLAYER_SHOTS):
-		var shot := MeshInstance3D.new()
-		shot.name = "PlayerShot%02d" % i
-		shot.mesh = player_sphere
-		shot.material_override = mat_player_shot
-		shot.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		shot.visible = false
-		player_shot_pool.append(shot)
-		add_child(shot)
+		var shot:=MeshInstance3D.new(); shot.name="PlayerShot%02d"%i; shot.mesh=player_sphere; shot.material_override=mat_player_shot; shot.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; shot.visible=false; player_shot_pool.append(shot); add_child(shot)
 
 	var enemy_sphere := SphereMesh.new()
-	enemy_sphere.radius = 0.105
-	enemy_sphere.height = 0.21
-	enemy_sphere.radial_segments = 8
-	enemy_sphere.rings = 4
+	enemy_sphere.radius=0.105; enemy_sphere.height=0.21; enemy_sphere.radial_segments=8; enemy_sphere.rings=4
 	for i in range(MAX_ENEMY_SHOTS):
-		var shot := MeshInstance3D.new()
-		shot.name = "EnemyShot%02d" % i
-		shot.mesh = enemy_sphere
-		shot.material_override = mat_enemy_shot
-		shot.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		shot.visible = false
-		enemy_shot_pool.append(shot)
-		add_child(shot)
+		var shot:=MeshInstance3D.new(); shot.name="EnemyShot%02d"%i; shot.mesh=enemy_sphere; shot.material_override=mat_enemy_shot; shot.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; shot.visible=false; enemy_shot_pool.append(shot); add_child(shot)
 
-	var coin_mesh := CylinderMesh.new()
-	coin_mesh.top_radius = 0.16
-	coin_mesh.bottom_radius = 0.16
-	coin_mesh.height = 0.055
-	coin_mesh.radial_segments = 12
+	var coin_mesh:=CylinderMesh.new(); coin_mesh.top_radius=0.16; coin_mesh.bottom_radius=0.16; coin_mesh.height=0.055; coin_mesh.radial_segments=12
 	for i in range(MAX_COINS):
-		var coin := MeshInstance3D.new()
-		coin.name = "Coin%02d" % i
-		coin.mesh = coin_mesh
-		coin.material_override = mat_coin
-		coin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		coin.visible = false
-		coin_pool.append(coin)
-		add_child(coin)
-
-func _make_enemy_proxy(index: int) -> Node3D:
-	var root := Node3D.new()
-	root.name = "EnemyProxy%02d" % index
-	var body_mesh := CapsuleMesh.new()
-	body_mesh.radius = 0.31
-	body_mesh.height = 1.02
-	body_mesh.radial_segments = 10
-	body_mesh.rings = 4
-	var body := MeshInstance3D.new()
-	body.name = "Body"
-	body.mesh = body_mesh
-	body.position = Vector3(0.0, 0.57, 0.0)
-	body.material_override = _enemy_material("default")
-	root.add_child(body)
-
-	var head_mesh := SphereMesh.new()
-	head_mesh.radius = 0.225
-	head_mesh.height = 0.45
-	head_mesh.radial_segments = 10
-	head_mesh.rings = 5
-	var head := MeshInstance3D.new()
-	head.name = "Head"
-	head.mesh = head_mesh
-	head.position = Vector3(0.0, 1.23, -0.03)
-	head.material_override = body.material_override
-	root.add_child(head)
-
-	var weapon_mesh := BoxMesh.new()
-	weapon_mesh.size = Vector3(0.08, 0.08, 0.68)
-	var weapon := MeshInstance3D.new()
-	weapon.name = "Weapon"
-	weapon.mesh = weapon_mesh
-	weapon.position = Vector3(0.38, 0.72, -0.18)
-	weapon.rotation_degrees = Vector3(0.0, 0.0, -18.0)
-	weapon.material_override = mat_trim
-	root.add_child(weapon)
-	return root
+		var coin:=MeshInstance3D.new(); coin.name="Coin%02d"%i; coin.mesh=coin_mesh; coin.material_override=mat_coin; coin.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; coin.visible=false; coin_pool.append(coin); add_child(coin)
 
 func _sync_enemies(enemies: Array, player_world: Vector3) -> void:
 	for i in range(enemy_pool.size()):
-		var proxy: Node3D = enemy_pool[i]
-		if i >= enemies.size():
-			_set_enemy_visible(proxy, false)
+		var proxy:Node3D=enemy_pool[i]
+		if i>=enemies.size():
+			_set_actor_visible(proxy,false)
 			continue
-		var e: Dictionary = enemies[i]
-		_set_enemy_visible(proxy, true)
-		var p := design_to_world(e.get("pos", DESIGN_ARENA.get_center()))
-		proxy.position = p
-		var kind := String(e.get("type", "enemy"))
-		var variant := String(e.get("boss_variant", ""))
-		var visual_kind := variant if kind == "warden" and variant != "" else kind
-		var material := _enemy_material(visual_kind)
-		var body := proxy.get_node("Body") as MeshInstance3D
-		var head := proxy.get_node("Head") as MeshInstance3D
-		body.material_override = material
-		head.material_override = material
-		var radius := float(e.get("radius", 24.0))
-		var scale_value := clampf(radius / 24.0, 0.78, 1.65)
-		if kind == "warden":
-			scale_value *= 1.28
-		if bool(e.get("elite", false)):
-			scale_value *= 1.08
-		proxy.scale = Vector3.ONE * scale_value
-		if p.distance_squared_to(player_world) > 0.001:
-			proxy.look_at(Vector3(player_world.x, p.y, player_world.z), Vector3.UP)
-		proxy.position.y = sin(runtime_elapsed * 3.1 + float(i) * 0.9) * 0.025
+		var e:Dictionary=enemies[i]
+		var kind:=String(e.get("type","enemy"))
+		var variant:=String(e.get("boss_variant",""))
+		var visual_kind:=variant if kind=="warden" and variant!="" else kind
+		if kind=="warden" and not actor_factory.is_authored_enemy(visual_kind): visual_kind="warden"
+		actor_factory.configure_enemy(proxy,visual_kind,actor_materials)
+		_set_actor_visible(proxy,true)
+		var p:=design_to_world(e.get("pos",DESIGN_ARENA.get_center()))
+		proxy.position=p
+		var radius:=float(e.get("radius",24.0))
+		var scale_value:=clampf(radius/24.0,0.78,1.65)
+		if kind=="warden": scale_value*=1.28
+		if bool(e.get("elite",false)): scale_value*=1.08
+		proxy.scale=Vector3.ONE*scale_value
+		if p.distance_squared_to(player_world)>0.001: proxy.look_at(Vector3(player_world.x,p.y,player_world.z),Vector3.UP)
+		var tell:=_enemy_tell(e)
+		var hit_age:=runtime_elapsed-float(e.get("v47_hit_stamp",-99.0))
+		var hit:=clampf(1.0-hit_age/0.16,0.0,1.0) if hit_age>=0.0 else 0.0
+		actor_factory.animate_enemy(proxy,runtime_elapsed,float(e.get("phase",0.0)),tell,hit,i)
 
-func _sync_projectiles(shots: Array, pool: Array, friendly: bool) -> void:
+func _enemy_tell(e: Dictionary) -> float:
+	var best:=99.0
+	for key in ["attack_cd","dash_cd","dive_cd","blink_cd","lunge_cd","phase_cd","slam_cd","summon_cd","teleport_cd"]:
+		var value:=float(e.get(key,0.0))
+		if value>0.001: best=minf(best,value)
+	if best==99.0 or best>0.34: return 0.0
+	return clampf(1.0-best/0.34,0.0,1.0)
+
+func _sync_projectiles(shots:Array,pool:Array,friendly:bool)->void:
 	for i in range(pool.size()):
-		var proxy := pool[i] as MeshInstance3D
-		if i >= shots.size():
-			proxy.visible = false
-			continue
-		var shot: Dictionary = shots[i]
-		proxy.visible = true
-		proxy.position = design_to_world(shot.get("pos", DESIGN_ARENA.get_center())) + Vector3(0.0, 0.42, 0.0)
-		var crit := bool(shot.get("crit", false)) if friendly else false
-		var size := 1.55 if crit else 1.0
-		proxy.scale = Vector3.ONE * size
+		var proxy:=pool[i] as MeshInstance3D
+		if i>=shots.size(): proxy.visible=false; continue
+		var shot:Dictionary=shots[i]
+		proxy.visible=true
+		proxy.position=design_to_world(shot.get("pos",DESIGN_ARENA.get_center()))+Vector3(0,0.42,0)
+		var crit:=bool(shot.get("crit",false)) if friendly else false
+		proxy.scale=Vector3.ONE*(1.55 if crit else 1.0)
 		if not friendly:
-			var c: Color = shot.get("color", Color("a568ff"))
-			proxy.material_override = _emissive_material(c, 1.35)
+			var c:Color=shot.get("color",Color("a568ff")); proxy.material_override=_emissive_material(c,1.35)
 
-func _sync_coins(coins: Array) -> void:
+func _sync_coins(coins:Array)->void:
 	for i in range(coin_pool.size()):
-		var coin := coin_pool[i] as MeshInstance3D
-		if i >= coins.size():
-			coin.visible = false
-			continue
-		coin.visible = true
-		var orb: Dictionary = coins[i]
-		coin.position = design_to_world(orb.get("pos", DESIGN_ARENA.get_center())) + Vector3(0.0, 0.20 + 0.06 * sin(runtime_elapsed * 7.0 + float(i)), 0.0)
-		coin.rotation.y = runtime_elapsed * 3.2 + float(i)
-		coin.rotation.z = 0.42
+		var coin:=coin_pool[i] as MeshInstance3D
+		if i>=coins.size(): coin.visible=false; continue
+		coin.visible=true
+		var orb:Dictionary=coins[i]
+		coin.position=design_to_world(orb.get("pos",DESIGN_ARENA.get_center()))+Vector3(0,0.20+0.06*sin(runtime_elapsed*7.0+float(i)),0)
+		coin.rotation.y=runtime_elapsed*3.2+float(i); coin.rotation.z=0.42
 
-func _apply_floor_identity(floor_no: int) -> void:
-	# Phase 1 covers the Lower Halls. Subtle warmth increases toward floor 10 so
-	# even placeholder geometry already communicates climbing through a place.
-	var t := clampf(float(maxi(1, floor_no) - 1) / 9.0, 0.0, 1.0)
-	mat_floor.albedo_color = Color("171a22").lerp(Color("231914"), t * 0.34)
-	mat_wall.albedo_color = Color("252632").lerp(Color("34261f"), t * 0.22)
+func _apply_floor_identity(floor_no:int)->void:
+	var t:=clampf(float(maxi(1,floor_no)-1)/9.0,0.0,1.0)
+	mat_floor.albedo_color=Color("151820").lerp(Color("231914"),t*0.34)
+	mat_wall.albedo_color=Color("252631").lerp(Color("34261f"),t*0.22)
 
-func _enemy_material(kind: String) -> StandardMaterial3D:
-	if enemy_materials.has(kind):
-		return enemy_materials[kind]
-	var color := Color("8f765f")
-	match kind:
-		"goblin", "ghoul": color = Color("66834f")
-		"bat": color = Color("695184")
-		"skeleton": color = Color("bdb7a4")
-		"necromancer", "hexer": color = Color("71508d")
-		"gargoyle", "sentinel": color = Color("77808d")
-		"warden": color = Color("8d4b69")
-		"crypt_keeper", "hollow_king": color = Color("76508e")
-		_: pass
-	var material := _material(color, 0.18, 0.68)
-	enemy_materials[kind] = material
-	return material
+func _set_actor_visible(root:Node3D,value:bool)->void:
+	root.visible=value
 
-func _add_box(name_value: String, size: Vector3, pos: Vector3, material: Material) -> MeshInstance3D:
-	return _add_box_to(self, name_value, size, pos, material)
+func _add_box(parent:Node,name_value:String,size:Vector3,pos:Vector3,material:Material)->MeshInstance3D:
+	var mesh:=BoxMesh.new(); mesh.size=size
+	var node:=MeshInstance3D.new(); node.name=name_value; node.mesh=mesh; node.position=pos; node.material_override=material; parent.add_child(node); return node
 
-func _add_box_to(parent: Node, name_value: String, size: Vector3, pos: Vector3, material: Material) -> MeshInstance3D:
-	var mesh := BoxMesh.new()
-	mesh.size = size
-	var node := MeshInstance3D.new()
-	node.name = name_value
-	node.mesh = mesh
-	node.position = pos
-	node.material_override = material
-	parent.add_child(node)
-	return node
+func _add_omni(name_value:String,pos:Vector3,color:Color,energy:float,range_value:float,shadows:bool)->void:
+	var light:=OmniLight3D.new(); light.name=name_value; light.position=pos; light.light_color=color; light.light_energy=energy; light.omni_range=range_value; light.shadow_enabled=shadows; add_child(light)
 
-func _set_enemy_visible(root: Node3D, value: bool) -> void:
-	for child in root.get_children():
-		if child is GeometryInstance3D:
-			(child as GeometryInstance3D).visible = value
+func _add_omni_to(parent:Node,name_value:String,pos:Vector3,color:Color,energy:float,range_value:float)->void:
+	var light:=OmniLight3D.new(); light.name=name_value; light.position=pos; light.light_color=color; light.light_energy=energy; light.omni_range=range_value; parent.add_child(light)
 
-func _material(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.metallic = metallic
-	material.roughness = roughness
-	return material
+func _material(color:Color,metallic:float,roughness:float)->StandardMaterial3D:
+	var material:=StandardMaterial3D.new(); material.albedo_color=color; material.metallic=metallic; material.roughness=roughness; return material
 
-func _emissive_material(color: Color, energy: float) -> StandardMaterial3D:
-	var material := _material(color, 0.08, 0.32)
-	material.emission_enabled = true
-	material.emission = color
-	material.emission_energy_multiplier = energy
-	return material
+func _emissive_material(color:Color,energy:float)->StandardMaterial3D:
+	var material:=_material(color,0.08,0.32); material.emission_enabled=true; material.emission=color; material.emission_energy_multiplier=energy; return material
