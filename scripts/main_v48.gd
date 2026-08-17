@@ -63,6 +63,10 @@ func _v48_zone_for_floor(floor_no: int) -> int:
 	return clampi((maxi(1, floor_no) - 1) / 10, 0, 4)
 
 func _v48_chamber_for_floor(floor_no: int) -> String:
+	# Floor 50 is the Null Sovereign encounter, so force the final pre-endgame
+	# chamber rather than letting the normal three-room cadence wrap around.
+	if floor_no == 50:
+		return "SOVEREIGN APPROACH"
 	var zone := _v48_zone_for_floor(floor_no)
 	var start := zone * 10 + 1
 	var choices: Array = V48_CHAMBERS[zone]
