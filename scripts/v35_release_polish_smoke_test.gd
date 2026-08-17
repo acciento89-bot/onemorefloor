@@ -27,16 +27,21 @@ func _init() -> void:
 		return
 
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	if not scene_text.contains("main_v35.gd"):
-		_fail(2404, "v1.24 runtime: main scene not on v35")
+	if not (scene_text.contains("main_v35.gd") or scene_text.contains("main_v36.gd") or scene_text.contains("main_v37.gd")):
+		_fail(2404, "v1.24+ runtime: compatible release renderer missing")
 		return
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	if not project_text.contains("config/version=\"1.24.0\""):
-		_fail(2405, "v1.24 release: project version not bumped")
+	if not (project_text.contains("config/version=\"1.24.0\"") or project_text.contains("config/version=\"1.25.0\"")):
+		_fail(2405, "v1.24+ release: compatible project version missing")
 		return
 	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not export_text.contains("application/version=\"16\"") or not export_text.contains("application/short_version=\"1.24.0\""):
-		_fail(2406, "v1.24 release: iOS build/version not bumped")
+	var export_ok := (
+		(export_text.contains("application/version=\"16\"") and export_text.contains("application/short_version=\"1.24.0\""))
+		or (export_text.contains("application/version=\"17\"") and export_text.contains("application/short_version=\"1.24.0\""))
+		or (export_text.contains("application/version=\"18\"") and export_text.contains("application/short_version=\"1.25.0\""))
+	)
+	if not export_ok:
+		_fail(2406, "v1.24+ release: compatible iOS build/version missing")
 		return
 	var main_text := FileAccess.get_file_as_string("res://scripts/main_v35.gd")
 	for marker in ["_v35_draw_enemy_identity", "_v35_draw_boss_identity", "record_run_summary", "CELESTIAL GRAVE", "set_combat_intensity"]:
@@ -44,7 +49,9 @@ func _init() -> void:
 			_fail(2407, "v1.23-v1.24 runtime marker missing: %s" % marker)
 			return
 
-	print("ONE MORE FLOOR v1.24 polish/release smoke test passed")	
+	# Keep the legacy log marker because the workflow intentionally validates the
+	# retained v1.24 release contract even when a successor renderer is active.
+	print("ONE MORE FLOOR v1.24 polish/release smoke test passed")
 	quit(0)
 
 func _fail(code: int, message: String) -> void:

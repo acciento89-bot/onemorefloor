@@ -35,6 +35,8 @@ func _run() -> void:
 		or scene_text.contains("main_v22.gd")
 		or scene_text.contains("main_v23.gd")
 		or scene_text.contains("main_v35.gd")
+		or scene_text.contains("main_v36.gd")
+		or scene_text.contains("main_v37.gd")
 	)
 	if not compatible_renderer:
 		_fail(906,"v1.7 menus: compatible v19+ main renderer is not active")
@@ -46,6 +48,7 @@ func _run() -> void:
 		or project_text.contains("config/version=\"1.9.0-runtime-ui\"")
 		or project_text.contains("config/version=\"1.10.0-premium-components\"")
 		or project_text.contains("config/version=\"1.24.0\"")
+		or project_text.contains("config/version=\"1.25.0\"")
 	)
 	if not compatible_version:
 		_fail(907,"v1.7 menus: compatible project version missing")
@@ -59,7 +62,8 @@ func _run() -> void:
 		or (export_text.contains("application/short_version=\"1.8.0\"") and export_text.contains("application/version=\"13\""))
 		or (export_text.contains("application/short_version=\"1.9.0\"") and export_text.contains("application/version=\"14\""))
 		or (export_text.contains("application/short_version=\"1.10.0\"") and export_text.contains("application/version=\"15\""))
-		or (export_text.contains("application/short_version=\"1.24.0\"") and export_text.contains("application/version=\"16\""))
+		or (export_text.contains("application/short_version=\"1.24.0\"") and (export_text.contains("application/version=\"16\"") or export_text.contains("application/version=\"17\"")))
+		or (export_text.contains("application/short_version=\"1.25.0\"") and export_text.contains("application/version=\"18\""))
 	)
 	if not ios_ok:
 		_fail(909,"v1.7 menus: compatible iOS version/build missing")
@@ -69,7 +73,8 @@ func _run() -> void:
 		or (export_text.contains("version/name=\"1.8.0\"") and export_text.contains("version/code=13"))
 		or (export_text.contains("version/name=\"1.9.0\"") and export_text.contains("version/code=14"))
 		or (export_text.contains("version/name=\"1.10.0\"") and export_text.contains("version/code=15"))
-		or (export_text.contains("version/name=\"1.24.0\"") and export_text.contains("version/code=16"))
+		or (export_text.contains("version/name=\"1.24.0\"") and (export_text.contains("version/code=16") or export_text.contains("version/code=17")))
+		or (export_text.contains("version/name=\"1.25.0\"") and export_text.contains("version/code=18"))
 	)
 	if not android_ok:
 		_fail(910,"v1.7 menus: compatible Android version/build missing")
