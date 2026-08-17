@@ -42,28 +42,33 @@ func animate_enemy(root: Node3D, elapsed: float, phase: float, tell: float, hit:
 	var tell_drive: float = clampf(tell, 0.0, 1.0)
 	var hit_drive: float = clampf(hit, 0.0, 1.0)
 
+	# Base enemy animation already owns Y bob, Z hit shake and scale. v1.48 sets
+	# only the additional axes explicitly so long sessions cannot accumulate drift.
+	motion.rotation.x = 0.0
+	motion.rotation.y = 0.0
+	motion.position.z = 0.0
 	match kind:
 		"goblin":
-			motion.rotation.y += pulse * 0.035 + tell_drive * 0.08
+			motion.rotation.y = pulse * 0.035 + tell_drive * 0.08
 			motion.position.y += absf(pulse) * 0.012
 		"bat":
-			motion.rotation.y += pulse * 0.12
-			motion.rotation.x += tell_drive * 0.10
+			motion.rotation.y = pulse * 0.12
+			motion.rotation.x = tell_drive * 0.10
 			motion.position.y += sin(elapsed * 7.6 + phase) * 0.035
 		"skeleton":
-			motion.rotation.y += sin(elapsed * 2.4 + phase) * 0.022
-			motion.rotation.x -= tell_drive * 0.055
+			motion.rotation.y = sin(elapsed * 2.4 + phase) * 0.022
+			motion.rotation.x = -tell_drive * 0.055
 		"ghoul":
-			motion.rotation.x += tell_drive * 0.13
-			motion.position.z -= tell_drive * 0.06
+			motion.rotation.x = tell_drive * 0.13
+			motion.position.z = -tell_drive * 0.06
 		"necromancer":
 			motion.position.y += sin(elapsed * 3.2 + phase) * 0.025
-			motion.rotation.y += tell_drive * 0.12
+			motion.rotation.y = tell_drive * 0.12
 		"warden":
 			motion.scale *= Vector3.ONE * (1.0 + tell_drive * 0.025)
-			motion.rotation.x -= tell_drive * 0.045
+			motion.rotation.x = -tell_drive * 0.045
 		_:
-			motion.rotation.y += pulse * 0.018
+			motion.rotation.y = pulse * 0.018
 
 	if hit_drive > 0.01:
 		motion.rotation.z += sin(elapsed * 42.0 + float(index)) * 0.035 * hit_drive
