@@ -25,8 +25,9 @@
 ; v1.42 rigged/imported model-pipeline baseline retained: res://scripts/main_v55.gd
 ; v1.43 Lower Halls + Ossuary 3D baseline retained: res://scripts/main_v56.gd
 ; v1.44 Lower Halls + Ossuary + Iron Bastion 3D baseline retained: res://scripts/main_v57.gd
-; v1.45 production 3D covers the complete original tower: floors 1-50, five realms.
-[ext_resource type="Script" path="res://scripts/main_v58.gd" id="1_main"]
+; v1.45 full five-realm 3D tower baseline retained: res://scripts/main_v58.gd
+; v1.46 production vertical slice adds camera, transition, boss, combat and loot presentation.
+[ext_resource type="Script" path="res://scripts/main_v59.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
