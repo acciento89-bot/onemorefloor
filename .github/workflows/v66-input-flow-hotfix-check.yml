@@ -23,7 +23,7 @@ permissions:
 jobs:
   validate-input-flow:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 9
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -47,7 +47,41 @@ jobs:
             exit 1
           fi
 
-      - name: Run tutorial and game-over input regression
+      - name: Tutorial upgrade click-through
+        env:
+          OMF_V66_SCENARIO: tutorial_upgrade
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee tutorial-upgrade.log
+          grep -q "V66_SCENARIO_PASS: tutorial_upgrade" tutorial-upgrade.log
+
+      - name: Tutorial death RETRY and HOME
+        env:
+          OMF_V66_SCENARIO: tutorial_death
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee tutorial-death.log
+          grep -q "V66_SCENARIO_PASS: tutorial_death" tutorial-death.log
+
+      - name: Normal GAME OVER RETRY
+        env:
+          OMF_V66_SCENARIO: game_over_retry
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee game-over-retry.log
+          grep -q "V66_SCENARIO_PASS: game_over_retry" game-over-retry.log
+
+      - name: 3D NOVA presentation hooks
+        env:
+          OMF_V66_SCENARIO: nova
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee nova.log
+          grep -q "V66_SCENARIO_PASS: nova" nova.log
+
+      - name: Full input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
         run: |
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee input-flow.log
