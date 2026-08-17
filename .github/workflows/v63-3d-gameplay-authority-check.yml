@@ -1,0 +1,62 @@
+name: v1.50 3D Gameplay Authority Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/main_v63.gd'
+      - 'scripts/world3d_chamber_v150.gd'
+      - 'scripts/world3d_gameplay_authority_v150.gd'
+      - 'scripts/v63_3d_gameplay_authority_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - 'docs/v1.50-3d-gameplay-authority.md'
+      - '.github/workflows/v63-3d-gameplay-authority-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/main_v63.gd'
+      - 'scripts/world3d_chamber_v150.gd'
+      - 'scripts/world3d_gameplay_authority_v150.gd'
+      - 'scripts/v63_3d_gameplay_authority_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - 'docs/v1.50-3d-gameplay-authority.md'
+      - '.github/workflows/v63-3d-gameplay-authority-check.yml'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_TAG: '4.7.1-stable'
+
+jobs:
+  gameplay-authority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/godot.zip" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP"
+          GODOT="$RUNNER_TEMP/Godot_v${GODOT_TAG}_linux.x86_64"
+          chmod +x "$GODOT"
+          "$GODOT" --version
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+
+      - name: Parse 3D gameplay authority runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --editor --path . --quit
+
+      - name: Run 3D gameplay authority smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --path . --script res://scripts/v63_3d_gameplay_authority_smoke_test.gd
