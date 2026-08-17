@@ -38,16 +38,20 @@ func _init() -> void:
 		_fail(2508, "v1.25 runtime: visual pack renderer not active")
 		return
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	if not scene_text.contains("main_v37.gd"):
-		_fail(2509, "v1.25 runtime: main_v37 is not active")
+	if not (scene_text.contains("main_v37.gd") or scene_text.contains("main_v38.gd")):
+		_fail(2509, "v1.25+ runtime: visual pack successor is not active")
 		return
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	if not project_text.contains("config/version=\"1.25.0\""):
-		_fail(2510, "v1.25 project version missing")
+	if not (project_text.contains("config/version=\"1.25.0\"") or project_text.contains("config/version=\"1.26.0\"")):
+		_fail(2510, "v1.25+ project version missing")
 		return
 	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not export_text.contains("application/short_version=\"1.25.0\"") or not export_text.contains("application/version=\"18\""):
-		_fail(2511, "v1.25 iOS build 18 config missing")
+	var mobile_ok := (
+		(export_text.contains("application/short_version=\"1.25.0\"") and export_text.contains("application/version=\"18\""))
+		or (export_text.contains("application/short_version=\"1.26.0\"") and export_text.contains("application/version=\"19\""))
+	)
+	if not mobile_ok:
+		_fail(2511, "v1.25+ mobile build config missing")
 		return
 	print("ONE MORE FLOOR v1.25 visual pack smoke test passed")
 	quit(0)
