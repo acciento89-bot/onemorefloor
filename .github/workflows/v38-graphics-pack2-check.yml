@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/main_v38.gd'
       - 'scripts/visual_pack_manager.gd'
+      - 'scripts/visual_pack_fx_overlay.gd'
       - 'scripts/v38_graphics_pack2_smoke_test.gd'
       - 'scenes/main.tscn'
       - 'project.godot'
@@ -14,6 +15,7 @@ on:
     paths:
       - 'scripts/main_v38.gd'
       - 'scripts/visual_pack_manager.gd'
+      - 'scripts/visual_pack_fx_overlay.gd'
       - 'scripts/v38_graphics_pack2_smoke_test.gd'
       - 'scenes/main.tscn'
       - 'project.godot'
@@ -38,8 +40,10 @@ jobs:
           unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
           chmod +x "$RUNNER_TEMP/godot/Godot_v4.7.1-stable_linux.x86_64"
           echo "GODOT=$RUNNER_TEMP/godot/Godot_v4.7.1-stable_linux.x86_64" >> "$GITHUB_ENV"
-      - name: Parse graphics pack renderer
-        run: "$GODOT --headless --path . --script res://scripts/main_v38.gd --check-only"
+      - name: Parse graphics pack renderers
+        run: |
+          "$GODOT" --headless --path . --script res://scripts/main_v38.gd --check-only
+          "$GODOT" --headless --path . --script res://scripts/visual_pack_fx_overlay.gd --check-only
       - name: Import project
         run: "$GODOT --headless --editor --path . --quit"
       - name: Run v1.26 graphics pack smoke test
