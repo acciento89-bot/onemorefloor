@@ -9,66 +9,18 @@ const REQUIRED_ANIMATIONS := ["idle", "run", "attack"]
 const RECOMMENDED_ANIMATIONS := ["hit", "skill", "spawn", "death"]
 
 const PROFILES := {
-	"wanderer": {
-		"role": "hero",
-		"target_height_m": 1.86,
-		"max_mesh_nodes": 10,
-		"max_material_slots": 14,
-		"recommended_triangles": 28000,
-		"texture_budget_mb": 18,
-	},
-	"goblin": {
-		"role": "melee_light",
-		"target_height_m": 1.20,
-		"max_mesh_nodes": 8,
-		"max_material_slots": 10,
-		"recommended_triangles": 14000,
-		"texture_budget_mb": 10,
-	},
-	"bat": {
-		"role": "flying_light",
-		"target_height_m": 0.88,
-		"max_mesh_nodes": 7,
-		"max_material_slots": 9,
-		"recommended_triangles": 12000,
-		"texture_budget_mb": 8,
-	},
-	"skeleton": {
-		"role": "melee_medium",
-		"target_height_m": 1.72,
-		"max_mesh_nodes": 9,
-		"max_material_slots": 11,
-		"recommended_triangles": 17000,
-		"texture_budget_mb": 11,
-	},
-	"ghoul": {
-		"role": "melee_brute",
-		"target_height_m": 1.76,
-		"max_mesh_nodes": 9,
-		"max_material_slots": 11,
-		"recommended_triangles": 18000,
-		"texture_budget_mb": 11,
-	},
-	"necromancer": {
-		"role": "caster",
-		"target_height_m": 1.82,
-		"max_mesh_nodes": 10,
-		"max_material_slots": 13,
-		"recommended_triangles": 22000,
-		"texture_budget_mb": 14,
-	},
-	"warden": {
-		"role": "boss",
-		"target_height_m": 2.35,
-		"max_mesh_nodes": 14,
-		"max_material_slots": 18,
-		"recommended_triangles": 38000,
-		"texture_budget_mb": 24,
-	},
+	"wanderer": {"role":"hero", "target_height_m":1.86, "max_mesh_nodes":10, "max_material_slots":14, "recommended_triangles":28000, "texture_budget_mb":18},
+	"goblin": {"role":"melee_light", "target_height_m":1.20, "max_mesh_nodes":8, "max_material_slots":10, "recommended_triangles":14000, "texture_budget_mb":10},
+	"bat": {"role":"flying_light", "target_height_m":0.88, "max_mesh_nodes":7, "max_material_slots":9, "recommended_triangles":12000, "texture_budget_mb":8},
+	"skeleton": {"role":"melee_medium", "target_height_m":1.72, "max_mesh_nodes":9, "max_material_slots":11, "recommended_triangles":17000, "texture_budget_mb":11},
+	"ghoul": {"role":"melee_brute", "target_height_m":1.76, "max_mesh_nodes":9, "max_material_slots":11, "recommended_triangles":18000, "texture_budget_mb":11},
+	"necromancer": {"role":"caster", "target_height_m":1.82, "max_mesh_nodes":10, "max_material_slots":13, "recommended_triangles":22000, "texture_budget_mb":14},
+	"warden": {"role":"boss", "target_height_m":2.35, "max_mesh_nodes":14, "max_material_slots":18, "recommended_triangles":38000, "texture_budget_mb":24},
 }
 
 func profile(kind: String) -> Dictionary:
-	return Dictionary(PROFILES.get(kind, PROFILES["goblin"])).duplicate(true)
+	var selected: Dictionary = PROFILES.get(kind, PROFILES["goblin"])
+	return selected.duplicate(true)
 
 func known_profile_count() -> int:
 	return PROFILES.size()
@@ -162,20 +114,32 @@ func _socket_coverage(root: Node3D, imported: Node3D, registry: Variant) -> Dict
 		if imported != null and registry != null and registry.has_method("resolve_socket"):
 			covered = registry.call("resolve_socket", imported, socket_name) != null
 		if not covered:
-			covered = root.get_node_or_null("ProductionSockets/%sSocket" % socket_name.capitalize()) != null
+			covered = root.get_node_or_null("ProductionSockets/%s" % _socket_node_name(socket_name)) != null
 		data[socket_name] = covered
 	return data
 
+func _socket_node_name(logical_name: String) -> String:
+	match logical_name:
+		"weapon": return "WeaponSocket"
+		"head": return "HeadSocket"
+		"chest": return "ChestSocket"
+		"feet": return "FeetSocket"
+		"overhead": return "OverheadSocket"
+		"vfx": return "VFXSocket"
+		_: return logical_name.capitalize().replace(" ", "") + "Socket"
+
 func _animation_coverage(animation_names: Array) -> Dictionary:
 	var data: Dictionary = {}
-	for state_value in REQUIRED_ANIMATIONS + RECOMMENDED_ANIMATIONS:
+	var all_states: Array = REQUIRED_ANIMATIONS + RECOMMENDED_ANIMATIONS
+	for state_value in all_states:
 		var state: String = String(state_value)
 		var aliases: Array = _aliases_for(state)
 		var matched := false
 		for name_value in animation_names:
 			var name_text: String = String(name_value).to_lower()
 			for alias_value in aliases:
-				if name_text == String(alias_value).to_lower() or name_text.contains(String(alias_value).to_lower()):
+				var alias_text: String = String(alias_value).to_lower()
+				if name_text == alias_text or name_text.contains(alias_text):
 					matched = true
 					break
 			if matched:
