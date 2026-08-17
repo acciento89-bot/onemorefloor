@@ -31,15 +31,15 @@ func _ready() -> void:
 		})
 	queue_redraw()
 
+func _v42_visual_completion_ready() -> bool:
+	return tex_v42_citadel != null and tex_v42_wanderer != null and tex_v42_forge != null
+
 # -----------------------------------------------------------------------------
 # ACTUAL ART REPLACEMENT
 # -----------------------------------------------------------------------------
 
 func _v16_backdrop(kind: String = "arcane", dim: float = 0.0) -> void:
 	if kind == "home" and tex_v42_citadel != null:
-		# Keep the full-screen atmospheric landscape, but replace the actual keep
-		# with the new production illustration. This is a real asset change, not
-		# another procedural frame drawn over the old castle.
 		if tex_v40_hifi != null:
 			draw_texture_rect(tex_v40_hifi, Rect2(Vector2.ZERO, SIZE), false, Color.WHITE)
 		else:
@@ -80,8 +80,6 @@ func draw_home() -> void:
 	super.draw_home()
 	if home_overlay != "" or settings_open:
 		return
-	# Subtle foreground depth in front of the new citadel. Kept intentionally
-	# quiet: the castle and PLAY button should remain the primary read.
 	var p := _v38_primary()
 	for i in range(9):
 		var x := 70.0 + float(i) * 72.0
@@ -90,15 +88,11 @@ func draw_home() -> void:
 
 func draw_hero_screen() -> void:
 	super.draw_hero_screen()
-	# Character-stage rim light makes the new authored armor separate from the
-	# purple portal without putting another card around the artwork.
 	var p := _v38_primary()
 	draw_arc(Vector2(360, 452), 185.0, -2.65, -0.49, 72, Color(p, 0.26), 2.0)
 
 func draw_forge_screen() -> void:
 	super.draw_forge_screen()
-	# The v2 forge includes the real anvil/hammer/workpiece. Add only animated
-	# heat shimmer lines so the authored illustration remains visible.
 	for i in range(5):
 		var yy := 576.0 - float(i) * 28.0 + sin(elapsed * 1.7 + float(i)) * 5.0
 		draw_arc(Vector2(360, yy), 84.0 + float(i) * 17.0, PI + 0.25, TAU - 0.25, 28, Color(V16_ORANGE, 0.055), 1.2)
@@ -110,7 +104,7 @@ func draw_forge_screen() -> void:
 
 func draw_store_screen() -> void:
 	_v16_header("STORE", "Optional support • the full tower remains playable free", V16_GOLD, 11, "arcane")
-	var debug := monetization != null and monetization.is_debug_simulation()
+	var debug: bool = monetization != null and monetization.is_debug_simulation()
 	var availability := "PLAYTEST PURCHASES" if debug else "PURCHASES TEMPORARILY UNAVAILABLE"
 	_v16_center(availability, 229, 11, Color(V16_MUTED, 0.76))
 	var catalog: Array = monetization.product_catalog()
@@ -136,11 +130,11 @@ func _v42_store_card(index: int, r: Rect2, product: Dictionary, debug: bool) -> 
 	var icon_index: int = icons[index % icons.size()]
 	var owned := false
 	var product_id := String(product.get("id", ""))
-	if product_id == MonetizationService.PRODUCT_REMOVE_ADS:
+	if product_id == "com.kamilunavo.onemorefloor.removeads":
 		owned = bool(monetization.remove_ads)
-	elif product_id == MonetizationService.PRODUCT_STARTER:
+	elif product_id == "com.kamilunavo.onemorefloor.starterpack":
 		owned = bool(monetization.starter_claimed)
-	elif product_id == MonetizationService.PRODUCT_PREMIUM_PASS:
+	elif product_id == "com.kamilunavo.onemorefloor.premiumpass":
 		owned = bool(monetization.premium_pass_unlocked())
 
 	_v16_frame(r, accent if not owned else V16_GREEN, Color("060912"), 0.12)
@@ -150,4 +144,3 @@ func _v42_store_card(index: int, r: Rect2, product: Dictionary, debug: bool) -> 
 	var action := "OWNED" if owned else ("TRY" if debug else "BUY")
 	var action_color := V16_GREEN if owned else V17_GOLD_HI
 	draw_string(v16_title_font, r.position + Vector2(r.size.x - 130, 58), action, HORIZONTAL_ALIGNMENT_CENTER, 104, 14, action_color)
-
