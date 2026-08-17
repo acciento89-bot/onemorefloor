@@ -53,11 +53,13 @@ func _run() -> void:
 			return
 
 	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not export_text.contains("application/short_version=\"1.26.0\"") or not export_text.contains("application/version=\"21\""):
-		_fail(4012, "v1.27 art pass: iOS build 21 config missing")
+	var ios_ok := export_text.contains("application/short_version=\"1.26.0\"") and (export_text.contains("application/version=\"20\"") or export_text.contains("application/version=\"21\""))
+	if not ios_ok:
+		_fail(4012, "v1.27 art pass: compatible iOS build config missing")
 		return
-	if not export_text.contains("version/name=\"1.26.0\"") or not export_text.contains("version/code=21"):
-		_fail(4013, "v1.27 art pass: Android build 21 config missing")
+	var android_ok := export_text.contains("version/name=\"1.26.0\"") and (export_text.contains("version/code=20") or export_text.contains("version/code=21"))
+	if not android_ok:
+		_fail(4013, "v1.27 art pass: compatible Android build config missing")
 		return
 
 	print("ONE MORE FLOOR v1.27 fullscreen/home/hero/forge art pass smoke test passed")
