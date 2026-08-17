@@ -31,8 +31,9 @@
 ; v1.48 character combat VFX baseline retained: res://scripts/main_v61.gd
 ; v1.49 production art/lookdev baseline retained: res://scripts/main_v62.gd
 ; v1.50 CharacterBody3D locomotion authority baseline retained: res://scripts/main_v63.gd
-; v1.51 routes touch triggers and projectile travel/hits through 3D combat authority.
-[ext_resource type="Script" path="res://scripts/main_v64.gd" id="1_main"]
+; v1.51 touch/projectile 3D combat authority baseline retained: res://scripts/main_v64.gd
+; v1.52 routes targeting, NOVA volume and Warden cast geometry through 3D combat core authority.
+[ext_resource type="Script" path="res://scripts/main_v65.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
