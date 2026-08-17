@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'scripts/main_v65.gd'
+      - 'scripts/main_v66.gd'
       - 'scenes/main.tscn'
       - 'export_presets.cfg'
       - '.github/workflows/v65-testflight-release.yml'
@@ -25,16 +26,17 @@ jobs:
       - name: Checkout merged release
         uses: actions/checkout@v5
 
-      - name: Gate exact v1.52 build 24 candidate
+      - name: Gate exact v1.52.1 build 24 candidate
         shell: bash
         run: |
           set -euo pipefail
           grep -q 'V65_VERSION := "1.52.0-3d-combat-core"' scripts/main_v65.gd
-          grep -q 'res://scripts/main_v65.gd' scenes/main.tscn
+          grep -q 'V66_VERSION := "1.52.1-input-flow-hotfix"' scripts/main_v66.gd
+          grep -q 'res://scripts/main_v66.gd' scenes/main.tscn
           grep -q 'application/short_version="1.26.0"' export_presets.cfg
           grep -q 'application/version="24"' export_presets.cfg
           grep -q 'config/version="1.26.0"' project.godot
-          echo 'v1.52 TestFlight release gate passed.'
+          echo 'v1.52.1 TestFlight release gate passed.'
 
       - name: Dispatch existing signed TestFlight workflow
         env:
