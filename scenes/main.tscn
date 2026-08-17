@@ -33,8 +33,9 @@
 ; v1.50 CharacterBody3D locomotion authority baseline retained: res://scripts/main_v63.gd
 ; v1.51 touch/projectile 3D combat authority baseline retained: res://scripts/main_v64.gd
 ; v1.52 targeting/NOVA/Warden 3D combat-core baseline retained: res://scripts/main_v65.gd
-; v1.52.1 fixes tutorial upgrade/game-over input and restores NOVA presentation hooks.
-[ext_resource type="Script" path="res://scripts/main_v66.gd" id="1_main"]
+; v1.52.1 input-flow/NOVA presentation hotfix baseline retained: res://scripts/main_v66.gd
+; v1.53 replaces the native primitive actor surface with smooth PBR 3D presentation.
+[ext_resource type="Script" path="res://scripts/main_v67.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
