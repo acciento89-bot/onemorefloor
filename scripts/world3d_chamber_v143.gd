@@ -76,7 +76,7 @@ func _build_ossuary_kit() -> void:
 	# Side crypt bays: recessed dark cells, stone frames and bone shelves.
 	for side in [-1.0, 1.0]:
 		for z in [-5.0, -2.0, 1.0, 4.0]:
-			var x := side * 4.78
+			var x: float = float(side) * 4.78
 			var bay := Node3D.new()
 			bay.name = "CryptBay"
 			bay.position = Vector3(x, 0.0, z)
