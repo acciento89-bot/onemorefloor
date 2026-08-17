@@ -33,6 +33,14 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	_v52_sync_world()
 
+func pointer(pos: Vector2, pressed: bool, id: int) -> void:
+	# v1.26 build 20 intentionally clears this retired modal before any modern
+	# Home route is allowed to intercept the tap. Keep that recovery at the top
+	# of the active stack now that v1.38 owns top-level navigation.
+	if state == State.HOME and summary_open:
+		summary_open = false
+	super.pointer(pos, pressed, id)
+
 func _v52_create_world_viewport() -> void:
 	v52_world_viewport = SubViewport.new()
 	v52_world_viewport.name = "Combat3DViewport"
