@@ -9,7 +9,8 @@
 ; v1.26 cash-out hotfix baseline retained: res://scripts/main_v39.gd
 ; v1.27 visual art-pass baseline retained: res://scripts/main_v40.gd
 ; v1.28 progression UI baseline retained: res://scripts/main_v41.gd
-[ext_resource type="Script" path="res://scripts/main_v42.gd" id="1_main"]
+; v1.29 visual completion baseline retained: res://scripts/main_v42.gd
+[ext_resource type="Script" path="res://scripts/main_v43.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 
