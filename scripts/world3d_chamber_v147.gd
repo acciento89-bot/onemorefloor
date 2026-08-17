@@ -44,9 +44,14 @@ func actor_production_ready() -> bool:
 		return false
 	if not bool(actor_factory.call("actor_production_ready", player_root)):
 		return false
+	# Enemy shells exist before they receive their first runtime kind. At startup
+	# they only need the stable production socket contract; configure_enemy()
+	# upgrades the rig/model mount the first time a real enemy occupies a slot.
 	for enemy_value in enemy_pool:
 		var enemy: Node3D = enemy_value as Node3D
-		if enemy == null or not bool(actor_factory.call("actor_production_ready", enemy)):
+		if enemy == null or not bool(enemy.get_meta("actor_pipeline_v147", false)):
+			return false
+		if enemy.get_node_or_null("ProductionSockets") == null:
 			return false
 	return actor_production_root != null and weapon_trail_pool.size() == WEAPON_TRAIL_SEGMENTS
 
