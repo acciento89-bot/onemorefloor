@@ -27,11 +27,11 @@ func _init() -> void:
 		return
 
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	if not (scene_text.contains("main_v35.gd") or scene_text.contains("main_v36.gd") or scene_text.contains("main_v37.gd")):
+	if not (scene_text.contains("main_v35.gd") or scene_text.contains("main_v36.gd") or scene_text.contains("main_v37.gd") or scene_text.contains("main_v38.gd")):
 		_fail(2404, "v1.24+ runtime: compatible release renderer missing")
 		return
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
-	if not (project_text.contains("config/version=\"1.24.0\"") or project_text.contains("config/version=\"1.25.0\"")):
+	if not (project_text.contains("config/version=\"1.24.0\"") or project_text.contains("config/version=\"1.25.0\"") or project_text.contains("config/version=\"1.26.0\"")):
 		_fail(2405, "v1.24+ release: compatible project version missing")
 		return
 	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
@@ -39,6 +39,7 @@ func _init() -> void:
 		(export_text.contains("application/version=\"16\"") and export_text.contains("application/short_version=\"1.24.0\""))
 		or (export_text.contains("application/version=\"17\"") and export_text.contains("application/short_version=\"1.24.0\""))
 		or (export_text.contains("application/version=\"18\"") and export_text.contains("application/short_version=\"1.25.0\""))
+		or (export_text.contains("application/version=\"19\"") and export_text.contains("application/short_version=\"1.26.0\""))
 	)
 	if not export_ok:
 		_fail(2406, "v1.24+ release: compatible iOS build/version missing")
