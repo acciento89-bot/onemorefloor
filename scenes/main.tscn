@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 ; Compatibility baseline retained for regression checks: res://scripts/main_v23.gd
 ; v1.21 baseline retained: res://scripts/main_v34.gd
@@ -17,9 +17,12 @@
 ; v1.34 foundation actor-art baseline retained: res://scripts/main_v47.gd
 ; v1.35 foundation environment baseline retained: res://scripts/main_v48.gd
 ; v1.36 run-progression baseline retained: res://scripts/main_v49.gd
-[ext_resource type="Script" path="res://scripts/main_v50.gd" id="1_main"]
+; v1.37 release-candidate baseline retained: res://scripts/main_v50.gd
+; v1.38 begins the 3D pivot by separating top-level navigation from world rendering.
+[ext_resource type="Script" path="res://scripts/main_v51.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
+[ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -32,3 +35,7 @@ script = ExtResource("2_full")
 [node name="VisualPackFX" type="Node2D" parent="."]
 script = ExtResource("3_fx")
 z_index = 40
+
+[node name="MenuShell" type="CanvasLayer" parent="."]
+layer = 20
+script = ExtResource("4_menu")
