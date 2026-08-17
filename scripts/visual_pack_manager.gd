@@ -105,17 +105,32 @@ func cycle(direction: int = 1) -> String:
 	save_data()
 	return selected
 
+func data_for(pack_id: String) -> Dictionary:
+	return Dictionary(PACKS.get(pack_id, PACKS["citadel"]))
+
 func data() -> Dictionary:
-	return Dictionary(PACKS.get(selected, PACKS["citadel"]))
+	return data_for(selected)
+
+func label_for(pack_id: String) -> String:
+	return String(data_for(pack_id).get("label", "CITADEL"))
+
+func primary_for(pack_id: String) -> Color:
+	return Color(data_for(pack_id).get("primary", Color("9b5cff")))
+
+func secondary_for(pack_id: String) -> Color:
+	return Color(data_for(pack_id).get("secondary", Color("e7b84d")))
+
+func unlock_floor_for(pack_id: String) -> int:
+	return int(data_for(pack_id).get("unlock_floor", 1))
 
 func label() -> String:
-	return String(data().get("label", "CITADEL"))
+	return label_for(selected)
 
 func primary() -> Color:
-	return Color(data().get("primary", Color("9b5cff")))
+	return primary_for(selected)
 
 func secondary() -> Color:
-	return Color(data().get("secondary", Color("e7b84d")))
+	return secondary_for(selected)
 
 func surface() -> Color:
 	return Color(data().get("surface", Color("07101d")))
