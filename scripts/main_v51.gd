@@ -11,17 +11,20 @@ const V51_VERSION := "1.38.0-3d-menu-foundation"
 const V51_BUILD := "24-dev"
 
 var v51_navigation
+var v51_menu_shell
 var v51_explicit_routes := 0
 
 func _ready() -> void:
 	super._ready()
 	v51_navigation = ScreenRouter.new()
+	v51_menu_shell = get_node_or_null("MenuShell")
 	_v51_sync_navigation(false)
+	_v51_sync_shell()
 	if telemetry != null:
 		telemetry.set_build_context(V51_VERSION, V51_BUILD)
 		telemetry.event("menu_navigation_foundation_ready", {
 			"screen": _v51_screen_from_legacy(),
-			"menu_shell": true,
+			"menu_shell": v51_menu_shell != null,
 			"world_layer_requested": _v51_world_layer_requested(),
 		})
 	queue_redraw()
@@ -29,12 +32,13 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	super._process(delta)
 	_v51_sync_navigation(false)
+	_v51_sync_shell()
 
 # -----------------------------------------------------------------------------
 # Canonical route mapping.
 # Legacy State/home_overlay values remain the rendering source of truth for this
-# compatibility pass. ScreenRouter becomes the stable API that the upcoming
-# CanvasLayer menu shell and Node3D world will share.
+# compatibility pass. ScreenRouter becomes the stable API that the CanvasLayer
+# menu shell and upcoming Node3D world share.
 # -----------------------------------------------------------------------------
 
 func _v51_screen_from_legacy() -> String:
@@ -104,6 +108,7 @@ func _v51_route_to(screen: String, play_audio: bool = true) -> bool:
 				"to": screen,
 				"count": v51_explicit_routes,
 			})
+	_v51_sync_shell()
 	queue_redraw()
 	return true
 
@@ -121,6 +126,12 @@ func _v51_sync_navigation(emit_telemetry: bool = false) -> void:
 	if emit_telemetry and telemetry != null:
 		telemetry.event("screen_sync", {"from": previous, "to": desired})
 
+func _v51_sync_shell() -> void:
+	if v51_menu_shell == null or v51_navigation == null:
+		return
+	if v51_menu_shell.has_method("set_screen"):
+		v51_menu_shell.call("set_screen", v51_navigation.current_screen, v51_navigation.is_menu_screen())
+
 func _v51_world_layer_requested() -> bool:
 	if v51_navigation == null:
 		return state in [State.RUNNING, State.UPGRADE, State.DECISION, State.GAME_OVER]
@@ -128,6 +139,7 @@ func _v51_world_layer_requested() -> bool:
 
 func _v51_menu_foundation_ready() -> bool:
 	return v51_navigation != null \
+		and v51_menu_shell != null \
 		and v51_navigation.is_known_screen(_v51_screen_from_legacy()) \
 		and _v50_release_candidate_ready()
 
@@ -146,6 +158,7 @@ func pointer(pos: Vector2, pressed: bool, id: int) -> void:
 	if settings_open or tutorial_active or release_paused:
 		super.pointer(pos, pressed, id)
 		_v51_sync_navigation(false)
+		_v51_sync_shell()
 		return
 
 	if state == State.HOME:
@@ -190,3 +203,4 @@ func pointer(pos: Vector2, pressed: bool, id: int) -> void:
 	# start, cash-out, death, premium-pass redirect, pause-home) enter the router.
 	super.pointer(pos, pressed, id)
 	_v51_sync_navigation(false)
+	_v51_sync_shell()
