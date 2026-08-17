@@ -230,14 +230,13 @@ func _draw_settings_overlay() -> void:
 	var start_x := V37_PACK_SELECTOR.position.x + 327.0
 	var y := V37_PACK_SELECTOR.end.y - 9.0
 	for i in range(ids.size()):
-		var id := ids[i]
+		var id: String = ids[i]
 		var c := Vector2(start_x + float(i)*28.0,y)
-		var unlocked := visual_pack.is_unlocked(id)
-		var selected := String(visual_pack.selected) == id
+		var unlocked: bool = bool(visual_pack.is_unlocked(id))
+		var selected: bool = String(visual_pack.selected) == id
 		var col := Color("596074")
 		if unlocked:
-			var data: Dictionary = Dictionary(visual_pack.PACKS[id])
-			col = Color(data.get("primary",V16_PURPLE))
+			col = Color(visual_pack.primary_for(id))
 		_v38_diamond(c,4.5 if selected else 3.0,Color(col,0.95 if selected else 0.45))
 		if selected:
 			draw_arc(c,8.0,0,TAU,20,Color(col,0.48),1.0)
