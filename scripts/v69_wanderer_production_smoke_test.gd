@@ -20,7 +20,10 @@ func _run() -> void:
 		_fail("main scene is not running v1.55 Wanderer pilot")
 		return
 	if not bool(game.call("_v69_wanderer_production_ready")):
-		_fail("production Wanderer did not replace the fallback")
+		var gate_snapshot: Dictionary = game.call("_v69_wanderer_snapshot")
+		var v68_ready := bool(game.call("_v68_real_model_intake_ready"))
+		var v65_ready := bool(game.call("_v65_3d_combat_core_ready"))
+		_fail("production Wanderer did not replace the fallback; v68_ready=%s v65_ready=%s snapshot=%s" % [v68_ready, v65_ready, JSON.stringify(gate_snapshot)])
 		return
 	if not bool(game.call("_v68_real_model_intake_ready")):
 		_fail("v1.54 real-model intake regressed")
