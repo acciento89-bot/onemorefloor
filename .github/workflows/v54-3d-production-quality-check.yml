@@ -1,0 +1,61 @@
+name: v1.41 3D Production Quality Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/main_v54.gd'
+      - 'scripts/world3d_chamber_v141.gd'
+      - 'scripts/world3d_actor_factory_v141.gd'
+      - 'scripts/v54_3d_production_quality_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v54-3d-production-quality-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/main_v54.gd'
+      - 'scripts/world3d_chamber_v141.gd'
+      - 'scripts/world3d_actor_factory_v141.gd'
+      - 'scripts/v54_3d_production_quality_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v54-3d-production-quality-check.yml'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: '4.7.1'
+  GODOT_TAG: '4.7.1-stable'
+
+jobs:
+  production-3d-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/godot.zip" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP"
+          GODOT="$RUNNER_TEMP/Godot_v${GODOT_TAG}_linux.x86_64"
+          chmod +x "$GODOT"
+          "$GODOT" --version
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+
+      - name: Parse production 3D runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --editor --path . --quit
+
+      - name: Run production 3D smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --path . --script res://scripts/v54_3d_production_quality_smoke_test.gd
