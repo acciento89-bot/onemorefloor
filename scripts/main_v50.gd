@@ -5,8 +5,8 @@ extends "res://scripts/main_v49.gd"
 # risks around lifecycle saves, mobile frame pacing, touch geometry and a Store
 # that must fail closed until a real native purchase/reward provider is wired.
 
-const V50_VERSION := "1.26.0-rc2"
-const V50_BUILD := "23"
+const V50_VERSION := "1.26.0-rc3"
+const V50_BUILD := "24"
 const V50_CANVAS := Rect2(0, 0, 720, 1280)
 const V50_MAX_FPS := 60
 const V50_COMBAT_VISUAL_SCALE := 1.12
@@ -180,7 +180,7 @@ func _v50_store_unavailable_notice() -> void:
 
 # -----------------------------------------------------------------------------
 # Screenshot-driven final polish.
-# The Build 22 device captures exposed two presentation issues: the locked
+# The Build 23 device captures exposed two presentation issues: the locked
 # premium badge sat on top of the reward values, and the combat Wanderer still
 # read slightly smaller than the new authored enemy silhouettes. Neither change
 # touches hitboxes, collision radii, reward values or progression state.
