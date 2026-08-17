@@ -1,0 +1,39 @@
+name: Combat VFX v1.33 Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+  pull_request:
+
+jobs:
+  validate-v46:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+
+      - name: Parse v1.33 runtime and combat FX art
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee parse.log
+          ./godot --headless --path . --script res://scripts/main_v46.gd --check-only
+          ./godot --headless --path . --script res://scripts/v46_combat_vfx_smoke_test.gd --check-only
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|Error.*SVG" parse.log; then
+            exit 1
+          fi
+
+      - name: Run v1.33 combat VFX smoke test
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v46_combat_vfx_smoke_test.gd --quit-after 120 | tee v46.log
+          grep -q "ONE MORE FLOOR v1.33 combat VFX smoke test passed" v46.log
