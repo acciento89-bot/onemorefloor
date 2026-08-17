@@ -21,8 +21,9 @@
 ; v1.38 navigation/menu-shell baseline retained: res://scripts/main_v51.gd
 ; v1.39 first real 3D chamber baseline retained: res://scripts/main_v52.gd
 ; v1.40 authored 3D actor baseline retained: res://scripts/main_v53.gd
-; v1.41 production-quality 3D presentation for the Lower Halls pilot.
-[ext_resource type="Script" path="res://scripts/main_v54.gd" id="1_main"]
+; v1.41 production-quality 3D baseline retained: res://scripts/main_v54.gd
+; v1.42 rigged/imported production-model pipeline with native fallback.
+[ext_resource type="Script" path="res://scripts/main_v55.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
