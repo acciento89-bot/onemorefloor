@@ -27,6 +27,30 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	_limit_v160_dynamic_light_energy()
 
+func sync_runtime(
+	player_pos: Vector2,
+	enemies: Array,
+	player_shots: Array,
+	enemy_shots: Array,
+	coins: Array,
+	joy: Vector2,
+	elapsed_value: float,
+	attack_flash: float,
+	skill_flash: float,
+	floor_no: int
+) -> void:
+	# Let the complete legacy/v1.60 runtime stack update first. v1.49 intentionally
+	# re-applies its own realm lookdev near the end of that chain, including the old
+	# 0.34/0.30 ambient level. The final v1.60 grade therefore has to own the last
+	# presentation write after super returns, while gameplay/state stays inherited.
+	super.sync_runtime(
+		player_pos, enemies, player_shots, enemy_shots, coins, joy,
+		elapsed_value, attack_flash, skill_flash, floor_no
+	)
+	_apply_v160_atmosphere_grade(floor_no)
+	_update_player_lighting()
+	_limit_v160_dynamic_light_energy()
+
 func _apply_floor_identity(floor_no: int) -> void:
 	super._apply_floor_identity(floor_no)
 	_apply_v160_atmosphere_grade(floor_no)
