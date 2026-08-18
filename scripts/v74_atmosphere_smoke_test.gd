@@ -65,6 +65,21 @@ func _run() -> void:
 			_fail("actor/material readiness regressed on floor %d" % floor_no)
 			return
 
+	# Diagnostic contract: passive enemies must not need attack state for this
+	# trace. The emitted paths identify any always-on ring layers still competing
+	# with real telegraphs in the final v1.60 composition.
+	var passive_enemies: Array = [
+		{"type":"goblin", "pos":Vector2(285.0, 425.0), "radius":25.0, "phase":0.25},
+		{"type":"bat", "pos":Vector2(435.0, 410.0), "radius":27.0, "phase":0.85},
+	]
+	world.sync_runtime(Vector2(360.0, 660.0), passive_enemies, [], [], [], Vector2.ZERO, 5.0, 0.0, 0.0, 1)
+	await process_frame
+	var passive_tori: Array[String] = []
+	_collect_visible_tori(world, passive_tori)
+	for path_value in passive_tori:
+		print("V74_PASSIVE_TORUS:%s" % path_value)
+	print("V74_PASSIVE_TORUS_COUNT:%d" % passive_tori.size())
+
 	var env := world.atmosphere_world.environment as Environment
 	if env == null or not env.adjustment_enabled:
 		_fail("production environment adjustment is disabled")
@@ -83,6 +98,14 @@ func _run() -> void:
 	world.queue_free()
 	await process_frame
 	quit(0)
+
+func _collect_visible_tori(node: Node, out: Array[String]) -> void:
+	if node is MeshInstance3D:
+		var mesh_node := node as MeshInstance3D
+		if mesh_node.visible and mesh_node.mesh is TorusMesh:
+			out.append(String(mesh_node.get_path()))
+	for child_value in node.get_children():
+		_collect_visible_tori(child_value as Node, out)
 
 func _near(actual: float, expected: float) -> bool:
 	return absf(actual - expected) <= 0.005
