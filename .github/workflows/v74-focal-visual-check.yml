@@ -1,0 +1,112 @@
+name: v1.60 Authored Focal Visual Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'assets/environment/v160/ossuary_altar.obj'
+      - 'assets/environment/v160/forge_engine.obj'
+      - 'assets/environment/v160/rift_anchor.obj'
+      - 'assets/environment/v160/starwell_dais.obj'
+      - 'scripts/world3d_chamber_v160_focals.gd'
+      - 'scripts/world3d_chamber_v160_floor.gd'
+      - 'scripts/main_v74.gd'
+      - 'scripts/v74_focal_environment_smoke_test.gd'
+      - 'scripts/v74_focal_visual_capture.gd'
+      - '.github/workflows/v74-focal-visual-check.yml'
+  pull_request:
+    paths:
+      - 'assets/environment/v160/ossuary_altar.obj'
+      - 'assets/environment/v160/forge_engine.obj'
+      - 'assets/environment/v160/rift_anchor.obj'
+      - 'assets/environment/v160/starwell_dais.obj'
+      - 'scripts/world3d_chamber_v160_focals.gd'
+      - 'scripts/world3d_chamber_v160_floor.gd'
+      - 'scripts/main_v74.gd'
+      - 'scripts/v74_focal_environment_smoke_test.gd'
+      - 'scripts/v74_focal_visual_capture.gd'
+      - '.github/workflows/v74-focal-visual-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-authored-focals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Import authored focal meshes
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee focal-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|OBJ:.*ERROR|Failed loading resource" focal-import.log; then
+            echo "Godot reported v1.60 focal import/parse errors"
+            exit 1
+          fi
+
+      - name: Validate authored focal runtime
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_focal_environment_smoke_test.gd --quit-after 180 2>&1 | tee focal-smoke.log
+          grep -q "v1.60 authored focal environment smoke test passed" focal-smoke.log
+
+      - name: Render real 720x1280 focal captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v160_focals
+          xvfb-run -a ./godot --path . --script res://scripts/v74_focal_visual_capture.gd --quit-after 220 2>&1 | tee focal-capture.log
+          grep -q "v1.60 authored focal visual capture passed" focal-capture.log
+          test -s artifacts/v160_focals/floor15.png
+          test -s artifacts/v160_focals/floor25.png
+          test -s artifacts/v160_focals/floor35.png
+          test -s artifacts/v160_focals/floor45.png
+
+      - name: Upload focal visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v74-authored-focal-visuals
+          path: artifacts/v160_focals/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Re-run v1.60 tower regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_tower_environment_smoke_test.gd --quit-after 200 2>&1 | tee tower-regression.log
+          grep -q "v1.60 authored tower environment smoke test passed" tower-regression.log
+
+      - name: Re-run v1.52.1 input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 180 2>&1 | tee input-regression.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" input-regression.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v74-focal-failure-logs
+          path: |
+            focal-import.log
+            focal-smoke.log
+            focal-capture.log
+            tower-regression.log
+            input-regression.log
+          if-no-files-found: ignore
