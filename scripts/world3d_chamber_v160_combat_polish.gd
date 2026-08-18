@@ -69,21 +69,24 @@ func _polish_v160_player_combat_geometry() -> void:
 	if player_root == null or v160_attack_arc == null or v160_skill_outer_ring == null:
 		return
 
-	# Gameplay camera readability: place the slash well in front of the Wanderer
-	# instead of letting the cloak/body occlude most of it from the isometric view.
+	# The broad energy footprint stays close to the Wanderer's actual melee space.
+	# Moving it slightly forward avoids cloak occlusion without implying a huge
+	# gameplay reach that the combat authority does not own.
 	v160_attack_arc.mesh = _build_v160_slash_arc_mesh(0.62, 1.58, -1.10, 1.10, 28)
-	v160_attack_arc.position = Vector3(0.0, 0.150, -0.72)
+	v160_attack_arc.position = Vector3(0.0, 0.145, -0.86)
 	v160_attack_arc.material_override = v160_attack_material
 
-	# A thin bright outer lip gives the broad translucent crescent a readable
-	# weapon edge without adding texture samples or screen-space effects.
-	v160_attack_edge_material = _transparent_emissive(Color("fff0b0", 0.88), 1.55)
+	# The bright edge is tilted upward like a sword-energy trail. This is the
+	# high-contrast read at gameplay zoom; the broad floor crescent remains the
+	# grounding layer underneath it.
+	v160_attack_edge_material = _transparent_emissive(Color("fff0b0", 0.90), 1.72)
 	v160_attack_edge_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	v160_attack_edge = MeshInstance3D.new()
 	v160_attack_edge.name = "V160AttackEdge"
-	v160_attack_edge.mesh = _build_v160_slash_arc_mesh(1.42, 1.62, -1.10, 1.10, 28)
+	v160_attack_edge.mesh = _build_v160_slash_arc_mesh(1.34, 1.62, -1.10, 1.10, 28)
 	v160_attack_edge.material_override = v160_attack_edge_material
-	v160_attack_edge.position = Vector3(0.0, 0.164, -0.72)
+	v160_attack_edge.position = Vector3(0.0, 0.58, -0.62)
+	v160_attack_edge.rotation.x = -0.62
 	v160_attack_edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	v160_attack_edge.visible = false
 	player_root.add_child(v160_attack_edge)
