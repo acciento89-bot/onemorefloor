@@ -25,8 +25,9 @@ func _run() -> void:
 		_fail("atmosphere world not ready before visual capture")
 		return
 
-	# Freeze time-driven VFX/animation for deterministic realm comparisons. State
-	# sync and rendering stay active; player lighting is refreshed explicitly.
+	# Freeze time-driven animation for deterministic realm comparisons. Spawn and
+	# death signatures are short-lived gameplay VFX (0.52 s in v1.48); because a
+	# frozen capture cannot age them out, they are explicitly suppressed here.
 	world.set_active(false)
 
 	for capture_value in CAPTURES:
@@ -40,6 +41,7 @@ func _run() -> void:
 		world.attack_amount = 0.0
 		world.skill_amount = 0.0
 		world.sync_runtime(Vector2(360.0, 660.0), enemies, [], [], [], Vector2.ZERO, 5.0, 0.0, 0.0, floor_no)
+		_suppress_transient_signatures(world)
 		world.transition_timer = 0.0
 		if world.transition_root != null:
 			world.transition_root.visible = false
@@ -52,6 +54,18 @@ func _run() -> void:
 	world.queue_free()
 	await process_frame
 	quit(0)
+
+func _suppress_transient_signatures(world: Node) -> void:
+	for pool_name in ["spawn_signature_pool", "death_signature_pool"]:
+		var pool_value: Variant = world.get(pool_name)
+		if not (pool_value is Array):
+			continue
+		for item_value in pool_value:
+			var item := item_value as Node3D
+			if item == null:
+				continue
+			item.visible = false
+			item.set_meta("age", 999.0)
 
 func _save_frame(stem: String) -> bool:
 	await RenderingServer.frame_post_draw
