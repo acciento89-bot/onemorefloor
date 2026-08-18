@@ -1,0 +1,112 @@
+name: v1.59 Authored Environment Assets Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'assets/environment/v159/**'
+      - 'scripts/main_v73.gd'
+      - 'scripts/menu3d_stage_v159.gd'
+      - 'scripts/v73_environment_asset_smoke_test.gd'
+      - 'scripts/v73_visual_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v73-environment-assets-check.yml'
+  pull_request:
+    paths:
+      - 'assets/environment/v159/**'
+      - 'scripts/main_v73.gd'
+      - 'scripts/menu3d_stage_v159.gd'
+      - 'scripts/v73_environment_asset_smoke_test.gd'
+      - 'scripts/v73_visual_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v73-environment-assets-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-authored-environments:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Import authored OBJ environment kit
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee parse.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|OBJ:.*ERROR|Failed loading resource" parse.log; then
+            echo "Godot reported v1.59 import/parse errors"
+            exit 1
+          fi
+
+      - name: Validate v1.59 authored environment runtime
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v73_environment_asset_smoke_test.gd --quit-after 150 2>&1 | tee v73-environment.log
+          grep -q "v1.59 authored environment asset smoke test passed" v73-environment.log
+
+      - name: Render real 720x1280 environment captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v159
+          xvfb-run -a ./godot --path . --script res://scripts/v73_visual_capture.gd --quit-after 180 2>&1 | tee v73-capture.log
+          grep -q "v1.59 portrait environment visual capture passed" v73-capture.log
+          test -s artifacts/v159/home.png
+          test -s artifacts/v159/hero.png
+          test -s artifacts/v159/forge.png
+
+      - name: Upload v1.59 portrait visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v73-environment-visuals
+          path: artifacts/v159/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Re-run v1.58 composition regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v72_composition_rescue_smoke_test.gd --quit-after 150 2>&1 | tee v72-composition.log
+          grep -q "v1.58 composition rescue smoke test passed" v72-composition.log
+
+      - name: Re-run v1.55 Wanderer regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v69_wanderer_production_smoke_test.gd --quit-after 150 2>&1 | tee v69-wanderer.log
+          grep -q "v1.55 production Wanderer model takeover smoke test passed" v69-wanderer.log
+
+      - name: Re-run v1.52.1 input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 150 2>&1 | tee v66-input-flow.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" v66-input-flow.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v73-environment-failure-logs
+          path: |
+            parse.log
+            v73-environment.log
+            v73-capture.log
+            v72-composition.log
+            v69-wanderer.log
+            v66-input-flow.log
+          if-no-files-found: ignore
