@@ -4,8 +4,8 @@ extends "res://scripts/world3d_chamber_v160_materials.gd"
 # Swaps only the actor factory used by the already-proven v1.54 chamber. All
 # combat/world authority remains inherited from the v1.60 material stack.
 
-const ActorFactoryV160 = preload("res://scripts/world3d_actor_factory_v160_enemy_quality_r4.gd")
-const ACTOR_PRESENTATION_VERSION := "1.60-character-quality-r8.1-hood-r9-enemy-r4"
+const ActorFactoryV160 = preload("res://scripts/world3d_actor_factory_v160_enemy_quality_r5.gd")
+const ACTOR_PRESENTATION_VERSION := "1.60-character-quality-r8.1-hood-r9-enemy-r5"
 
 func _build_player() -> void:
 	actor_factory = ActorFactoryV160.new()
