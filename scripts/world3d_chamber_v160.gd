@@ -6,6 +6,9 @@ extends "res://scripts/world3d_chamber_v154.gd"
 
 const TOWER_ENV_VERSION := "1.60"
 const TOWER_ENV_ROOT := "res://assets/environment/v160/"
+const V160_CAMERA_POSITION := Vector3(0.0, 9.60, 11.40)
+const V160_CAMERA_FOCUS := Vector3(0.0, 0.35, -0.55)
+const V160_CAMERA_SIZE := 16.15
 const TOWER_ASSETS := {
 	"lower_arch": TOWER_ENV_ROOT + "tower_arch.obj",
 	"ossuary_totem": TOWER_ENV_ROOT + "ossuary_totem.obj",
@@ -41,6 +44,7 @@ func _ready() -> void:
 	_build_authored_tower_materials()
 	_build_authored_tower_environment()
 	_tune_inherited_realm_presentation()
+	_apply_v160_camera_composition()
 
 func authored_tower_environment_ready() -> bool:
 	if not real_model_intake_ready() or authored_tower_root == null:
@@ -63,6 +67,9 @@ func debug_snapshot() -> Dictionary:
 	data["authored_tower_asset_paths"] = tower_asset_paths.duplicate()
 	data["v160_starless_lookdev"] = v160_star_core_material != null
 	data["v160_true_ring_geometry"] = true
+	data["v160_camera_position"] = camera_base_position
+	data["v160_camera_focus"] = camera_focus
+	data["v160_camera_size"] = camera_base_size
 	return data
 
 func _apply_floor_identity(floor_no: int) -> void:
@@ -80,6 +87,19 @@ func _animate_starless_spire(delta: float) -> void:
 	if starless_core != null:
 		var pulse := 0.55 + sin(runtime_elapsed * 3.2) * 0.030
 		starless_core.scale = Vector3.ONE * pulse
+
+func _apply_v160_camera_composition() -> void:
+	if camera == null:
+		return
+	# v1.46 animates back toward these baseline values on every frame. Update
+	# all three inherited anchors so transition, boss and combat shake keep the
+	# new lower isometric composition instead of snapping to the old top-down one.
+	camera_base_position = V160_CAMERA_POSITION
+	camera_base_size = V160_CAMERA_SIZE
+	camera_focus = V160_CAMERA_FOCUS
+	camera.position = camera_base_position
+	camera.size = camera_base_size
+	camera.look_at(camera_focus, Vector3.UP)
 
 func _build_authored_tower_materials() -> void:
 	tower_lower_mat = _material(Color("2a3040"), 0.20, 0.72)
