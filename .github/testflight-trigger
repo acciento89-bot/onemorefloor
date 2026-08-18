@@ -1,4 +1,4 @@
-build=25
+build=26
 version=1.26.0
-requested=2026-08-18T07:54:00+02:00
-reason=v1.55 Wanderer production pilot retry after build 24 did not appear in App Store Connect
+requested=2026-08-18T10:15:00+02:00
+reason=v1.56 full 3D presentation playtest
