@@ -192,34 +192,34 @@ func _apply_v160_atmosphere_grade(floor_no: int) -> void:
 			atmosphere_player_fill_base = 0.25
 		"rift_descent":
 			background = Color("030106")
-			ambient = Color("362747")
-			ambient_energy = 0.17
-			key_color = Color("afa0c6")
-			key_energy = 0.88
+			ambient = Color("3d2d50")
+			ambient_energy = 0.19
+			key_color = Color("b8add0")
+			key_energy = 0.96
 			warm_color = Color("795056")
 			warm_energy = 0.16
 			arcane_color = Color("7d4eae")
 			arcane_energy = 1.20
-			saturation = 0.86
-			atmosphere_rim_color = Color("9968bd")
-			atmosphere_fill_color = Color("7293a4")
-			atmosphere_player_rim_base = 0.46
-			atmosphere_player_fill_base = 0.20
+			saturation = 0.84
+			atmosphere_rim_color = Color("a477c6")
+			atmosphere_fill_color = Color("829daf")
+			atmosphere_player_rim_base = 0.52
+			atmosphere_player_fill_base = 0.25
 		"starless_spire":
 			background = Color("010207")
-			ambient = Color("293348")
-			ambient_energy = 0.16
-			key_color = Color("8ea4ca")
-			key_energy = 0.82
+			ambient = Color("35415a")
+			ambient_energy = 0.19
+			key_color = Color("a6b7d7")
+			key_energy = 0.94
 			warm_color = Color("625058")
 			warm_energy = 0.08
-			arcane_color = Color("5d73a8")
-			arcane_energy = 0.82
+			arcane_color = Color("6d82b6")
+			arcane_energy = 0.88
 			saturation = 0.76
-			atmosphere_rim_color = Color("7189bb")
-			atmosphere_fill_color = Color("b0bdd3")
-			atmosphere_player_rim_base = 0.42
-			atmosphere_player_fill_base = 0.18
+			atmosphere_rim_color = Color("849bd0")
+			atmosphere_fill_color = Color("c1cce0")
+			atmosphere_player_rim_base = 0.50
+			atmosphere_player_fill_base = 0.24
 		_:
 			pass
 
