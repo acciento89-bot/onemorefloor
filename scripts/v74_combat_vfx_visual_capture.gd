@@ -39,8 +39,8 @@ func _run() -> void:
 	if not await _save_frame("skill_ring"):
 		return
 
-	# A tell-only frame demonstrates that enemy telegraphs are now hollow rings
-	# while preserving the exact runtime warning timing.
+	# A tell-only frame demonstrates the v1.60 hierarchy: one primary ground
+	# warning plus the archetype-specific accent instead of stacked legacy rings.
 	world.attack_amount = 0.0
 	world.skill_amount = 0.0
 	world.sync_runtime(player_pos, enemies, [], [], [], Vector2.ZERO, 3.30, 0.0, 0.0, 1)
@@ -49,10 +49,9 @@ func _run() -> void:
 	if not await _save_frame("enemy_tells"):
 		return
 
-	# Closer validation view for player-only arc/skill geometry. The preceding
-	# enemies are removed, so their death-signature pool is hidden only for this
-	# diagnostic frame. Production timing/state is never changed by the gate.
-	world.sync_runtime(Vector2(360.0, 600.0), [], [], [], [], Vector2.ZERO, 4.0, 1.0, 1.0, 1)
+	# Attack-only close-up: no skill ring and no enemy removal signatures can hide
+	# the directed slash. Camera changes are diagnostic-only.
+	world.sync_runtime(Vector2(360.0, 600.0), [], [], [], [], Vector2.ZERO, 4.0, 1.0, 0.0, 1)
 	_clear_transition_for_capture(world)
 	_hide_signature_pool_for_capture(world.spawn_signature_pool)
 	_hide_signature_pool_for_capture(world.death_signature_pool)

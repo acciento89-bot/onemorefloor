@@ -94,7 +94,7 @@ func _run() -> void:
 		return
 
 	# Drive a real runtime attack + skill + Warden tell. The legacy runtime owns
-	# all timing; v1.60 only changes the visible geometry mounted on those states.
+	# all timing; v1.60 only changes the visible hierarchy mounted on those states.
 	var enemy := {
 		"type": "warden",
 		"pos": Vector2(360.0, 420.0),
@@ -109,11 +109,40 @@ func _run() -> void:
 	if not _is_torus(tell_ring):
 		_fail("runtime enemy TellRing is not true torus geometry")
 		return
+	if tell_ring.visible:
+		_fail("duplicate attached TellRing remained visible in v1.60 hierarchy")
+		return
+	var primary_tell := world.telegraph_pool[0] as MeshInstance3D
+	if primary_tell == null or not primary_tell.visible:
+		_fail("v1.60 primary ground telegraph is not visible")
+		return
+	var grounding := world.enemy_grounding_pool[0] as MeshInstance3D
+	if grounding != null and grounding.visible:
+		_fail("duplicate v1.49 grounding remained visible during active tell")
+		return
+	var shock0 := slot.get_node_or_null("Shockwave0") as MeshInstance3D
+	var shock1 := slot.get_node_or_null("Shockwave1") as MeshInstance3D
+	var shock2 := slot.get_node_or_null("Shockwave2") as MeshInstance3D
+	if shock0 == null or not shock0.visible or (shock1 != null and shock1.visible) or (shock2 != null and shock2.visible):
+		_fail("Warden shockwave hierarchy is not one-primary-wave")
+		return
+
 	if world.v160_attack_arc == null or not world.v160_attack_arc.visible or not (world.v160_attack_arc.mesh is ArrayMesh):
 		_fail("directed v1.60 attack arc did not activate")
 		return
+	var arc_arrays: Array = (world.v160_attack_arc.mesh as ArrayMesh).surface_get_arrays(0)
+	var arc_normals: PackedVector3Array = arc_arrays[Mesh.ARRAY_NORMAL]
+	if arc_normals.is_empty() or arc_normals[0].y <= 0.5:
+		_fail("v1.60 attack arc does not face the isometric camera")
+		return
 	if world.v160_skill_outer_ring == null or not world.v160_skill_outer_ring.visible or not _is_torus(world.v160_skill_outer_ring):
 		_fail("v1.60 skill outer ring did not activate")
+		return
+	if world.attack_ring.visible or world.skill_ring_outer.visible or world.skill_ring_inner.visible:
+		_fail("legacy v1.46 player pulse duplicates remained visible in v1.60")
+		return
+	if world.player_chest_sigil == null or not world.player_chest_sigil.visible:
+		_fail("v1.48 inner skill sigil was lost during v1.60 hierarchy pass")
 		return
 
 	if not bool(world.call("character_combat_vfx_ready")):

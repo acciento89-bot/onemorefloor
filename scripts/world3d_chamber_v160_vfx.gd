@@ -41,6 +41,7 @@ func sync_runtime(
 	super.sync_runtime(player_pos, enemies, player_shots, enemy_shots, coins, joy, elapsed_value, attack_flash, skill_flash, floor_no)
 	_upgrade_v160_enemy_tell_rings()
 	_sync_v160_player_combat_accents()
+	_apply_v160_enemy_vfx_hierarchy(enemies)
 
 func production_combat_vfx_ready() -> bool:
 	return production_actor_presentation_ready() \
@@ -62,7 +63,8 @@ func debug_snapshot() -> Dictionary:
 	return data
 
 func _build_v160_combat_materials() -> void:
-	v160_attack_material = _transparent_emissive(Color("f5c86c", 0.62), 1.05)
+	v160_attack_material = _transparent_emissive(Color("f5c86c", 0.68), 1.14)
+	v160_attack_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	v160_skill_material = _transparent_emissive(Color("8b67d8", 0.48), 0.82)
 	v160_tell_material = _transparent_emissive(Color("8e5fc1", 0.44), 0.62)
 	v160_warden_tell_material = _transparent_emissive(Color("c95058", 0.48), 0.68)
@@ -164,9 +166,9 @@ func _build_v160_player_combat_accents() -> void:
 		return
 	v160_attack_arc = MeshInstance3D.new()
 	v160_attack_arc.name = "V160AttackArc"
-	v160_attack_arc.mesh = _build_v160_slash_arc_mesh(0.38, 0.96, -1.05, 1.05, 20)
+	v160_attack_arc.mesh = _build_v160_slash_arc_mesh(0.38, 0.98, -1.05, 1.05, 20)
 	v160_attack_arc.material_override = v160_attack_material
-	v160_attack_arc.position = Vector3(0.0, 0.68, -0.02)
+	v160_attack_arc.position = Vector3(0.0, 0.78, -0.02)
 	v160_attack_arc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	v160_attack_arc.visible = false
 	player_root.add_child(v160_attack_arc)
@@ -186,6 +188,16 @@ func _build_v160_player_combat_accents() -> void:
 	player_root.add_child(v160_skill_outer_ring)
 
 func _sync_v160_player_combat_accents() -> void:
+	# v1.46 direct tests keep their own attack/skill pulses. In the v1.60 world
+	# these three duplicate ground signals are suppressed so the authored slash +
+	# v1.48 inner sigil + v1.60 outer skill ring form one readable hierarchy.
+	if attack_ring != null:
+		attack_ring.visible = false
+	if skill_ring_outer != null:
+		skill_ring_outer.visible = false
+	if skill_ring_inner != null:
+		skill_ring_inner.visible = false
+
 	if v160_attack_arc != null:
 		v160_attack_arc.visible = attack_amount > 0.025
 		if v160_attack_arc.visible:
@@ -198,6 +210,48 @@ func _sync_v160_player_combat_accents() -> void:
 			var skill_scale := 0.78 + (1.0 - skill_amount) * 0.56
 			v160_skill_outer_ring.scale = Vector3(skill_scale, 1.0, skill_scale)
 			v160_skill_outer_ring.rotation.y = runtime_elapsed * 1.65
+
+func _apply_v160_enemy_vfx_hierarchy(enemies: Array) -> void:
+	# v1.46 owns the primary ground warning. Hide the older attached TellRing and
+	# transient v1.49 grounding whenever the same enemy is actively telegraphing.
+	# Warden keeps one v1.48 shockwave instead of three simultaneous ground rings.
+	for index in range(enemy_pool.size()):
+		var proxy := enemy_pool[index] as Node3D
+		if proxy != null:
+			var attached_tell := proxy.get_node_or_null("Motion/Visual/TellRing") as MeshInstance3D
+			if attached_tell != null:
+				attached_tell.visible = false
+		if index >= enemies.size():
+			continue
+		var enemy: Dictionary = enemies[index]
+		var tell := _enemy_tell(enemy)
+		if tell > 0.05 and index < enemy_grounding_pool.size():
+			var grounding := enemy_grounding_pool[index] as MeshInstance3D
+			if grounding != null:
+				grounding.visible = false
+		if index < enemy_vfx_slots.size() and String(enemy.get("type", "")) == "warden" and tell > 0.10:
+			var slot := enemy_vfx_slots[index] as Node3D
+			if slot != null:
+				for wave_index in [1, 2]:
+					var wave := slot.get_node_or_null("Shockwave%d" % wave_index) as MeshInstance3D
+					if wave != null:
+						wave.visible = false
+
+	# v1.49 boss dominance remains as the boss identity layer. During an active
+	# Warden tell, drop its inner ring so the primary warning and one shockwave own
+	# the floor. v1.46's boss halo is redundant in v1.60 and stays hidden.
+	if boss_halo != null:
+		boss_halo.visible = false
+	var boss_telling := false
+	for enemy_value in enemies:
+		var enemy: Dictionary = enemy_value
+		if String(enemy.get("type", "")) == "warden" and _enemy_tell(enemy) > 0.05:
+			boss_telling = true
+			break
+	if boss_dominance_ring_outer != null:
+		boss_dominance_ring_outer.visible = boss_dominance_root != null and boss_dominance_root.visible
+	if boss_dominance_ring_inner != null:
+		boss_dominance_ring_inner.visible = boss_dominance_root != null and boss_dominance_root.visible and not boss_telling
 
 func _upgrade_v160_enemy_tell_rings() -> void:
 	for enemy_value in enemy_pool:
@@ -242,11 +296,12 @@ func _build_v160_slash_arc_mesh(inner_radius: float, outer_radius: float, start_
 		var outer0 := Vector3(sin(a0) * outer_radius, 0.0, -cos(a0) * outer_radius)
 		var inner1 := Vector3(sin(a1) * inner_radius, 0.0, -cos(a1) * inner_radius)
 		var outer1 := Vector3(sin(a1) * outer_radius, 0.0, -cos(a1) * outer_radius)
+		# Top-facing winding: the isometric camera sees +Y, not the culled underside.
 		tool.add_vertex(inner0)
+		tool.add_vertex(outer1)
 		tool.add_vertex(outer0)
-		tool.add_vertex(outer1)
 		tool.add_vertex(inner0)
-		tool.add_vertex(outer1)
 		tool.add_vertex(inner1)
+		tool.add_vertex(outer1)
 	tool.generate_normals()
 	return tool.commit()
