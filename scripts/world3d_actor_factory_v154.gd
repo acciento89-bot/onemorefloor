@@ -48,6 +48,86 @@ func _sync_socket_targets(root: Node3D) -> void:
 			continue
 		socket.global_transform = target.global_transform
 
+# v1.49's original quality gate intentionally expects a Skeleton3D for imported
+# production assets. The v1.55 pilot is a different, still legitimate glTF form:
+# it is an articulated node hierarchy with authored transform animations. Keep
+# skeleton_ok truthful, but expose a separate production tier when the actual
+# runtime contract is complete instead of inventing a dummy skeleton.
+func production_asset_report(root: Node3D) -> Dictionary:
+	var report: Dictionary = super.production_asset_report(root)
+	if bool(report.get("ready", false)):
+		report["rig_strategy"] = "skeleton" if bool(report.get("skeleton_ok", false)) else "native_fallback"
+		return report
+	if not imported_model_active(root):
+		return report
+	var imported := root.get_node_or_null("Motion/RigMount/ImportedModel") as Node3D
+	var mesh_count := _v154_imported_mesh_count(imported)
+	var required_animation_states_ok := _v154_required_animation_states_ready(imported)
+	var production_sockets_ok := actor_production_ready(root)
+	var articulated_ready := imported != null \
+		and model_pipeline_ready(root) \
+		and production_sockets_ok \
+		and mesh_count >= 6 \
+		and required_animation_states_ok
+	report["rig_strategy"] = "node_transform_animation"
+	report["v154_articulated_ready"] = articulated_ready
+	report["v154_mesh_count"] = mesh_count
+	report["v154_required_animation_states_ok"] = required_animation_states_ok
+	report["v154_production_sockets_ok"] = production_sockets_ok
+	if articulated_ready:
+		report["ready"] = true
+		report["tier"] = "animated_articulated_candidate"
+	return report
+
+func production_art_ready(root: Node3D) -> bool:
+	if root == null or not bool(root.get_meta("actor_art_v149", false)):
+		return false
+	var report: Dictionary = production_asset_report(root)
+	return bool(report.get("ready", false))
+
+func _v154_required_animation_states_ready(imported: Node3D) -> bool:
+	var player := _v154_find_animation_player(imported)
+	if player == null:
+		return false
+	for state in ["idle", "run", "attack"]:
+		if not _v154_animation_state_available(player, state):
+			return false
+	return true
+
+func _v154_animation_state_available(player: AnimationPlayer, state: String) -> bool:
+	var aliases: Array = []
+	match state:
+		"idle": aliases = ["idle", "stand"]
+		"run": aliases = ["run", "jog", "locomotion", "walk"]
+		"attack": aliases = ["attack", "slash", "melee", "swing"]
+		_: aliases = [state]
+	for animation_name_value in player.get_animation_list():
+		var animation_name := String(animation_name_value).to_lower()
+		for alias_value in aliases:
+			var alias := String(alias_value).to_lower()
+			if animation_name == alias or animation_name.contains(alias):
+				return true
+	return false
+
+func _v154_find_animation_player(node: Node) -> AnimationPlayer:
+	if node == null:
+		return null
+	if node is AnimationPlayer:
+		return node as AnimationPlayer
+	for child in node.get_children():
+		var found := _v154_find_animation_player(child)
+		if found != null:
+			return found
+	return null
+
+func _v154_imported_mesh_count(node: Node) -> int:
+	if node == null:
+		return 0
+	var count := 1 if node is MeshInstance3D else 0
+	for child in node.get_children():
+		count += _v154_imported_mesh_count(child)
+	return count
+
 func real_model_intake_ready() -> bool:
 	return model_registry != null \
 		and model_registry.has_method("candidate_paths") \
