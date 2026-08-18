@@ -67,15 +67,11 @@ func _run() -> void:
 	_stage("mesh-composition")
 	var imported_mesh_count := _mesh_count(imported)
 	print("V69_MESH_COUNT:%d" % imported_mesh_count)
-	# Godot is allowed to collapse/reparent the glTF scene root on import. Validate
-	# the authored model by its resulting mesh composition instead of a brittle
-	# assumption that WandererRoot must survive as a direct child node.
 	if imported_mesh_count < 10:
 		_fail("production Wanderer mesh composition is incomplete")
 		return
 
 	_stage("fallback-suppression")
-	# Imported assets must suppress both legacy and v1.53 native fallback geometry.
 	var presentation := player_root.get_node_or_null("Motion/PresentationV153")
 	if presentation != null:
 		_fail("v1.53 fallback presentation was created despite imported Wanderer")
@@ -107,7 +103,7 @@ func _run() -> void:
 	if registry == null:
 		_fail("actor factory model registry is null")
 		return
-	var registry_script := registry.get_script()
+	var registry_script = registry.get_script()
 	var registry_path := "<no-script>"
 	if registry_script != null:
 		registry_path = String(registry_script.resource_path)
@@ -116,7 +112,6 @@ func _run() -> void:
 		_fail("actor factory model registry has no drive_animation method")
 		return
 
-	# Exercise the exact runtime animation path used by gameplay.
 	for state in ["idle", "run", "attack", "hit", "skill"]:
 		_stage("drive-%s" % state)
 		var driven := bool(registry.drive_animation(imported, state, 1.0))
