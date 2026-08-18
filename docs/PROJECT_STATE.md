@@ -8,8 +8,9 @@ Canonical handoff for continued development. Read this file before changing art 
 - Pull request: #82 — `v1.60 authored environment milestone`
 - Branch: `agent/v1.60-meta-environments`
 - Base: `main`
-- Last fully validated Wanderer baseline: `090b7ce8a702229b9d52600f9d540f68cb73ac9c` (r6).
-- Current active candidate: r7 silhouette-lock candidate, implementation head before this state commit `070d3bfcc2c29379ae3ae660f527287d8b3382c3`.
+- Last fully validated technical Wanderer candidate: `5a5d4b2fa915b609b521912bb79761149eabe475` (r7), but visual lock was rejected after manual capture inspection.
+- Last accepted safe rollback baseline remains `090b7ce8a702229b9d52600f9d540f68cb73ac9c` (r6).
+- Current active candidate: r8 capture-driven silhouette correction; activation commit `8486af39db2c91d28974cc2febab2b3659e71941`.
 - PR stays DRAFT.
 - No TestFlight trigger, App Store build-number bump or version jump until a visibly meaningful bundled milestone is approved.
 
@@ -61,47 +62,64 @@ Starting point: PR #82 head `6b6f5909af5b0fb6d9973a15bd5291cd3cb10445`.
 - Torso rebuilt from rounded tube to tapered tailored body.
 - Cape rebuilt from broad flat trapezoid to narrower folded shell.
 - r4 presentation layer reduced head, shoulder, limb, boot and ornament mass and improved cloth/cape/steel separation.
-- Eye slits moved inward; sigil, ArcaneCore, belt and clasp reduced.
 - No gameplay authority changed.
 
 ### r5 — fully validated limb-anatomy baseline
 
-Head `87d6dca0f290b0f3f10fe5aabd468ff1625a0ae1` replaced former simple tapered octagonal cylinders with authored geometry:
+Head `87d6dca0f290b0f3f10fe5aabd468ff1625a0ae1` replaced former simple tapered octagonal cylinders with authored arm, leg and gauntlet OBJ geometry. Candidate meshes were checked closed/watertight before intake.
 
-- `wanderer_arm.obj`: shoulder/bicep/elbow/forearm/wrist profile plus restrained elbow plane.
-- `wanderer_leg.obj`: thigh/knee/calf/ankle taper plus readable knee plane.
-- `wanderer_gauntlet.obj`: cuff/wrist shell, tapered hand plate and knuckle ridge.
-- All three candidate meshes were checked as closed/watertight before intake.
+### r6 — accepted safe rollback baseline
 
-### r6 — fully validated focused cleanup
+Head `090b7ce8a702229b9d52600f9d540f68cb73ac9c` is the current accepted rollback point.
 
-Head `090b7ce8a702229b9d52600f9d540f68cb73ac9c` is the current validated rollback point.
+- Hood uses a flatter multi-ring crown rather than the former apex/cone.
+- Boot uses slimmer layered greave/ankle/low-foot/toe-cap geometry.
+- Boot mass, chest accents, belt buckle and cape clasp were reduced.
+- Dedicated Production Wanderer, v1.55 Wanderer, v1.54 real-model intake, v1.52.1 input-flow, material-depth, enemy silhouette, authored environment and Godot checks completed successfully.
+- Manual r6 captures still showed dominant chest accent, detached/segment-like arms and a smooth helmet-like hood, so visual work continued.
 
-- Hood rebuilt with a flatter multi-ring crown rather than an apex/cone while retaining brow overhang and side cowl drapes.
-- Boot rebuilt as slimmer layered greave/ankle/low-foot/toe-cap assembly.
-- `world3d_actor_factory_v160_character_quality_r6.gd` reduced boot mass, chest accents, belt buckle and cape clasp.
-- The preserved animated glTF `ArcaneCore` remained visible but was reduced to an accent.
-- Dedicated Production Wanderer, v1.55 Wanderer, v1.54 real-model intake, v1.52.1 input-flow, material-depth, enemy silhouette, authored environment and Godot checks all completed successfully on r6.
-- r6 runtime close-ups were inspected manually. Technical readiness is green, but visual lock was rejected because the chest diamond still dominates, arms remain too detached/segment-like and the hood still reads too smooth/helmet-like from the front.
+### r7 — technically validated, visually rejected
 
-### r7 — active silhouette-lock candidate
+Head `5a5d4b2fa915b609b521912bb79761149eabe475` completed the dedicated Production Wanderer workflow successfully, including Godot compile/import, main v1.60 actor integration, runtime/close-up captures, v1.55 regression and v1.52.1 input-flow regression.
 
-Implementation head before this state commit: `070d3bfcc2c29379ae3ae660f527287d8b3382c3`.
+Manual inspection of the actual r7 idle close-up rejected the visual lock:
 
-- Adds `world3d_actor_factory_v160_character_quality_r7.gd`, extending the fully validated r6 layer only.
-- Hood is narrowed and shifted to expose more of the faceted mask and reduce the smooth cap/helmet read.
-- Authored pauldrons, arms and gauntlets are pulled inward on their existing presentation meshes only; articulated pivots remain untouched.
-- Boot mass is reduced one more step while retaining the r6 authored layered boot geometry.
-- Animated `ArcaneCore` scale reduced from r6 accent level to a small tertiary magical core; authored chest sigil, buckle and clasp reduced further.
-- Material hierarchy is cooled/darkened: darker cloth/cape, cooler restrained steel, less saturated leather/gold and lower arcane emission.
-- `world3d_chamber_v160_actors.gd` now activates the r7 actor factory.
-- r7 is NOT accepted/locked until the dedicated Production Wanderer workflow and runtime/close-up captures are inspected.
+- preserved purple chest diamond still dominates the torso
+- arms remain too long/vertical and read as detached bars
+- hood still reads too smooth/cap-like from the front
+- overall technical contract is sound; failures are presentation quality only
 
-Do not restore pre-r3 head/chest geometry, pre-r4 rounded torso/broad cape or pre-r5 rod-like limbs unless a demonstrated regression requires it.
+Do not call r7 visually locked merely because CI is green.
+
+### r8 — active capture-driven correction
+
+Activation commit: `8486af39db2c91d28974cc2febab2b3659e71941`.
+
+- `world3d_actor_factory_v160_character_quality_r8.gd` extends r7 only; no gameplay or rig authority is changed.
+- Hood is flattened more aggressively and shifted to expose the faceted mask.
+- Authored arms are shortened and pulled inward; gauntlets are moved upward/inward on the same animated arm pivots.
+- Pauldron mass is reduced again without changing shoulder pivots.
+- Preserved animated glTF `ArcaneCore` remains visible for the production contract but is reduced to 6% scale; authored chest sigil is reduced further.
+- Warm highlight contamination is reduced with darker cloth/cape, cooler steel and even more restrained gold/arcane response.
+- `world3d_chamber_v160_actors.gd` activates the r8 factory.
+- r8 is NOT accepted until its Production Wanderer workflow and idle/attack/gameplay captures are manually inspected.
+
+Do not restore pre-r3 head/chest geometry, pre-r4 rounded torso/broad cape or pre-r5 rod-like authored limb meshes unless a demonstrated regression requires it.
 
 ## Enemies
 
 Authored body bases exist for Goblin, Bat, Skeleton, Ghoul, Necromancer and Warden. Retain weapons, eyes, runes and archetype details while avoiding blockout body cores.
+
+Current gameplay-scale visual review shows:
+
+- Skeleton is the clearest of the six current silhouettes.
+- Goblin remains too round/chibi.
+- Bat wings are too flat/paper-like.
+- Ghoul reads as disconnected capsule masses and needs stronger hunch/anatomy/material breakup.
+- Necromancer robe/body is still too block-like.
+- Warden remains too toy-like and needs a more human armored proportion plus clearer armor-layer separation.
+
+First enemy quality priority after Wanderer lock: Goblin, Ghoul and Warden, then Bat/Necromancer, with Skeleton preserved unless a clear regression is visible.
 
 ## Required regression gates
 
@@ -119,11 +137,11 @@ Before release/upload decisions preserve and rerun relevant checks, especially:
 
 ## Current next priorities
 
-1. Validate r7 through Godot import, Production Wanderer, v1.55, v1.54 and v1.52.1 gates.
-2. Download and inspect r7 idle/attack close-ups plus gameplay-camera captures.
-3. Lock Wanderer silhouette for v1.60 only if the chest accent, detached-arm read and hood/helmet read are materially improved without new clipping.
-4. If locked, record r7 as the canonical Wanderer baseline and move to the six enemy authored body bases at gameplay scale.
-5. If not locked, make only a narrowly targeted r8 fix based on visible capture evidence; do not reopen already accepted body geometry broadly.
+1. Validate r8 through Production Wanderer/Godot/import plus v1.55, v1.54 and v1.52.1 regressions.
+2. Download and manually inspect r8 idle/attack close-ups plus gameplay-camera captures.
+3. Lock Wanderer only if chest accent, arm-bar read and hood/cap read are materially resolved without new clipping.
+4. Once locked, start enemy quality pass with Goblin + Ghoul + Warden while retaining proven weapon/eye/rune detail layers.
+5. Do not upload TestFlight from character micro-passes; bundle a visibly meaningful milestone first.
 
 ## Release policy
 
