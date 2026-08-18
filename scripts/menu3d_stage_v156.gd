@@ -51,7 +51,6 @@ func stage_ready() -> bool:
 	return camera != null \
 		and environment_node != null \
 		and stage_root != null \
-		and actor_anchor != null \
 		and current_screen in MENU_SCREENS
 
 func debug_snapshot() -> Dictionary:
@@ -147,7 +146,6 @@ func _build_common_floor() -> void:
 		_make_box(stage_root, "ColumnCap", Vector3(0.86, 0.34, 0.86), mat_gold, Vector3(x, 6.05, -2.72))
 
 func _build_home_stage() -> void:
-	# Real 3D citadel facade replacing the flat Home illustration.
 	_make_box(stage_root, "Keep", Vector3(5.7, 4.8, 1.2), mat_stone, Vector3(0.0, 2.55, -2.25))
 	for x in [-3.25, 3.25]:
 		_make_box(stage_root, "Tower", Vector3(1.45, 5.8, 1.45), mat_stone_hi, Vector3(x, 2.95, -2.1))
@@ -155,18 +153,15 @@ func _build_home_stage() -> void:
 			_make_box(stage_root, "Crenel", Vector3(0.34, 0.45, 1.55), mat_stone_hi, Vector3(x - 0.43 + tooth * 0.43, 6.05, -2.1))
 	for x in [-1.75, -0.88, 0.0, 0.88, 1.75]:
 		_make_box(stage_root, "KeepCrenel", Vector3(0.42, 0.52, 1.30), mat_stone_hi, Vector3(x, 5.18, -2.25))
-
 	_make_box(stage_root, "GateVoid", Vector3(1.9, 3.25, 1.24), mat_void, Vector3(0.0, 1.52, -1.56))
 	_make_box(stage_root, "GateTop", Vector3(2.55, 0.55, 1.35), mat_dark_metal, Vector3(0.0, 3.23, -1.57))
 	for x in [-2.0, 2.0]:
 		_make_box(stage_root, "Banner", Vector3(0.62, 2.35, 0.08), mat_red, Vector3(x, 2.25, -1.54))
 		_make_box(stage_root, "BannerSigil", Vector3(0.28, 0.46, 0.11), mat_gold, Vector3(x, 2.32, -1.47), Vector3(0.0, 0.0, deg_to_rad(45.0)))
-
 	for x in [-2.75, 2.75]:
 		_add_torch(Vector3(x, 1.05, -0.92), Color("ff9c46"), 3.2)
 	for x in [-1.15, 1.15]:
 		_add_torch(Vector3(x, 3.92, -1.58), Color("c56dff"), 2.2)
-
 	_make_box(stage_root, "Bridge", Vector3(4.4, 0.28, 4.8), mat_stone_hi, Vector3(0.0, 0.02, 0.05))
 	_add_actor(Vector3(0.0, 0.26, 0.80), 1.16)
 
