@@ -29,6 +29,7 @@ var tower_iron_mat: StandardMaterial3D
 var tower_rift_mat: StandardMaterial3D
 var tower_spire_mat: StandardMaterial3D
 var tower_brass_mat: StandardMaterial3D
+var v160_lower_ring_material: StandardMaterial3D
 var v160_ossuary_ring_material: StandardMaterial3D
 var v160_rift_core_material: StandardMaterial3D
 var v160_star_core_material: StandardMaterial3D
@@ -76,9 +77,6 @@ func _animate_rift_descent(delta: float) -> void:
 
 func _animate_starless_spire(delta: float) -> void:
 	super._animate_starless_spire(delta)
-	# The inherited v1.45 StarCore was intentionally spectacular at the time,
-	# but in portrait it clips into a huge white blob. v1.60 keeps the motion
-	# while reducing the silhouette to a readable focal jewel.
 	if starless_core != null:
 		var pulse := 0.55 + sin(runtime_elapsed * 3.2) * 0.030
 		starless_core.scale = Vector3.ONE * pulse
@@ -90,6 +88,7 @@ func _build_authored_tower_materials() -> void:
 	tower_rift_mat = _emissive_material(Color("7740b8"), 0.82)
 	tower_spire_mat = _material(Color("1a2030"), 0.38, 0.64)
 	tower_brass_mat = _material(Color("82592a"), 0.70, 0.34)
+	v160_lower_ring_material = _emissive_material(Color("7650a8"), 0.34)
 	v160_ossuary_ring_material = _emissive_material(Color("7045a8"), 0.52)
 	v160_rift_core_material = _emissive_material(Color("8a54c8"), 0.64)
 	v160_star_core_material = _emissive_material(Color("7693c9"), 0.50)
@@ -167,9 +166,22 @@ func _build_spire_authored(root_node: Node3D) -> void:
 	_place_tower_asset(root_node, "SpireForegroundColumn", "spire_column", tower_spire_mat, Vector3(3.78, 0.02, 4.62), Vector3(0.62, 0.78, 0.62), Vector3(0.0, -0.12, 0.0))
 
 func _tune_inherited_realm_presentation() -> void:
+	_tune_lower_halls_presentation()
 	_tune_ossuary_presentation()
 	_tune_rift_presentation()
 	_tune_starless_presentation()
+
+func _tune_lower_halls_presentation() -> void:
+	if production_details_root == null:
+		return
+	_hide_thin_cylinder_children(production_details_root, 0.05)
+	var ring_root := Node3D.new()
+	ring_root.name = "V160LowerFloorRings"
+	production_details_root.add_child(ring_root)
+	for z in [-4.8, -0.2, 4.2]:
+		var ring := _add_true_ring(ring_root, "V160LowerRing", 0.53, 0.68, v160_lower_ring_material)
+		ring.position = Vector3(0.0, 0.055, z)
+		ring.scale = Vector3(1.0, 0.72, 0.46)
 
 func _tune_ossuary_presentation() -> void:
 	if ossuary_root == null:
@@ -181,12 +193,7 @@ func _tune_ossuary_presentation() -> void:
 	_set_realm_light_energy(ossuary_root, "NecroAltarLight", 1.45)
 	_set_realm_light_energy(ossuary_root, "CryptFill", 0.62)
 	_override_named_mesh_material(ossuary_root, ["Skull", "SkullCap", "Table", "BoneSpire", "BoneMark"], tower_bone_mat)
-
-	# v1.43 used filled CylinderMesh discs as floor sigils. Preserve the legacy
-	# nodes for compatibility, but render true torus ritual rings in v1.60.
-	for child in ossuary_root.get_children():
-		if child is MeshInstance3D and String(child.name).begins_with("OssuarySigil"):
-			(child as MeshInstance3D).visible = false
+	_hide_thin_cylinder_children(ossuary_root, 0.05)
 	var ritual_root := Node3D.new()
 	ritual_root.name = "V160OssuaryRitualRings"
 	ossuary_root.add_child(ritual_root)
@@ -210,13 +217,9 @@ func _tune_starless_presentation() -> void:
 	if starless_core != null:
 		starless_core.material_override = v160_star_core_material
 	_override_named_mesh_material(starless_root, ["StarMote", "ObservatoryStar", "CrownStar", "CrownConstellation"], v160_star_core_material)
-
 	var starwell := starless_root.get_node_or_null("Starwell") as Node3D
 	if starwell != null:
-		# Hide every auto-renamed legacy filled cylinder before adding real rings.
-		for child in starwell.get_children():
-			if child is MeshInstance3D and String(child.name).begins_with("CelestialRing"):
-				(child as MeshInstance3D).visible = false
+		_hide_thin_cylinder_children(starwell, 0.06)
 		var celestial_root := Node3D.new()
 		celestial_root.name = "V160CelestialRings"
 		starwell.add_child(celestial_root)
@@ -230,6 +233,20 @@ func _tune_starless_presentation() -> void:
 	_set_realm_light_energy(starless_root, "StarlessKeyLight", 1.08)
 	_set_realm_light_energy(starless_root, "StarwellLight", 0.74)
 	_set_realm_light_energy(starless_root, "ApexGoldFill", 0.64)
+
+func _hide_thin_cylinder_children(parent: Node, max_height: float) -> int:
+	if parent == null:
+		return 0
+	var hidden := 0
+	for child in parent.get_children():
+		var mesh_instance := child as MeshInstance3D
+		if mesh_instance == null:
+			continue
+		var cylinder := mesh_instance.mesh as CylinderMesh
+		if cylinder != null and cylinder.height <= max_height:
+			mesh_instance.visible = false
+			hidden += 1
+	return hidden
 
 func _add_true_ring(parent: Node3D, node_name: String, inner_radius: float, outer_radius: float, material: Material) -> MeshInstance3D:
 	var mesh := TorusMesh.new()
