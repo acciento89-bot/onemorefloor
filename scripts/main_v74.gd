@@ -6,7 +6,7 @@ extends "res://scripts/main_v73.gd"
 # Gameplay, input, saves and v1.54 real-model combat authority remain inherited.
 
 const Menu3DStageV160Scene = preload("res://scripts/menu3d_stage_v160.gd")
-const AuthoredTowerWorldV160 = preload("res://scripts/world3d_chamber_v160_vfx.gd")
+const AuthoredTowerWorldV160 = preload("res://scripts/world3d_chamber_v160_combat_polish.gd")
 const V74_VERSION := "1.60.0-authored-environment-milestone"
 const V74_BUILD := "47-dev"
 

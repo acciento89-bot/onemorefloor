@@ -7,6 +7,7 @@ on:
       - agent/**
     paths:
       - 'scripts/world3d_chamber_v160_vfx.gd'
+      - 'scripts/world3d_chamber_v160_combat_polish.gd'
       - 'scripts/world3d_chamber_v160_actors.gd'
       - 'scripts/main_v74.gd'
       - 'scripts/v74_combat_vfx_smoke_test.gd'
@@ -15,6 +16,7 @@ on:
   pull_request:
     paths:
       - 'scripts/world3d_chamber_v160_vfx.gd'
+      - 'scripts/world3d_chamber_v160_combat_polish.gd'
       - 'scripts/world3d_chamber_v160_actors.gd'
       - 'scripts/main_v74.gd'
       - 'scripts/v74_combat_vfx_smoke_test.gd'

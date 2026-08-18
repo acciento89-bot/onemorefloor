@@ -1,6 +1,6 @@
 extends SceneTree
 
-const WorldV160VFX = preload("res://scripts/world3d_chamber_v160_vfx.gd")
+const WorldV160VFX = preload("res://scripts/world3d_chamber_v160_combat_polish.gd")
 
 func _init() -> void:
 	call_deferred("_run")
@@ -19,14 +19,21 @@ func _run() -> void:
 	if int(snapshot.get("production_combat_vfx_true_rings", 0)) < int(snapshot.get("production_combat_vfx_static_target", 999)):
 		_fail("static true-ring coverage incomplete")
 		return
-	if int(snapshot.get("production_combat_vfx_static_target", 0)) != 229:
-		_fail("production combat VFX static ring target is not 229")
+	if int(snapshot.get("production_combat_vfx_static_target", 0)) != 230:
+		_fail("production combat VFX static ring target is not 230")
 		return
 	if not bool(snapshot.get("production_actor_presentation_ready", false)):
 		_fail("actor presentation regression under VFX layer")
 		return
 	if not bool(snapshot.get("character_combat_vfx_ready", false)):
 		_fail("v1.48 combat VFX regression")
+		return
+
+	# The original Wanderer SkillRing is the final known filled combat disc and
+	# must be captured as ring #230 while remaining visually suppressed in v1.60.
+	var legacy_player_skill := world.player_root.get_node_or_null("SkillRing") as MeshInstance3D
+	if not _is_torus(legacy_player_skill):
+		_fail("base Wanderer SkillRing was not upgraded to true ring geometry")
 		return
 
 	# v1.46 legacy presentation discs must now be hollow combat rings.
@@ -139,11 +146,25 @@ func _run() -> void:
 	if arc_material == null or arc_material.cull_mode != BaseMaterial3D.CULL_DISABLED:
 		_fail("v1.60 attack arc is not double-sided for isometric view")
 		return
+	if world.v160_attack_arc.position.y < 0.10 or world.v160_attack_arc.position.y > 0.22 or world.v160_attack_arc.position.z >= -0.05:
+		_fail("v1.60 attack arc is not on the forward floor presentation plane")
+		return
+	if world.v160_attack_edge == null or not world.v160_attack_edge.visible or not (world.v160_attack_edge.mesh is ArrayMesh):
+		_fail("v1.60 bright attack edge did not activate")
+		return
+
 	if world.v160_skill_outer_ring == null or not world.v160_skill_outer_ring.visible or not _is_torus(world.v160_skill_outer_ring):
 		_fail("v1.60 skill outer ring did not activate")
 		return
-	if world.attack_ring.visible or world.skill_ring_outer.visible or world.skill_ring_inner.visible:
-		_fail("legacy v1.46 player pulse duplicates remained visible in v1.60")
+	if world.v160_skill_outer_ring.position.y < 0.10:
+		_fail("v1.60 skill ring is not raised above authored floor tiles")
+		return
+	var polished_skill_mesh := world.v160_skill_outer_ring.mesh as TorusMesh
+	if polished_skill_mesh == null or polished_skill_mesh.outer_radius < 1.05:
+		_fail("v1.60 skill ring is too small for the player footprint")
+		return
+	if world.attack_ring.visible or world.skill_ring_outer.visible or world.skill_ring_inner.visible or legacy_player_skill.visible:
+		_fail("legacy player pulse duplicates remained visible in v1.60")
 		return
 	if world.player_chest_sigil == null or not world.player_chest_sigil.visible:
 		_fail("v1.48 inner skill sigil was lost during v1.60 hierarchy pass")

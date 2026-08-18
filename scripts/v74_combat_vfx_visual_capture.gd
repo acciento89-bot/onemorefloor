@@ -1,6 +1,6 @@
 extends SceneTree
 
-const WorldV160VFX = preload("res://scripts/world3d_chamber_v160_vfx.gd")
+const WorldV160VFX = preload("res://scripts/world3d_chamber_v160_combat_polish.gd")
 const CAPTURE_DIR := "res://artifacts/v160_combat_vfx"
 
 func _init() -> void:
