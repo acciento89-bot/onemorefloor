@@ -33,7 +33,10 @@ func create_player(materials: Dictionary) -> Node3D:
 	return root
 
 func v160_authored_wanderer_ready(root: Node3D) -> bool:
-	if not v160_wanderer_polish_ready(root):
+	# The authored layer intentionally hides several visible meshes from the
+	# intermediate polish stage, so readiness is anchored to the stable v1.60
+	# articulated presentation contract rather than polish mesh visibility.
+	if not v160_wanderer_presentation_ready(root):
 		return false
 	for path in AUTHORED_ASSETS.values():
 		if not ResourceLoader.exists(String(path)):
