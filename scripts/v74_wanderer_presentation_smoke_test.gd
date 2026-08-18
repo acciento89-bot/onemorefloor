@@ -1,11 +1,32 @@
 extends SceneTree
 
 const WorldV160Actors = preload("res://scripts/world3d_chamber_v160_actors.gd")
+const REQUIRED_AUTHORED_ASSETS := [
+	"res://assets/models/actors/v160/wanderer_torso.obj",
+	"res://assets/models/actors/v160/wanderer_chestplate.obj",
+	"res://assets/models/actors/v160/wanderer_hood.obj",
+	"res://assets/models/actors/v160/wanderer_pauldron.obj",
+	"res://assets/models/actors/v160/wanderer_arm.obj",
+	"res://assets/models/actors/v160/wanderer_gauntlet.obj",
+	"res://assets/models/actors/v160/wanderer_leg.obj",
+	"res://assets/models/actors/v160/wanderer_boot.obj",
+	"res://assets/models/actors/v160/wanderer_blade.obj",
+	"res://assets/models/actors/v160/wanderer_cape.obj",
+]
 
 func _init() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
+	for path in REQUIRED_AUTHORED_ASSETS:
+		if not ResourceLoader.exists(path):
+			_fail("missing authored Wanderer asset: %s" % path)
+			return
+		var mesh := load(path) as Mesh
+		if mesh == null or mesh.get_surface_count() <= 0:
+			_fail("authored Wanderer asset did not import as Mesh: %s" % path)
+			return
+
 	var world = WorldV160Actors.new()
 	root.add_child(world)
 	world.set_active(true)
@@ -17,11 +38,18 @@ func _run() -> void:
 		return
 	var snapshot: Dictionary = world.debug_snapshot()
 	var wanderer: Dictionary = snapshot.get("wanderer_v160", {})
+	var authored: Dictionary = snapshot.get("wanderer_v160_authored", {})
 	if int(wanderer.get("mesh_count", 0)) < 22:
-		_fail("insufficient v1.60 Wanderer presentation meshes")
+		_fail("base v1.60 Wanderer presentation contract regressed")
 		return
 	if not bool(wanderer.get("prototype_geometry_hidden", false)):
-		_fail("prototype Wanderer geometry was not retired")
+		_fail("v1.55 prototype Wanderer geometry was not retired")
+		return
+	if not bool(authored.get("ready", false)) or int(authored.get("instances", 0)) < 15:
+		_fail("authored modular Wanderer coverage incomplete: %s" % JSON.stringify(authored))
+		return
+	if int(authored.get("asset_count", 0)) != REQUIRED_AUTHORED_ASSETS.size():
+		_fail("authored Wanderer asset count mismatch")
 		return
 
 	var imported := world.player_root.get_node_or_null("Motion/RigMount/ImportedModel") as Node3D
@@ -29,27 +57,40 @@ func _run() -> void:
 		_fail("imported Wanderer mount missing")
 		return
 	var old_torso := _find_named_mesh(imported, "Torso")
-	var new_torso := _find_named_mesh(imported, "V160Torso")
-	var new_hood := _find_named_mesh(imported, "V160Hood")
-	var new_blade := _find_named_mesh(imported, "V160Blade")
+	var rounded_torso := _find_named_mesh(imported, "V160Torso")
+	var rounded_hood := _find_named_mesh(imported, "V160Hood")
+	var polish_cape := _find_named_mesh(imported, "V160ProductionCape")
+	var authored_torso := _find_named_mesh(imported, "V160AuthoredTorso")
+	var authored_hood := _find_named_mesh(imported, "V160AuthoredHood")
+	var authored_cape := _find_named_mesh(imported, "V160AuthoredCape")
+	var authored_blade := _find_named_mesh(imported, "V160AuthoredBlade")
 	var arcane_core := _find_named_mesh(imported, "ArcaneCore")
 	if old_torso == null or old_torso.visible:
-		_fail("prototype torso is still visible")
+		_fail("v1.55 prototype torso is still visible")
 		return
-	if new_torso == null or not new_torso.visible or not (new_torso.material_override is ShaderMaterial):
-		_fail("v1.60 torso presentation missing")
+	if rounded_torso == null or rounded_torso.visible or rounded_hood == null or rounded_hood.visible:
+		_fail("rounded v1.60 intermediate body geometry is still visible")
 		return
-	if new_hood == null or not new_hood.visible or new_blade == null or not new_blade.visible:
-		_fail("hood/blade production silhouette missing")
+	if polish_cape == null or polish_cape.visible:
+		_fail("intermediate polish cape is still visible")
 		return
+
+	for mesh_instance in [authored_torso, authored_hood, authored_cape, authored_blade]:
+		if mesh_instance == null or not mesh_instance.visible:
+			_fail("authored Wanderer landmark mesh missing")
+			return
+		if not (mesh_instance.material_override is ShaderMaterial):
+			_fail("authored Wanderer landmark is missing production shader material")
+			return
+		if not String(mesh_instance.mesh.resource_path).ends_with(".obj"):
+			_fail("authored Wanderer landmark is not backed by imported OBJ geometry")
+			return
 	if arcane_core == null or not arcane_core.visible:
 		_fail("animated ArcaneCore was not preserved")
 		return
 
 	# Drive the same required production states through the existing v1.54
-	# registry. Read the chosen clip immediately: waiting a frame would allow the
-	# normal world process to legitimately request its current gameplay state and
-	# turn this into a state-leak test instead of an animation-contract test.
+	# registry. The authored meshes are children of those same animated pivots.
 	var cases := [
 		["idle", 0.0, 0.0, 0.0],
 		["run", 1.0, 0.0, 0.0],
