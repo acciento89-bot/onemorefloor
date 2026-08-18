@@ -69,34 +69,38 @@ func _polish_v160_player_combat_geometry() -> void:
 	if player_root == null or v160_attack_arc == null or v160_skill_outer_ring == null:
 		return
 
-	# The slash lives on the floor *in front* of the Wanderer. At chest height it
-	# was geometrically behind the body from the isometric camera and disappeared.
-	v160_attack_arc.mesh = _build_v160_slash_arc_mesh(0.58, 1.30, -1.10, 1.10, 24)
-	v160_attack_arc.position = Vector3(0.0, 0.145, -0.20)
+	# Gameplay camera readability: place the slash well in front of the Wanderer
+	# instead of letting the cloak/body occlude most of it from the isometric view.
+	v160_attack_arc.mesh = _build_v160_slash_arc_mesh(0.62, 1.58, -1.10, 1.10, 28)
+	v160_attack_arc.position = Vector3(0.0, 0.150, -0.72)
 	v160_attack_arc.material_override = v160_attack_material
 
 	# A thin bright outer lip gives the broad translucent crescent a readable
 	# weapon edge without adding texture samples or screen-space effects.
-	v160_attack_edge_material = _transparent_emissive(Color("fff0b0", 0.84), 1.42)
+	v160_attack_edge_material = _transparent_emissive(Color("fff0b0", 0.88), 1.55)
 	v160_attack_edge_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	v160_attack_edge = MeshInstance3D.new()
 	v160_attack_edge.name = "V160AttackEdge"
-	v160_attack_edge.mesh = _build_v160_slash_arc_mesh(1.20, 1.34, -1.10, 1.10, 24)
+	v160_attack_edge.mesh = _build_v160_slash_arc_mesh(1.42, 1.62, -1.10, 1.10, 28)
 	v160_attack_edge.material_override = v160_attack_edge_material
-	v160_attack_edge.position = Vector3(0.0, 0.158, -0.20)
+	v160_attack_edge.position = Vector3(0.0, 0.164, -0.72)
 	v160_attack_edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	v160_attack_edge.visible = false
 	player_root.add_child(v160_attack_edge)
 
-	# The skill ring is intentionally larger than the player footprint and raised
-	# above authored floor tiles, so it reads as a deliberate gameplay boundary.
+	# The skill boundary must sit clearly outside the hero silhouette at gameplay
+	# zoom. The earlier ~1.1 radius was technically visible but visually swallowed
+	# by the cape/pauldrons in the orthographic projection.
+	v160_skill_material.albedo_color = Color("a879ea", 0.68)
+	v160_skill_material.emission = Color("a879ea")
+	v160_skill_material.emission_energy_multiplier = 1.12
 	var skill_mesh := TorusMesh.new()
-	skill_mesh.inner_radius = 0.98
-	skill_mesh.outer_radius = 1.12
-	skill_mesh.rings = 36
+	skill_mesh.inner_radius = 1.38
+	skill_mesh.outer_radius = 1.58
+	skill_mesh.rings = 40
 	skill_mesh.ring_segments = 10
 	v160_skill_outer_ring.mesh = skill_mesh
-	v160_skill_outer_ring.position = Vector3(0.0, 0.155, 0.0)
+	v160_skill_outer_ring.position = Vector3(0.0, 0.165, 0.0)
 
 func _sync_v160_combat_polish() -> void:
 	# The original actor-factory SkillRing remains structurally present for legacy
@@ -108,9 +112,9 @@ func _sync_v160_combat_polish() -> void:
 		var attack_visible := attack_amount > 0.025
 		v160_attack_arc.visible = attack_visible
 		if attack_visible:
-			var attack_scale := 0.92 + attack_amount * 0.18
+			var attack_scale := 0.96 + attack_amount * 0.14
 			v160_attack_arc.scale = Vector3(attack_scale, 1.0, attack_scale)
-			v160_attack_arc.rotation.y = (1.0 - attack_amount) * 0.20
+			v160_attack_arc.rotation.y = (1.0 - attack_amount) * 0.18
 	if v160_attack_edge != null:
 		v160_attack_edge.visible = v160_attack_arc != null and v160_attack_arc.visible
 		if v160_attack_edge.visible:
@@ -121,6 +125,6 @@ func _sync_v160_combat_polish() -> void:
 		var skill_visible := skill_amount > 0.025
 		v160_skill_outer_ring.visible = skill_visible
 		if skill_visible:
-			var skill_scale := 0.92 + (1.0 - skill_amount) * 0.62
+			var skill_scale := 0.98 + (1.0 - skill_amount) * 0.50
 			v160_skill_outer_ring.scale = Vector3(skill_scale, 1.0, skill_scale)
 			v160_skill_outer_ring.rotation.y = runtime_elapsed * 1.45
