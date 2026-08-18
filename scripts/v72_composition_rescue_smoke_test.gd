@@ -49,7 +49,7 @@ func _run() -> void:
 	if not bool(home.get("actor_present", false)) or String(home.get("actor_animation", "")) != "Idle":
 		_fail("Home Wanderer is missing or not idling")
 		return
-	if float(home.get("actor_scale", 99.0)) > 0.85 or float(home.get("actor_y", -99.0)) < 0.70:
+	if float(home.get("actor_scale", 99.0)) > 0.75 or float(home.get("actor_y", -99.0)) < 1.45:
 		_fail("Home Wanderer framing is still too large/low")
 		return
 	for blocker in ["SideWall", "Forecourt", "ForecourtStep", "GateRecess"]:
@@ -64,7 +64,7 @@ func _run() -> void:
 	if not bool(hero.get("actor_present", false)) or String(hero.get("actor_animation", "")) != "Idle":
 		_fail("Hero Wanderer is missing or not idling")
 		return
-	if float(hero.get("actor_scale", 99.0)) > 0.85 or float(hero.get("actor_y", -99.0)) < 0.90:
+	if float(hero.get("actor_scale", 99.0)) > 0.72 or float(hero.get("actor_y", -99.0)) < 1.95:
 		_fail("Hero Wanderer framing is still too large/low")
 		return
 	for blocker in ["HeroAlcove", "HeroColumn", "HeroColumnBase"]:
@@ -86,7 +86,7 @@ func _run() -> void:
 
 	_stage("regressions")
 	if not bool(game.call("_v71_lookdev_ready")):
-		_fail("v1.57 lookdev regression")
+		_fail("v1.57 material/lookdev contract regression")
 		return
 	if not bool(game.call("_v70_full_3d_presentation_ready")):
 		_fail("v1.56 presentation regression")
