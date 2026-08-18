@@ -1,11 +1,14 @@
 extends "res://scripts/world3d_actor_factory_v160_character_quality_r7.gd"
 
-# ONE MORE FLOOR v1.60 — Wanderer silhouette correction r8.
-# Capture-driven presentation-only pass after r7. The imported v1.55 glTF
+# ONE MORE FLOOR v1.60 — Wanderer silhouette correction r8.1.
+# Capture-driven presentation-only pass after r7/r8. The imported v1.55 glTF
 # hierarchy, animation clips, pivots, sockets, hitboxes, combat, saves and input
-# remain authoritative and unchanged.
+# remain authoritative and unchanged. r8.1 constrains only the presentation
+# amplitude of the animated ArcaneCore scale track.
 
-const WANDERER_R8_VERSION := "1.60-wanderer-silhouette-r8"
+const WANDERER_R8_VERSION := "1.60-wanderer-silhouette-r8.1"
+const ARCANE_CORE_ANIMATION_SCALE := 0.27
+const ARCANE_CORE_TRACK_MARKER := "v160_arcane_core_scale_r81"
 
 func create_player(materials: Dictionary) -> Node3D:
 	var root: Node3D = super.create_player(materials)
@@ -20,8 +23,9 @@ func character_quality_snapshot(root: Node3D = null) -> Dictionary:
 	data["wanderer_r8"] = root != null \
 		and String(root.get_meta("wanderer_character_quality_r8", "")) == WANDERER_R8_VERSION
 	data["wanderer_r8_version"] = WANDERER_R8_VERSION
-	data["silhouette_profile"] = "authored-tailored-humanoid-r8-capture-corrected"
-	data["material_profile"] = "dark-cloth-cool-steel-minimal-arcane-r8"
+	data["silhouette_profile"] = "authored-tailored-humanoid-r8.1-capture-corrected"
+	data["material_profile"] = "dark-cloth-cool-steel-minimal-arcane-r8.1"
+	data["arcane_core_animation_scale"] = ARCANE_CORE_ANIMATION_SCALE
 	return data
 
 func _apply_wanderer_r8(root: Node3D) -> void:
@@ -29,29 +33,45 @@ func _apply_wanderer_r8(root: Node3D) -> void:
 	if imported == null:
 		return
 
-	# r7 close-up evidence: the hood still reads as a smooth cap. Flatten it more
-	# aggressively and expose the authored faceted mask as the dominant face read.
+	# r7/r8 close-up evidence: the hood still reads as a smooth cap. Flatten it
+	# and expose the authored faceted mask as the dominant face read.
 	_tune_named_mesh(imported, "V160AuthoredHood", Vector3(0.61, 0.63, 0.65), Vector3(0.0, -0.066, -0.010))
 	_tune_named_mesh(imported, "V160AuthoredMask", Vector3(0.70, 0.78, 0.64), Vector3(0.0, -0.045, -0.050))
 	var hood := _find_named_mesh(imported, "V160AuthoredHood")
 	if hood != null:
 		hood.rotation.x = -0.035
 
-	# r7 also showed long vertical arm bars. Shorten only the visible authored
-	# shells and bring the gauntlets upward/inward on the same animated pivots.
+	# Shorten the visible authored shells and bring them inward on the same
+	# animated pivots. A small local angle breaks the two-vertical-bars read
+	# without changing any shoulder/arm animation authority.
 	_tune_named_mesh(imported, "V160AuthoredPauldronL", Vector3(0.25, 0.34, 0.39), Vector3(0.028, -0.050, 0.018))
 	_tune_named_mesh(imported, "V160AuthoredPauldronR", Vector3(0.31, 0.40, 0.45), Vector3(-0.028, -0.028, -0.006))
 	_tune_named_mesh(imported, "V160AuthoredArmL", Vector3(0.50, 0.82, 0.58), Vector3(0.060, 0.035, -0.008))
 	_tune_named_mesh(imported, "V160AuthoredArmR", Vector3(0.50, 0.82, 0.58), Vector3(-0.060, 0.035, -0.008))
 	_tune_named_mesh(imported, "V160AuthoredGauntletL", Vector3(0.47, 0.60, 0.54), Vector3(0.052, -0.292, -0.018))
 	_tune_named_mesh(imported, "V160AuthoredGauntletR", Vector3(0.47, 0.60, 0.54), Vector3(-0.052, -0.292, -0.018))
+	var arm_l := _find_named_mesh(imported, "V160AuthoredArmL")
+	var arm_r := _find_named_mesh(imported, "V160AuthoredArmR")
+	var gauntlet_l := _find_named_mesh(imported, "V160AuthoredGauntletL")
+	var gauntlet_r := _find_named_mesh(imported, "V160AuthoredGauntletR")
+	if arm_l != null:
+		arm_l.rotation.z = 0.105
+	if arm_r != null:
+		arm_r.rotation.z = -0.105
+	if gauntlet_l != null:
+		gauntlet_l.rotation.z = 0.085
+	if gauntlet_r != null:
+		gauntlet_r.rotation.z = -0.085
 
-	# The preserved animated carrier has to stay visible for the production
-	# contract, but at r7 scale it still rendered like a chest badge. Reduce it
-	# to a true tertiary spark; keep the authored sigil even smaller beneath it.
+	# The glTF Skill clip contains an explicit ArcaneCore scale animation. Godot's
+	# imported RESET/animation state can therefore restore the original large
+	# carrier scale after a factory-level node scale is applied. Constrain every
+	# ArcaneCore TYPE_SCALE_3D track at runtime instead: the animation remains the
+	# authority and still pulses, only at tertiary-accent amplitude.
+	_limit_arcane_core_animation(imported)
 	var arcane_core := _find_named_mesh(imported, "ArcaneCore")
 	if arcane_core != null:
-		arcane_core.scale = Vector3(0.060, 0.060, 0.060)
+		arcane_core.scale = Vector3(0.0594, 0.0648, 0.0324)
 	var chest_sigil := _find_named_mesh(imported, "V160ChestSigil")
 	if chest_sigil != null:
 		chest_sigil.scale = Vector3(0.070, 0.085, 0.035)
@@ -79,3 +99,26 @@ func _apply_wanderer_r8(root: Node3D) -> void:
 		arcane.set_shader_parameter("emission_strength", 0.060)
 
 	root.set_meta("wanderer_character_quality_r8", WANDERER_R8_VERSION)
+
+func _limit_arcane_core_animation(imported: Node3D) -> void:
+	var player := _v154_find_animation_player(imported)
+	if player == null:
+		return
+	for animation_name_value in player.get_animation_list():
+		var animation := player.get_animation(StringName(animation_name_value))
+		if animation == null or bool(animation.get_meta(ARCANE_CORE_TRACK_MARKER, false)):
+			continue
+		var changed := false
+		for track_index in range(animation.get_track_count()):
+			if animation.track_get_type(track_index) != Animation.TYPE_SCALE_3D:
+				continue
+			var track_path := String(animation.track_get_path(track_index))
+			if not track_path.contains("ArcaneCore"):
+				continue
+			for key_index in range(animation.track_get_key_count(track_index)):
+				var key_value: Variant = animation.track_get_key_value(track_index, key_index)
+				if key_value is Vector3:
+					animation.track_set_key_value(track_index, key_index, (key_value as Vector3) * ARCANE_CORE_ANIMATION_SCALE)
+					changed = true
+		if changed:
+			animation.set_meta(ARCANE_CORE_TRACK_MARKER, true)
