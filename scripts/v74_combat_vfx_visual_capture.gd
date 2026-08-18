@@ -31,11 +31,13 @@ func _run() -> void:
 	]
 	var player_pos := Vector2(360.0, 665.0)
 
+	_set_player_peak_state(world, 1.0, 0.0)
 	world.sync_runtime(player_pos, enemies, [], [], [], Vector2.ZERO, 3.0, 1.0, 0.0, 1)
 	_clear_transition_for_capture(world)
 	if not await _save_frame("attack_arc"):
 		return
 
+	_set_player_peak_state(world, 0.0, 1.0)
 	world.sync_runtime(player_pos, enemies, [], [], [], Vector2.ZERO, 3.15, 0.0, 1.0, 1)
 	_clear_transition_for_capture(world)
 	if not await _save_frame("skill_ring"):
@@ -43,8 +45,7 @@ func _run() -> void:
 
 	# A tell-only frame demonstrates the v1.60 hierarchy: one primary ground
 	# warning plus the archetype-specific accent instead of stacked legacy rings.
-	world.attack_amount = 0.0
-	world.skill_amount = 0.0
+	_set_player_peak_state(world, 0.0, 0.0)
 	world.sync_runtime(player_pos, enemies, [], [], [], Vector2.ZERO, 3.30, 0.0, 0.0, 1)
 	_clear_transition_for_capture(world)
 	if not await _save_frame("enemy_tells"):
@@ -52,6 +53,7 @@ func _run() -> void:
 
 	# Attack-only close-up: no skill ring and no enemy removal signatures can hide
 	# the directed slash. Camera changes are diagnostic-only.
+	_set_player_peak_state(world, 1.0, 0.0)
 	world.sync_runtime(Vector2(360.0, 600.0), [], [], [], [], Vector2.ZERO, 4.0, 1.0, 0.0, 1)
 	_clear_transition_for_capture(world)
 	_hide_signature_pool_for_capture(world.spawn_signature_pool)
@@ -66,6 +68,12 @@ func _run() -> void:
 	world.queue_free()
 	await process_frame
 	quit(0)
+
+func _set_player_peak_state(world, attack_value: float, skill_value: float) -> void:
+	# With processing frozen there is intentionally no decay between captures, so
+	# reset the two presentation accumulators explicitly before each diagnostic.
+	world.attack_amount = attack_value
+	world.skill_amount = skill_value
 
 func _clear_transition_for_capture(world) -> void:
 	# The realm-transition disc is an intentional presentation surface, not a
