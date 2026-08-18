@@ -61,21 +61,22 @@ func _build_home_stage() -> void:
 		_make_box(stage_root, "HomeBanner", Vector3(0.48, 1.48, 0.04), mat_cloth, Vector3(x, 2.85, -2.88))
 		_make_box(stage_root, "HomeSigil", Vector3(0.18, 0.30, 0.06), mat_brass, Vector3(x, 2.88, -2.82), Vector3(0.0, 0.0, deg_to_rad(45.0)))
 		_add_torch(Vector3(x, 1.72, -2.65), Color("e99352"), 0.55)
-	_make_cylinder(stage_root, "HomeDais", 0.76, 0.13, mat_dark_metal, Vector3(0.0, 0.08, -0.05))
-	_add_actor(Vector3(0.0, 1.55, -0.05), 0.72)
-	_add_character_key(Vector3(0.0, 2.80, 2.25), Color("cec4ff"), 0.86, 4.7)
+	_make_cylinder(stage_root, "HomeDais", 0.76, 0.13, mat_dark_metal, Vector3(0.0, 1.47, -0.05))
+	_make_cylinder(stage_root, "HomeDaisTrim", 0.66, 0.025, mat_brass, Vector3(0.0, 1.55, -0.05))
+	_add_actor(Vector3(0.0, 1.62, -0.05), 0.72)
+	_add_character_key(Vector3(0.0, 2.85, 2.25), Color("cec4ff"), 0.86, 4.7)
 
 func _build_hero_stage() -> void:
-	# One clean showcase bay with the actor lifted fully above the stats card.
+	# One clean showcase bay with the actor entirely above the stats card.
 	_make_box(stage_root, "HeroBay", Vector3(4.8, 4.25, 0.16), mat_stone_mid, Vector3(0.0, 2.38, -3.08))
-	_make_rune_ring(Vector3(0.0, 2.58, -2.88), 1.36, 14, mat_purple)
+	_make_rune_ring(Vector3(0.0, 3.22, -2.88), 1.36, 14, mat_purple)
 	for x in [-2.20, 2.20]:
 		_make_box(stage_root, "HeroRearColumn", Vector3(0.38, 3.65, 0.30), mat_stone_hi, Vector3(x, 2.05, -2.90))
 		_add_torch(Vector3(x, 3.18, -2.62), Color("8a63d4"), 0.46)
-	_make_cylinder(stage_root, "HeroDais", 0.86, 0.15, mat_dark_metal, Vector3(0.0, 0.10, -0.02))
-	_make_cylinder(stage_root, "HeroDaisTrim", 0.74, 0.03, mat_brass, Vector3(0.0, 0.19, -0.02))
-	_add_actor(Vector3(0.0, 2.05, -0.02), 0.70)
-	_add_character_key(Vector3(0.0, 3.05, 2.35), Color("ddd3ff"), 1.12, 5.0)
+	_make_cylinder(stage_root, "HeroDais", 0.94, 0.15, mat_dark_metal, Vector3(0.0, 3.15, -0.02))
+	_make_cylinder(stage_root, "HeroDaisTrim", 0.82, 0.03, mat_brass, Vector3(0.0, 3.24, -0.02))
+	_add_actor(Vector3(0.0, 3.32, -0.02), 0.85)
+	_add_character_key(Vector3(0.0, 4.35, 2.35), Color("ddd3ff"), 1.16, 5.1)
 
 func _build_forge_stage() -> void:
 	# Forge props live on the back wall because the lower half is intentionally UI territory.
@@ -112,6 +113,6 @@ func _camera_position_for(screen: String) -> Vector3:
 func _camera_target_for(screen: String) -> Vector3:
 	match screen:
 		"home": return Vector3(0.0, 2.35, -0.70)
-		"hero": return Vector3(0.0, 2.75, -0.20)
+		"hero": return Vector3(0.0, 3.00, -0.20)
 		"forge": return Vector3(0.0, 2.18, -1.80)
 		_: return Vector3(0.0, 2.00, -0.80)
