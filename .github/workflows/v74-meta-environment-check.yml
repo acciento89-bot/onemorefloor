@@ -1,4 +1,4 @@
-name: v1.60 Authored Meta Environment Check
+name: v1.60 Authored Environment Milestone Check
 
 on:
   push:
@@ -9,8 +9,11 @@ on:
       - 'assets/environment/v160/**'
       - 'scripts/main_v74.gd'
       - 'scripts/menu3d_stage_v160.gd'
+      - 'scripts/world3d_chamber_v160.gd'
       - 'scripts/v74_meta_environment_smoke_test.gd'
       - 'scripts/v74_visual_capture.gd'
+      - 'scripts/v74_tower_environment_smoke_test.gd'
+      - 'scripts/v74_tower_visual_capture.gd'
       - 'scenes/main.tscn'
       - '.github/workflows/v74-meta-environment-check.yml'
   pull_request:
@@ -18,8 +21,11 @@ on:
       - 'assets/environment/v160/**'
       - 'scripts/main_v74.gd'
       - 'scripts/menu3d_stage_v160.gd'
+      - 'scripts/world3d_chamber_v160.gd'
       - 'scripts/v74_meta_environment_smoke_test.gd'
       - 'scripts/v74_visual_capture.gd'
+      - 'scripts/v74_tower_environment_smoke_test.gd'
+      - 'scripts/v74_tower_visual_capture.gd'
       - 'scenes/main.tscn'
       - '.github/workflows/v74-meta-environment-check.yml'
 
@@ -27,9 +33,9 @@ permissions:
   contents: read
 
 jobs:
-  validate-meta-environments:
+  validate-authored-environments:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -44,7 +50,7 @@ jobs:
           chmod +x godot
           ./godot --version
 
-      - name: Import v1.60 authored OBJ kit
+      - name: Import v1.60 authored OBJ kits
         run: |
           set -o pipefail
           ./godot --headless --editor --path . --quit 2>&1 | tee parse.log
@@ -59,6 +65,12 @@ jobs:
           ./godot --headless --path . --script res://scripts/v74_meta_environment_smoke_test.gd --quit-after 180 2>&1 | tee v74-meta.log
           grep -q "v1.60 authored meta environment smoke test passed" v74-meta.log
 
+      - name: Validate v1.60 authored tower environments
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_tower_environment_smoke_test.gd --quit-after 200 2>&1 | tee v74-tower.log
+          grep -q "v1.60 authored tower environment smoke test passed" v74-tower.log
+
       - name: Render real 720x1280 meta environment captures
         run: |
           set -o pipefail
@@ -71,11 +83,25 @@ jobs:
           test -s artifacts/v160/pass.png
           test -s artifacts/v160/store.png
 
-      - name: Upload v1.60 portrait visual gate
+      - name: Render real 720x1280 tower realm captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v160_tower
+          xvfb-run -a ./godot --path . --script res://scripts/v74_tower_visual_capture.gd --quit-after 220 2>&1 | tee v74-tower-capture.log
+          grep -q "v1.60 authored tower realm visual capture passed" v74-tower-capture.log
+          test -s artifacts/v160_tower/floor01.png
+          test -s artifacts/v160_tower/floor15.png
+          test -s artifacts/v160_tower/floor25.png
+          test -s artifacts/v160_tower/floor35.png
+          test -s artifacts/v160_tower/floor45.png
+
+      - name: Upload v1.60 visual gates
         uses: actions/upload-artifact@v4
         with:
-          name: v74-meta-environment-visuals
-          path: artifacts/v160/*.png
+          name: v74-authored-environment-visuals
+          path: |
+            artifacts/v160/*.png
+            artifacts/v160_tower/*.png
           if-no-files-found: error
           retention-days: 14
 
@@ -97,11 +123,13 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: v74-meta-environment-failure-logs
+          name: v74-authored-environment-failure-logs
           path: |
             parse.log
             v74-meta.log
+            v74-tower.log
             v74-capture.log
+            v74-tower-capture.log
             v73-environment.log
             v66-input-flow.log
           if-no-files-found: ignore
