@@ -21,7 +21,11 @@ func _init() -> void:
 
 func _run() -> void:
 	for path in REQUIRED_ASSETS:
-		if not ResourceLoader.exists(path) or load(path) as Mesh == null:
+		if not ResourceLoader.exists(path):
+			_fail("tower asset missing: %s" % path)
+			return
+		var imported_mesh := load(path) as Mesh
+		if imported_mesh == null or imported_mesh.get_surface_count() <= 0:
 			_fail("tower asset failed import: %s" % path)
 			return
 
