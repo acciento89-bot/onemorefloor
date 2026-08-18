@@ -12,8 +12,8 @@ const EXPECTED_GRADE := {
 	"lower_halls": {"ambient":0.22, "key":1.00, "warm":1.25, "arcane":0.55},
 	"ossuary": {"ambient":0.18, "key":0.94, "warm":0.38, "arcane":1.00},
 	"iron_bastion": {"ambient":0.23, "key":1.04, "warm":1.48, "arcane":0.20},
-	"rift_descent": {"ambient":0.17, "key":0.88, "warm":0.16, "arcane":1.20},
-	"starless_spire": {"ambient":0.16, "key":0.82, "warm":0.08, "arcane":0.82},
+	"rift_descent": {"ambient":0.19, "key":0.96, "warm":0.16, "arcane":1.20},
+	"starless_spire": {"ambient":0.19, "key":0.94, "warm":0.08, "arcane":0.88},
 }
 const RETIRED_DECORATIVE_RING_ROOTS := [
 	"ProductionDetails/V160LowerFloorRings",
