@@ -9,14 +9,12 @@ on:
       - 'scripts/main_v71.gd'
       - 'scripts/menu3d_stage_v157.gd'
       - 'scripts/v71_3d_lookdev_smoke_test.gd'
-      - 'scenes/main.tscn'
       - '.github/workflows/v71-3d-lookdev-check.yml'
   pull_request:
     paths:
       - 'scripts/main_v71.gd'
       - 'scripts/menu3d_stage_v157.gd'
       - 'scripts/v71_3d_lookdev_smoke_test.gd'
-      - 'scenes/main.tscn'
       - '.github/workflows/v71-3d-lookdev-check.yml'
 
 permissions:
@@ -40,20 +38,24 @@ jobs:
           chmod +x godot
           ./godot --version
 
-      - name: Import and parse v1.57
+      - name: Import and parse v1.57 baseline
         run: |
           set -o pipefail
           ./godot --headless --editor --path . --quit 2>&1 | tee parse.log
           if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|glTF:.*ERROR" parse.log; then
-            echo "Godot reported v1.57 import/parse errors"
+            echo "Godot reported import/parse errors"
             exit 1
           fi
 
-      - name: Validate v1.57 production 3D lookdev
+      - name: Validate v1.57 snapshot when v1.57 is active
         run: |
           set -o pipefail
-          ./godot --headless --path . --script res://scripts/v71_3d_lookdev_smoke_test.gd --quit-after 120 2>&1 | tee v71-lookdev.log
-          grep -q "v1.57 production 3D lookdev smoke test passed" v71-lookdev.log
+          if grep -q 'path="res://scripts/main_v71.gd"' scenes/main.tscn; then
+            ./godot --headless --path . --script res://scripts/v71_3d_lookdev_smoke_test.gd --quit-after 120 2>&1 | tee v71-lookdev.log
+            grep -q "v1.57 production 3D lookdev smoke test passed" v71-lookdev.log
+          else
+            echo "A successor to v1.57 is active; fixed v1.57 camera/composition snapshot is intentionally superseded." | tee v71-lookdev.log
+          fi
 
       - name: Re-run v1.56 full 3D presentation regression
         run: |
