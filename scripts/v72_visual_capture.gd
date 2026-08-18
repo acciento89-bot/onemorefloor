@@ -19,6 +19,14 @@ func _run() -> void:
 	for _i in range(6):
 		await process_frame
 
+	# Visual QA must capture the actual menu composition, not the fresh-install
+	# tutorial modal. This mutates only the ephemeral CI instance.
+	game.set("tutorial_active", false)
+	game.set("settings_open", false)
+	game.set("release_paused", false)
+	game.queue_redraw()
+	await process_frame
+
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(CAPTURE_DIR))
 
 	for screen in CAPTURE_SCREENS:
