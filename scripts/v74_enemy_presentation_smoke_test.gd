@@ -3,6 +3,8 @@ extends SceneTree
 const WorldV160Actors = preload("res://scripts/world3d_chamber_v160_actors.gd")
 const ENEMY_KINDS := ["goblin", "bat", "skeleton", "ghoul", "necromancer", "warden"]
 const ENEMY_QUALITY_ROOT := "res://assets/models/enemies/v160/"
+const ENEMY_SURFACE_DETAIL_NODE := "EnemyQualityDetailR4"
+const ENEMY_SURFACE_R4_VERSION := "1.60-enemy-surface-detail-r4"
 
 func _init() -> void:
 	call_deferred("_run")
@@ -64,6 +66,26 @@ func _run() -> void:
 		if not (authored.material_override is ShaderMaterial):
 			_fail("%s authored body is missing character surface-depth material" % kind)
 			return
+
+		var detail := layer.get_node_or_null(ENEMY_SURFACE_DETAIL_NODE) as Node3D
+		if kind == "skeleton":
+			if detail != null:
+				_fail("locked Skeleton unexpectedly received r4 detail geometry")
+				return
+		else:
+			if detail == null or not detail.visible:
+				_fail("r4 surface/detail layer missing for %s" % kind)
+				return
+			if String(detail.get_meta("version", "")) != ENEMY_SURFACE_R4_VERSION:
+				_fail("r4 surface/detail version mismatch for %s" % kind)
+				return
+			if int(detail.get_meta("mesh_count", 0)) < 3 or detail.get_child_count() < 3:
+				_fail("r4 surface/detail coverage too small for %s" % kind)
+				return
+			if not bool(enemy.get_meta("enemy_surface_detail_r4", false)):
+				_fail("r4 surface/detail root marker missing for %s" % kind)
+				return
+
 		if not bool(world.actor_factory.call("visual_presentation_ready", enemy)):
 			_fail("v1.53 presentation contract regressed for %s" % kind)
 			return
@@ -86,6 +108,10 @@ func _run() -> void:
 	if recycled_layer == null or String(recycled_layer.get_meta("kind", "")) != "warden":
 		_fail("enemy shell reuse retained stale archetype")
 		return
+	var recycled_detail := recycled_layer.get_node_or_null(ENEMY_SURFACE_DETAIL_NODE) as Node3D
+	if recycled_detail == null or String(recycled_detail.get_meta("kind", "")) != "warden":
+		_fail("r4 detail layer did not survive clean shell reuse")
+		return
 
 	var final_snapshot: Dictionary = world.debug_snapshot()
 	if not bool(final_snapshot.get("production_actor_presentation_ready", false)):
@@ -94,6 +120,9 @@ func _run() -> void:
 	var quality: Dictionary = final_snapshot.get("character_quality_v160", {})
 	if not bool(quality.get("ready", false)) or int(quality.get("enemy_asset_count", 0)) != ENEMY_KINDS.size():
 		_fail("character-quality pipeline snapshot incomplete: %s" % JSON.stringify(quality))
+		return
+	if String(quality.get("enemy_surface_detail_r4_version", "")) != ENEMY_SURFACE_R4_VERSION:
+		_fail("r4 surface/detail snapshot marker missing")
 		return
 	if not bool(final_snapshot.get("production_material_depth_ready", false)):
 		_fail("material-depth regression under enemy presentation layer")
