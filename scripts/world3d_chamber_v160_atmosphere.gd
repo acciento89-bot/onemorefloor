@@ -105,11 +105,20 @@ func _configure_v160_atmosphere_structure() -> void:
 		camera.size = camera_base_size
 
 func _retire_v160_legacy_floor_signals() -> void:
-	# Lower Halls and Ossuary still inherit the bright v1.41/v1.43 decorative
-	# lane sigils. Duplicate child names are auto-renamed by Godot, so name-only
-	# cleanup misses two of the three rings. Match the distinctive large, low
-	# CylinderMesh signature on the direct realm roots instead. Historic realm
-	# scripts remain untouched and real combat/spawn/death VFX live elsewhere.
+	# Lower Halls and Ossuary inherit both the older flat sigils and the v1.60
+	# Torus replacements. The authored production floors already carry enough
+	# spatial identity, while these always-on rings compete directly with genuine
+	# combat telegraphs, impacts and spawn/death VFX. Retire the two dedicated
+	# decorative Torus roots at the final presentation layer and also suppress any
+	# surviving legacy thin cylinders. Combat VFX pools live outside these roots.
+	if production_details_root != null:
+		var lower_ring_root := production_details_root.get_node_or_null("V160LowerFloorRings") as Node3D
+		if lower_ring_root != null:
+			lower_ring_root.visible = false
+	if ossuary_root != null:
+		var ossuary_ring_root := ossuary_root.get_node_or_null("V160OssuaryRitualRings") as Node3D
+		if ossuary_ring_root != null:
+			ossuary_ring_root.visible = false
 	_hide_v160_decorative_floor_cylinders(production_details_root, 0.60)
 	_hide_v160_decorative_floor_cylinders(ossuary_root, 0.65)
 
