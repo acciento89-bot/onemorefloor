@@ -6,7 +6,8 @@ extends "res://scripts/world3d_actor_factory_v160_enemy_lookdev.gd"
 # Animation pivots, hitboxes, sockets, tell rings, weapons and combat authority
 # remain inherited unchanged.
 
-const CHARACTER_QUALITY_VERSION := "1.60-character-quality-takeover"
+const CHARACTER_QUALITY_VERSION := "1.60-character-quality-takeover-r2"
+const CHARACTER_SURFACE_SHADER: Shader = preload("res://assets/shaders/v160_surface_depth.gdshader")
 const ENEMY_AUTHORED_ROOT := "res://assets/models/enemies/v160/"
 const ENEMY_BODY_ASSETS := {
 	"goblin": ENEMY_AUTHORED_ROOT + "goblin_body.obj",
@@ -34,6 +35,11 @@ const ENEMY_BODY_MATERIAL := {
 }
 
 var enemy_body_mesh_cache: Dictionary = {}
+var character_enemy_materials: Dictionary = {}
+
+func _init() -> void:
+	super._init()
+	_build_character_enemy_materials()
 
 func create_player(materials: Dictionary) -> Node3D:
 	var root: Node3D = super.create_player(materials)
@@ -53,7 +59,9 @@ func enemy_presentation_pipeline_ready() -> bool:
 	return super.enemy_presentation_pipeline_ready() and _enemy_authored_assets_ready()
 
 func character_quality_pipeline_ready() -> bool:
-	return enemy_presentation_pipeline_ready() and _enemy_authored_assets_ready()
+	return enemy_presentation_pipeline_ready() \
+		and _enemy_authored_assets_ready() \
+		and character_enemy_materials.size() == ENEMY_BODY_ASSETS.size()
 
 func character_quality_player_ready(root: Node3D) -> bool:
 	if not v160_authored_wanderer_ready(root):
@@ -90,7 +98,7 @@ func character_quality_snapshot(root: Node3D = null) -> Dictionary:
 		"enemy_assets_ready": _enemy_authored_assets_ready(),
 		"wanderer_ready": character_quality_player_ready(root) if root != null else false,
 		"silhouette_profile": "authored-obj-body-cores",
-		"material_profile": "controlled-layered-mobile",
+		"material_profile": "surface-depth-character-r2",
 	}
 
 func _enemy_authored_assets_ready() -> bool:
@@ -107,25 +115,31 @@ func _refine_authored_wanderer_quality(root: Node3D) -> void:
 
 	# Break the broad robot silhouette: narrow the center mass and make the
 	# shoulder treatment deliberately asymmetric while preserving all pivots.
-	_tune_named_mesh(imported, "V160AuthoredTorso", Vector3(0.86, 1.04, 0.80), Vector3(0.0, 0.10, 0.015))
-	_tune_named_mesh(imported, "V160AuthoredChestplate", Vector3(0.79, 0.86, 0.76), Vector3(0.0, -0.055, -0.005))
-	_tune_named_mesh(imported, "V160AuthoredCape", Vector3(0.84, 1.10, 0.90), Vector3(0.0, 0.015, 0.28))
-	_tune_named_mesh(imported, "V160AuthoredHood", Vector3(0.84, 0.90, 0.86), Vector3(0.0, -0.015, -0.018))
-	_tune_named_mesh(imported, "V160AuthoredMask", Vector3(0.82, 0.86, 0.76), Vector3(0.0, -0.035, -0.018))
-	_tune_named_mesh(imported, "V160AuthoredPauldronL", Vector3(0.52, 0.62, 0.66), Vector3(-0.018, -0.025, 0.025))
-	_tune_named_mesh(imported, "V160AuthoredPauldronR", Vector3(0.67, 0.74, 0.76), Vector3(0.025, 0.005, -0.005))
+	_tune_named_mesh(imported, "V160AuthoredTorso", Vector3(0.80, 1.05, 0.74), Vector3(0.0, 0.105, 0.018))
+	_tune_named_mesh(imported, "V160AuthoredChestplate", Vector3(0.70, 0.80, 0.68), Vector3(0.0, -0.060, -0.018))
+	_tune_named_mesh(imported, "V160AuthoredCape", Vector3(0.78, 1.12, 0.86), Vector3(0.0, 0.020, 0.29))
+	_tune_named_mesh(imported, "V160AuthoredHood", Vector3(0.78, 0.86, 0.80), Vector3(0.0, -0.025, -0.030))
+	_tune_named_mesh(imported, "V160AuthoredMask", Vector3(0.76, 0.82, 0.68), Vector3(0.0, -0.040, -0.028))
+	_tune_named_mesh(imported, "V160AuthoredPauldronL", Vector3(0.38, 0.48, 0.54), Vector3(-0.010, -0.045, 0.030))
+	_tune_named_mesh(imported, "V160AuthoredPauldronR", Vector3(0.50, 0.58, 0.62), Vector3(0.018, -0.020, -0.010))
 	for suffix in ["L", "R"]:
-		_tune_named_mesh(imported, "V160AuthoredArm%s" % suffix, Vector3(0.76, 1.03, 0.78))
-		_tune_named_mesh(imported, "V160AuthoredGauntlet%s" % suffix, Vector3(0.74, 0.84, 0.76), Vector3(0.0, -0.355, -0.015))
-		_tune_named_mesh(imported, "V160AuthoredLeg%s" % suffix, Vector3(0.74, 1.06, 0.78))
-		_tune_named_mesh(imported, "V160AuthoredBoot%s" % suffix, Vector3(0.76, 0.88, 0.86), Vector3(0.0, -0.395, -0.072))
-	_tune_named_mesh(imported, "V160AuthoredBlade", Vector3(0.84, 1.10, 0.82), Vector3(0.0, -0.045, -0.01))
+		_tune_named_mesh(imported, "V160AuthoredArm%s" % suffix, Vector3(0.66, 1.04, 0.70))
+		_tune_named_mesh(imported, "V160AuthoredGauntlet%s" % suffix, Vector3(0.64, 0.78, 0.68), Vector3(0.0, -0.350, -0.018))
+		_tune_named_mesh(imported, "V160AuthoredLeg%s" % suffix, Vector3(0.64, 1.08, 0.70))
+		_tune_named_mesh(imported, "V160AuthoredBoot%s" % suffix, Vector3(0.62, 0.76, 0.74), Vector3(0.0, -0.380, -0.065))
+	_tune_named_mesh(imported, "V160AuthoredBlade", Vector3(0.78, 1.14, 0.76), Vector3(0.0, -0.055, -0.012))
 
 	var eye_l := _find_named_mesh(imported, "V160EyeSlitL")
 	var eye_r := _find_named_mesh(imported, "V160EyeSlitR")
 	for eye in [eye_l, eye_r]:
 		if eye != null:
-			eye.scale = Vector3(0.78, 0.72, 0.80)
+			eye.scale = Vector3(0.70, 0.66, 0.74)
+	var belt := _find_named_mesh(imported, "V160Belt")
+	if belt != null:
+		belt.scale = Vector3(0.78, 0.44, 0.64)
+	var chest_sigil := _find_named_mesh(imported, "V160ChestSigil")
+	if chest_sigil != null:
+		chest_sigil.scale = Vector3(0.40, 0.52, 0.18)
 
 	# Materials move away from black plastic: cooler cloth, readable blue steel,
 	# restrained brass and a smaller but cleaner arcane accent.
@@ -201,7 +215,9 @@ func _mount_authored_enemy_body(root: Node3D, kind: String) -> void:
 	authored.name = "AuthoredBodyV160"
 	authored.mesh = mesh
 	var material_key := String(ENEMY_BODY_MATERIAL.get(kind, ""))
-	authored.material_override = enemy_v160_materials.get(material_key) as Material
+	authored.material_override = character_enemy_materials.get(kind) as Material
+	if authored.material_override == null:
+		authored.material_override = enemy_v160_materials.get(material_key) as Material
 	authored.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	authored.set_meta("character_quality_v160", CHARACTER_QUALITY_VERSION)
 	layer.add_child(authored)
@@ -209,22 +225,53 @@ func _mount_authored_enemy_body(root: Node3D, kind: String) -> void:
 	# Per-archetype silhouette tuning at gameplay scale.
 	match kind:
 		"goblin":
-			authored.scale = Vector3(1.02, 1.00, 0.96)
+			authored.scale = Vector3(0.94, 0.98, 0.92)
 			authored.rotation.z = -0.025
 		"bat":
-			authored.scale = Vector3(1.08, 0.96, 1.00)
+			authored.scale = Vector3(1.02, 0.94, 0.96)
 			authored.position.y = 0.02
 		"skeleton":
-			authored.scale = Vector3(0.98, 1.02, 0.96)
+			authored.scale = Vector3(0.90, 1.02, 0.90)
 		"ghoul":
-			authored.scale = Vector3(1.04, 1.00, 1.00)
+			authored.scale = Vector3(0.86, 1.00, 0.90)
 			authored.rotation.x = 0.025
 		"necromancer":
-			authored.scale = Vector3(0.96, 1.02, 0.96)
+			authored.scale = Vector3(0.88, 1.02, 0.90)
 		"warden":
-			authored.scale = Vector3(1.02, 1.02, 0.98)
+			authored.scale = Vector3(0.84, 1.00, 0.90)
 
 	root.set_meta("enemy_character_quality_version_v160", CHARACTER_QUALITY_VERSION)
+
+func _build_character_enemy_materials() -> void:
+	character_enemy_materials = {
+		"goblin": _make_character_surface(Color("42513a"), Color("889a76"), 0.00, 0.88, 0.22, 0.30, 0.030),
+		"bat": _make_character_surface(Color("181426"), Color("604773"), 0.00, 0.94, 0.18, 0.34, 0.024),
+		"skeleton": _make_character_surface(Color("858071"), Color("d0c6ac"), 0.00, 0.90, 0.24, 0.26, 0.018),
+		"ghoul": _make_character_surface(Color("35433b"), Color("758271"), 0.00, 0.94, 0.18, 0.28, 0.025),
+		"necromancer": _make_character_surface(Color("1b1328"), Color("704f8a"), 0.00, 0.90, 0.22, 0.36, 0.022),
+		"warden": _make_character_surface(Color("302a32"), Color("8d98a8"), 0.28, 0.66, 0.38, 0.34, 0.018),
+	}
+
+func _make_character_surface(
+	base_color: Color,
+	edge_color: Color,
+	metallic_value: float,
+	roughness_value: float,
+	specular_value: float,
+	edge_value: float,
+	variation_value: float
+) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = CHARACTER_SURFACE_SHADER
+	material.set_shader_parameter("base_color", base_color)
+	material.set_shader_parameter("edge_color", edge_color)
+	material.set_shader_parameter("metallic", metallic_value)
+	material.set_shader_parameter("roughness", roughness_value)
+	material.set_shader_parameter("specular_level", specular_value)
+	material.set_shader_parameter("edge_strength", edge_value)
+	material.set_shader_parameter("height_strength", 0.035)
+	material.set_shader_parameter("variation_strength", variation_value)
+	return material
 
 func _load_enemy_body_mesh(path: String) -> Mesh:
 	if enemy_body_mesh_cache.has(path):
