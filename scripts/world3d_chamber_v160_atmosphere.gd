@@ -16,7 +16,7 @@ var atmosphere_realm := ""
 var atmosphere_rim_color := Color("9078b7")
 var atmosphere_fill_color := Color("c39a70")
 var atmosphere_player_rim_base := 0.48
-var atmosphere_player_fill_base := 0.18
+var atmosphere_player_fill_base := 0.24
 
 func _ready() -> void:
 	super._ready()
@@ -109,82 +109,84 @@ func _apply_v160_atmosphere_grade(floor_no: int) -> void:
 	var realm := _realm_for_floor_v149(floor_no)
 	atmosphere_realm = realm
 
+	# Lower Halls establishes the baseline: darker than the legacy 0.34 wash, but
+	# still bright enough for stone/material read on a phone-sized viewport.
 	var background := Color("02040a")
-	var ambient := Color("383540")
-	var ambient_energy := 0.16
-	var key_color := Color("c7c4d3")
-	var key_energy := 0.98
-	var warm_color := Color("e89058")
-	var warm_energy := 1.35
+	var ambient := Color("3d3943")
+	var ambient_energy := 0.22
+	var key_color := Color("cbc8d7")
+	var key_energy := 1.00
+	var warm_color := Color("df8854")
+	var warm_energy := 1.25
 	var arcane_color := Color("74669b")
-	var arcane_energy := 0.58
+	var arcane_energy := 0.55
 	var saturation := 0.86
 	atmosphere_rim_color = Color("8e78b5")
-	atmosphere_fill_color = Color("c39b72")
+	atmosphere_fill_color = Color("c9a27c")
 	atmosphere_player_rim_base = 0.48
-	atmosphere_player_fill_base = 0.18
+	atmosphere_player_fill_base = 0.24
 
 	match realm:
 		"ossuary":
 			background = Color("010506")
-			ambient = Color("283a3b")
-			ambient_energy = 0.14
-			key_color = Color("a8c3c2")
-			key_energy = 0.90
-			warm_color = Color("9a654f")
-			warm_energy = 0.42
-			arcane_color = Color("5eaaa8")
-			arcane_energy = 1.02
+			ambient = Color("304344")
+			ambient_energy = 0.18
+			key_color = Color("aec8c7")
+			key_energy = 0.94
+			warm_color = Color("93614c")
+			warm_energy = 0.38
+			arcane_color = Color("5ba6a4")
+			arcane_energy = 1.00
 			saturation = 0.80
 			atmosphere_rim_color = Color("76b8b5")
-			atmosphere_fill_color = Color("a6bdb3")
+			atmosphere_fill_color = Color("adc5ba")
 			atmosphere_player_rim_base = 0.45
-			atmosphere_player_fill_base = 0.16
+			atmosphere_player_fill_base = 0.21
 		"iron_bastion":
-			background = Color("060302")
-			ambient = Color("44352e")
-			ambient_energy = 0.14
-			key_color = Color("ccb09a")
-			key_energy = 0.98
-			warm_color = Color("ed763d")
-			warm_energy = 1.62
+			background = Color("070302")
+			ambient = Color("534036")
+			ambient_energy = 0.23
+			key_color = Color("d3b49d")
+			key_energy = 1.04
+			warm_color = Color("e6743c")
+			warm_energy = 1.48
 			arcane_color = Color("806b70")
-			arcane_energy = 0.22
+			arcane_energy = 0.20
 			saturation = 0.84
 			atmosphere_rim_color = Color("ba8058")
-			atmosphere_fill_color = Color("dfaa73")
-			atmosphere_player_rim_base = 0.46
-			atmosphere_player_fill_base = 0.18
+			atmosphere_fill_color = Color("e0ad7a")
+			atmosphere_player_rim_base = 0.48
+			atmosphere_player_fill_base = 0.25
 		"rift_descent":
 			background = Color("030106")
-			ambient = Color("30213e")
-			ambient_energy = 0.13
-			key_color = Color("aa9ac1")
-			key_energy = 0.84
-			warm_color = Color("80545a")
-			warm_energy = 0.18
-			arcane_color = Color("8150b6")
-			arcane_energy = 1.34
+			ambient = Color("362747")
+			ambient_energy = 0.17
+			key_color = Color("afa0c6")
+			key_energy = 0.88
+			warm_color = Color("795056")
+			warm_energy = 0.16
+			arcane_color = Color("7d4eae")
+			arcane_energy = 1.20
 			saturation = 0.86
-			atmosphere_rim_color = Color("9d69c4")
-			atmosphere_fill_color = Color("688da0")
-			atmosphere_player_rim_base = 0.48
-			atmosphere_player_fill_base = 0.14
+			atmosphere_rim_color = Color("9968bd")
+			atmosphere_fill_color = Color("7293a4")
+			atmosphere_player_rim_base = 0.46
+			atmosphere_player_fill_base = 0.20
 		"starless_spire":
 			background = Color("010207")
-			ambient = Color("20283a")
-			ambient_energy = 0.11
-			key_color = Color("879cc3")
-			key_energy = 0.76
-			warm_color = Color("66525a")
-			warm_energy = 0.10
-			arcane_color = Color("5b72aa")
-			arcane_energy = 0.86
+			ambient = Color("293348")
+			ambient_energy = 0.16
+			key_color = Color("8ea4ca")
+			key_energy = 0.82
+			warm_color = Color("625058")
+			warm_energy = 0.08
+			arcane_color = Color("5d73a8")
+			arcane_energy = 0.82
 			saturation = 0.76
 			atmosphere_rim_color = Color("7189bb")
-			atmosphere_fill_color = Color("aab6cd")
+			atmosphere_fill_color = Color("b0bdd3")
 			atmosphere_player_rim_base = 0.42
-			atmosphere_player_fill_base = 0.13
+			atmosphere_player_fill_base = 0.18
 		_:
 			pass
 
@@ -193,8 +195,8 @@ func _apply_v160_atmosphere_grade(floor_no: int) -> void:
 	env.ambient_light_color = ambient
 	env.ambient_light_energy = ambient_energy
 	env.adjustment_enabled = true
-	env.adjustment_brightness = 0.96
-	env.adjustment_contrast = 1.18
+	env.adjustment_brightness = 0.99
+	env.adjustment_contrast = 1.13
 	env.adjustment_saturation = saturation
 
 	atmosphere_key.light_color = key_color
