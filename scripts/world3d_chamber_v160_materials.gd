@@ -10,12 +10,20 @@ const SURFACE_DEPTH_SHADER: Shader = preload("res://assets/shaders/v160_surface_
 
 var material_depth_instances := 0
 var material_depth_target := 0
+var legacy_focal_meshes_hidden := 0
 var surface_materials: Dictionary = {}
+
+var controlled_necro_focus_mat: StandardMaterial3D
+var controlled_forge_core_mat: StandardMaterial3D
+var controlled_rift_core_mat: StandardMaterial3D
+var controlled_star_core_mat: StandardMaterial3D
 
 func _ready() -> void:
 	super._ready()
 	_build_surface_material_library()
 	_apply_authored_surface_depth()
+	_build_controlled_focal_materials()
+	_tune_inherited_focal_blockouts()
 
 func production_material_depth_ready() -> bool:
 	return production_focal_ready() \
@@ -31,6 +39,7 @@ func debug_snapshot() -> Dictionary:
 	data["production_material_depth_instances"] = material_depth_instances
 	data["production_material_depth_target"] = material_depth_target
 	data["production_material_depth_classes"] = surface_materials.keys()
+	data["legacy_focal_meshes_hidden"] = legacy_focal_meshes_hidden
 	return data
 
 func _build_surface_material_library() -> void:
@@ -57,6 +66,12 @@ func _build_surface_material_library() -> void:
 	surface_materials["obsidian"] = _make_surface_material(
 		Color("101724"), Color("49658f"), 0.46, 0.47, 0.44, 0.28, 0.028, 0.012
 	)
+
+func _build_controlled_focal_materials() -> void:
+	controlled_necro_focus_mat = _emissive_material(Color("8b60bc"), 0.36)
+	controlled_forge_core_mat = _emissive_material(Color("d27832"), 0.46)
+	controlled_rift_core_mat = _emissive_material(Color("8652b9"), 0.32)
+	controlled_star_core_mat = _emissive_material(Color("7392c6"), 0.30)
 
 func _make_surface_material(
 	base_color: Color,
@@ -123,3 +138,50 @@ func _surface_material_for_instance(instance: MeshInstance3D) -> Material:
 	if path.ends_with("spire_column.obj") or path.ends_with("starwell_dais.obj") or node_name == "StarwellDaisV160":
 		return surface_materials["obsidian"] as Material
 	return null
+
+func _tune_inherited_focal_blockouts() -> void:
+	legacy_focal_meshes_hidden = 0
+
+	# Ossuary: retain the animated necromantic focus but let the authored
+	# reliquary altar own all visible structure.
+	var bone_altar := ossuary_root.get_node_or_null("BoneAltar") as Node3D if ossuary_root != null else null
+	legacy_focal_meshes_hidden += _hide_direct_meshes_except(bone_altar, ["NecroFocus"])
+	if bone_altar != null:
+		var necro_focus := bone_altar.get_node_or_null("NecroFocus") as MeshInstance3D
+		if necro_focus != null:
+			necro_focus.material_override = controlled_necro_focus_mat
+
+	# Iron Bastion: remove the old box-built furnace body/mouth/stacks while
+	# preserving the pulsing ForgeCore inside the authored forge engine.
+	var forge_heart := iron_bastion_root.get_node_or_null("ForgeHeart") as Node3D if iron_bastion_root != null else null
+	legacy_focal_meshes_hidden += _hide_direct_meshes_except(forge_heart, ["ForgeCore"])
+	if iron_forge_core != null:
+		iron_forge_core.material_override = controlled_forge_core_mat
+
+	# Rift: keep the animated core only; the authored anchor gate now owns the
+	# complete frame/silhouette.
+	var old_rift_anchor := rift_root.get_node_or_null("RiftAnchor") as Node3D if rift_root != null else null
+	legacy_focal_meshes_hidden += _hide_direct_meshes_except(old_rift_anchor, ["RiftCore"])
+	if rift_core != null:
+		rift_core.material_override = controlled_rift_core_mat
+
+	# Starless: keep StarCore and the v1.60 true torus rings. The imported dais
+	# replaces the old primitive WellBase/WellRim and any leftover disc meshes.
+	var starwell := starless_root.get_node_or_null("Starwell") as Node3D if starless_root != null else null
+	legacy_focal_meshes_hidden += _hide_direct_meshes_except(starwell, ["StarCore"])
+	if starless_core != null:
+		starless_core.material_override = controlled_star_core_mat
+
+func _hide_direct_meshes_except(root_node: Node3D, keep_names: Array) -> int:
+	if root_node == null:
+		return 0
+	var hidden := 0
+	for child_value in root_node.get_children():
+		var mesh_instance := child_value as MeshInstance3D
+		if mesh_instance == null:
+			continue
+		if keep_names.has(String(mesh_instance.name)):
+			continue
+		mesh_instance.visible = false
+		hidden += 1
+	return hidden
