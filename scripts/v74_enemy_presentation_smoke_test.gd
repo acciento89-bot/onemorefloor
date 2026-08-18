@@ -2,6 +2,7 @@ extends SceneTree
 
 const WorldV160Actors = preload("res://scripts/world3d_chamber_v160_actors.gd")
 const ENEMY_KINDS := ["goblin", "bat", "skeleton", "ghoul", "necromancer", "warden"]
+const ENEMY_QUALITY_ROOT := "res://assets/models/enemies/v160/"
 
 func _init() -> void:
 	call_deferred("_run")
@@ -19,6 +20,9 @@ func _run() -> void:
 	if not world.actor_factory.has_method("v160_enemy_presentation_ready"):
 		_fail("v1.60 enemy presentation API missing")
 		return
+	if not world.actor_factory.has_method("character_quality_enemy_ready"):
+		_fail("v1.60 character-quality enemy API missing")
+		return
 	if world.enemy_pool.size() < ENEMY_KINDS.size():
 		_fail("enemy pool is too small for six-archetype gate")
 		return
@@ -34,6 +38,9 @@ func _run() -> void:
 		if not bool(world.actor_factory.call("v160_enemy_presentation_ready", enemy)):
 			_fail("v1.60 enemy presentation not ready for %s" % kind)
 			return
+		if not bool(world.actor_factory.call("character_quality_enemy_ready", enemy)):
+			_fail("v1.60 authored character-quality body not ready for %s" % kind)
+			return
 		var snapshot: Dictionary = world.actor_factory.call("v160_enemy_presentation_snapshot", enemy)
 		if String(snapshot.get("kind", "")) != kind or int(snapshot.get("mesh_count", 0)) < 7:
 			_fail("enemy snapshot incomplete for %s: %s" % [kind, JSON.stringify(snapshot)])
@@ -45,6 +52,17 @@ func _run() -> void:
 			return
 		if legacy == null or legacy.visible:
 			_fail("legacy v1.53 enemy surface is still visible for %s" % kind)
+			return
+		var authored := layer.get_node_or_null("AuthoredBodyV160") as MeshInstance3D
+		var expected_path := ENEMY_QUALITY_ROOT + kind + "_body.obj"
+		if authored == null or not authored.visible or authored.mesh == null:
+			_fail("authored OBJ body missing for %s" % kind)
+			return
+		if String(authored.mesh.resource_path) != expected_path:
+			_fail("%s uses wrong authored body: %s" % [kind, authored.mesh.resource_path])
+			return
+		if not (authored.material_override is ShaderMaterial):
+			_fail("%s authored body is missing character surface-depth material" % kind)
 			return
 		if not bool(world.actor_factory.call("visual_presentation_ready", enemy)):
 			_fail("v1.53 presentation contract regressed for %s" % kind)
@@ -61,6 +79,9 @@ func _run() -> void:
 	if not bool(world.actor_factory.call("v160_enemy_presentation_ready", recycle)):
 		_fail("enemy layer did not survive shell reuse")
 		return
+	if not bool(world.actor_factory.call("character_quality_enemy_ready", recycle)):
+		_fail("authored enemy body did not survive shell reuse")
+		return
 	var recycled_layer := recycle.get_node_or_null("Motion/Visual/EnemyPresentationV160") as Node3D
 	if recycled_layer == null or String(recycled_layer.get_meta("kind", "")) != "warden":
 		_fail("enemy shell reuse retained stale archetype")
@@ -69,6 +90,10 @@ func _run() -> void:
 	var final_snapshot: Dictionary = world.debug_snapshot()
 	if not bool(final_snapshot.get("production_actor_presentation_ready", false)):
 		_fail("Wanderer regression under enemy presentation layer")
+		return
+	var quality: Dictionary = final_snapshot.get("character_quality_v160", {})
+	if not bool(quality.get("ready", false)) or int(quality.get("enemy_asset_count", 0)) != ENEMY_KINDS.size():
+		_fail("character-quality pipeline snapshot incomplete: %s" % JSON.stringify(quality))
 		return
 	if not bool(final_snapshot.get("production_material_depth_ready", false)):
 		_fail("material-depth regression under enemy presentation layer")
