@@ -1,0 +1,84 @@
+name: v1.56 Full 3D Presentation Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/main_v70.gd'
+      - 'scripts/menu3d_stage_v156.gd'
+      - 'scripts/v70_full_3d_presentation_smoke_test.gd'
+      - 'assets/models/actors/wanderer.gltf'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v70-full-3d-presentation-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/main_v70.gd'
+      - 'scripts/menu3d_stage_v156.gd'
+      - 'scripts/v70_full_3d_presentation_smoke_test.gd'
+      - 'assets/models/actors/wanderer.gltf'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v70-full-3d-presentation-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-full-3d-presentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Import and parse v1.56
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee parse.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|glTF:.*ERROR" parse.log; then
+            echo "Godot reported v1.56 import/parse errors"
+            exit 1
+          fi
+
+      - name: Validate full 3D menu presentation
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v70_full_3d_presentation_smoke_test.gd --quit-after 120 2>&1 | tee v70-presentation.log
+          grep -q "v1.56 full 3D presentation smoke test passed" v70-presentation.log
+
+      - name: Re-run v1.55 Wanderer production regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v69_wanderer_production_smoke_test.gd --quit-after 120 2>&1 | tee v69-wanderer.log
+          grep -q "v1.55 production Wanderer model takeover smoke test passed" v69-wanderer.log
+
+      - name: Re-run v1.52.1 input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 120 2>&1 | tee v66-input-flow.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" v66-input-flow.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v70-full-3d-presentation-failure-logs
+          path: |
+            parse.log
+            v70-presentation.log
+            v69-wanderer.log
+            v66-input-flow.log
+          if-no-files-found: ignore
