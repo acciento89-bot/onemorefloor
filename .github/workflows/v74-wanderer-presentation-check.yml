@@ -6,8 +6,11 @@ on:
       - main
       - agent/**
     paths:
+      - 'assets/models/actors/v160/**'
       - 'assets/shaders/v160_surface_depth.gdshader'
       - 'scripts/world3d_actor_factory_v160.gd'
+      - 'scripts/world3d_actor_factory_v160_polish.gd'
+      - 'scripts/world3d_actor_factory_v160_authored.gd'
       - 'scripts/world3d_chamber_v160_actors.gd'
       - 'scripts/world3d_chamber_v160_materials.gd'
       - 'scripts/main_v74.gd'
@@ -16,8 +19,11 @@ on:
       - '.github/workflows/v74-wanderer-presentation-check.yml'
   pull_request:
     paths:
+      - 'assets/models/actors/v160/**'
       - 'assets/shaders/v160_surface_depth.gdshader'
       - 'scripts/world3d_actor_factory_v160.gd'
+      - 'scripts/world3d_actor_factory_v160_polish.gd'
+      - 'scripts/world3d_actor_factory_v160_authored.gd'
       - 'scripts/world3d_chamber_v160_actors.gd'
       - 'scripts/world3d_chamber_v160_materials.gd'
       - 'scripts/main_v74.gd'
@@ -50,7 +56,7 @@ jobs:
         run: |
           set -o pipefail
           ./godot --headless --editor --path . --quit 2>&1 | tee wanderer-import.log
-          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" wanderer-import.log; then
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|OBJ:.*ERROR|Failed to load script|Failed loading resource" wanderer-import.log; then
             echo "Godot reported v1.60 Wanderer compile/import errors"
             exit 1
           fi
