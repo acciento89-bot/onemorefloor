@@ -8,9 +8,9 @@ Canonical handoff for continued development. Read this file before changing art 
 - Pull request: #82 — `v1.60 authored environment milestone`
 - Branch: `agent/v1.60-meta-environments`
 - Base: `main`
-- Last validated actor implementation before this state update: `4eed3856434c71c3f3f4b430b69cce866679e121`.
+- Last fully validated and visually accepted actor implementation: `cb47de3d52e29b8b8a4250e8b5f64b15e8e387b9` (Enemy Surface r5.1 on top of r4/r3/r2 + Wanderer r8.1/Hood r9).
 - Wanderer animation/core safe point: `00a78086d47b06093c1c7554c2713067f3def132` (r8.1).
-- Current actor stack: Wanderer r8.1 + temporary Hood r9 + Enemy r2 Goblin/Ghoul/Warden + Enemy r3 Bat/Necromancer + accepted Enemy Surface/Detail r4. Skeleton remains intentionally unchanged.
+- Current actor stack: Wanderer r8.1 + temporary Hood r9 + Enemy r2 Goblin/Ghoul/Warden + Enemy r3 Bat/Necromancer + Enemy Detail r4 + accepted Character Surface r5.1. Skeleton remains intentionally unchanged by r4 detail and receives zero extra r5.1 breakup.
 - PR stays DRAFT.
 - No TestFlight trigger, App Store build-number bump or version jump until a visibly meaningful bundled milestone is approved.
 
@@ -80,7 +80,7 @@ Candidate bundle: `4001178b8e7069f072ebe6a255ee8856490377f6`.
 
 - New layered cloth/cowl OBJ compiled and passed Production Wanderer, main integration, v1.55 and v1.52.1 gates.
 - Manual close-up review rejected it: side drape/cowl forms read like two horn-like points around the head.
-- r10 is NOT canonical. The corrective commit restored r9 while preserving r8.1 and the accepted enemy work.
+- r10 is NOT canonical. Corrective work restored r9 while preserving r8.1 and the accepted enemy work.
 - Hood r11 must use a smoother cloth-volume strategy rather than pointy side pieces or a box crown.
 
 ## Enemies
@@ -103,7 +103,6 @@ Bundle: `6ed71e52d4c7aea2db8283d55ad0439696027de3`.
   - Goblin has readable arms/hands/legs and a less spherical silhouette.
   - Ghoul has one coherent hunched body line with low hands and crouched legs.
   - Warden has longer human proportions and slimmer armored body mass.
-- These remain anatomy baselines, not final surface/detail art.
 
 ### Enemy r3 — accepted Bat + Necromancer anatomy baseline
 
@@ -111,47 +110,57 @@ Validation bundle: `4001178b8e7069f072ebe6a255ee8856490377f6`.
 
 - Production Enemy Silhouette workflow passed completely: compile/import, all six silhouettes, main integration, gallery/close-ups, v1.53, v1.55 and v1.52.1 regressions.
 - Manual gallery review accepted the new anatomy/silhouette direction.
-
-Bat r3:
-- smaller head/torso, ears, feet/tail
-- articulated-looking shoulder -> elbow -> wrist -> tip wing bones
-- three angled membrane sections per wing
-- removes the previous flat board-wing read
-
-Necromancer r3:
-- tapered multi-stage robe
-- split front panels, mantle/collar and faceted hood
-- angled two-part sleeves instead of hanging arm rods
-- face/staff/crown/rune remain restrained accents
-- removes most of the former single-block robe silhouette
+- Bat: smaller body plus articulated-looking wing structure and angled membrane sections; removes board-wing read.
+- Necromancer: tapered multi-stage robe, split front panels, mantle/collar, faceted hood and angled sleeves; removes most of the robe-block/arm-stick read.
 
 ### Enemy Surface/Detail r4 — accepted production-detail baseline
 
-Implementation commit: `4eed3856434c71c3f3f4b430b69cce866679e121`.
+Implementation: `4eed3856434c71c3f3f4b430b69cce866679e121`.
 
-r4 does NOT replace or rescale the accepted r2/r3 anatomy. It adds a new thin secondary detail layer using the existing production material classes. The rejected r1 chunky overlay strategy is not restored.
+r4 keeps r2/r3 anatomy fixed and adds only thin secondary production details using existing material classes:
+- Goblin: crossed leather harness, narrow belt, restrained scrap bracer.
+- Bat: thin leading/finger wing bones over r3 membranes.
+- Ghoul: shallow dark rib planes and short bone/clavicle accents.
+- Necromancer: dark mantle edge, robe seams, waist band and restrained clasp.
+- Warden: thin chest plate, waist line, knee caps and shoulder trim.
+- Skeleton intentionally receives NO r4 detail layer.
 
-Accepted visual changes after manual gallery/close-up inspection:
-- Goblin: crossed leather harness, narrow belt and restrained scrap bracer create clear body/clothing separation.
-- Bat: thin leading/finger wing bones now read over the r3 membrane geometry, improving structure without changing wing silhouette.
-- Ghoul: shallow dark rib planes and short bone/clavicle accents break the single flesh mass while preserving the r2 hunch.
-- Necromancer: dark mantle edge, long front robe seams, waist band and restrained clasp create layered cloth/material separation.
-- Warden: thin chest plate, waist line, knee caps and shoulder trim create a clearer metal hierarchy without replacing r2 anatomy.
-- Skeleton intentionally receives NO r4 detail layer and remains locked to the existing baseline.
+The enemy smoke gate explicitly requires r4 detail on Goblin/Bat/Ghoul/Necromancer/Warden and explicitly rejects it on Skeleton. Production Enemy workflow and regressions passed. Manual gallery review accepted r4 as a meaningful material/depth improvement.
 
-Technical contract:
-- `v74_enemy_presentation_smoke_test.gd` now explicitly requires the r4 detail layer on Goblin/Bat/Ghoul/Necromancer/Warden and explicitly rejects it on Skeleton.
-- The production enemy workflow passed compile/import, all six silhouettes, main integration, gallery/close-ups, v1.53, v1.55 and v1.52.1 regressions.
-- Manual image review accepted r4 as a meaningful surface/detail improvement.
+### Character Surface r5 — technically valid, visually rejected
 
-r4 is an accepted surface/detail BASELINE, not final production art. The enemies still carry a visible low-poly/faceted read at close range and need later material/surface sophistication without resetting anatomy.
+Implementation: `4f7d9c0a6f90ca2e43eed0f8c07f034fdbf76068`.
+Workflow run: `32185144135`.
+
+- Introduced `v160_character_surface_r5.gdshader`, used only by the six authored enemy body-core materials; Environment and Wanderer shaders remained untouched.
+- Shader adds cheap object-space tonal and roughness variation without textures, screen-space effects or extra passes.
+- Full production workflow was technically green: shader compile, all six silhouettes, main integration, gallery/close-ups, v1.53, v1.55 and v1.52.1.
+- Manual image review rejected the initial strength: Goblin/Ghoul/Warden showed recognizable blotchy/camouflage-like patches rather than natural material variation.
+- Do NOT restore initial r5 strengths merely because its CI was green.
+
+### Character Surface r5.1 — accepted surface baseline
+
+Implementation/head: `cb47de3d52e29b8b8a4250e8b5f64b15e8e387b9`.
+
+- Keeps the character-only mobile shader architecture from r5 but greatly reduces visible color modulation.
+- Most of the remaining effect is subtle roughness/tonal variation rather than visible colored patches.
+- Environment shader and Wanderer shader remain untouched.
+- Skeleton uses the compatible character shader with zero additional r5.1 color/roughness breakup, preserving its locked appearance.
+- Full current-head validation is green, including Production Enemy, Production Wanderer, Godot, iOS playtest, v1.55, v1.54, v1.53, v1.52.1, Material Depth and authored environment checks.
+- Manual side-by-side review against accepted r4 confirms the r5 camouflage/blotch problem is gone:
+  - Goblin/Ghoul/Warden retain r4 material separation without recognizable patch patterns.
+  - Necromancer remains dark and cloth-like rather than visibly patterned.
+  - Bat remains clean/readable.
+  - Skeleton is visually effectively unchanged.
+- r5.1 is accepted as the current enemy BODY-SURFACE baseline. It is deliberately subtle; future surface work must not turn the procedural signal back into a visible pattern.
 
 ## Required regression gates
 
 Before release/upload decisions preserve and rerun relevant checks, especially:
 - v1.60 Production Wanderer + runtime/close-up captures
 - v1.60 Production Enemy Silhouette + gallery/close-ups
-- r4 enemy detail-layer contract (five detailed archetypes, Skeleton unchanged)
+- r4 enemy detail contract: five detailed archetypes, Skeleton unchanged
+- r5.1 body-surface contract: character-only shader; no extra Skeleton breakup; no environment shader replacement
 - v1.55 Wanderer production regression
 - v1.54 real-model intake regression
 - v1.53 visual presentation regression
@@ -162,11 +171,11 @@ Before release/upload decisions preserve and rerun relevant checks, especially:
 
 ## Current next priorities
 
-1. Preserve Enemy r2/r3 anatomy + r4 detail baseline; do not reset silhouettes again.
-2. Next enemy polish should target material/surface sophistication and controlled close-range faceting, not additional bulky overlay geometry.
-3. Keep r8.1 + temporary Hood r9 stable while enemy surface work proceeds.
-4. Hood r11 remains a focused later task and must use smoother cloth volume while avoiding both r9 boxiness and r10 horn-like points.
-5. After another visible surface-quality pass, evaluate whether the character milestone is large enough to justify a TestFlight build; do not upload micro-passes.
+1. Preserve Enemy r2/r3 anatomy + r4 detail + r5.1 subtle body-surface baseline. Do not reset enemy silhouettes again.
+2. Return to the remaining Wanderer visual blocker: Hood r11.
+3. Hood r11 must use smoother rounded cloth volume with a controlled front opening/cowl, avoiding r9 boxiness and r10 horn-like side points.
+4. Keep r8.1 ArcaneCore animation fix and all existing pivots/animation authority untouched.
+5. After Hood r11 is visually accepted, reassess the bundled character milestone as a whole before deciding whether it is finally large enough for a TestFlight build. Do not upload a hood micro-pass by itself.
 
 ## Release policy
 
