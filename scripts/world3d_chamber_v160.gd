@@ -185,7 +185,7 @@ func _tune_ossuary_presentation() -> void:
 	# v1.43 used filled CylinderMesh discs as floor sigils. Preserve the legacy
 	# nodes for compatibility, but render true torus ritual rings in v1.60.
 	for child in ossuary_root.get_children():
-		if child is MeshInstance3D and String(child.name) == "OssuarySigil":
+		if child is MeshInstance3D and String(child.name).begins_with("OssuarySigil"):
 			(child as MeshInstance3D).visible = false
 	var ritual_root := Node3D.new()
 	ritual_root.name = "V160OssuaryRitualRings"
@@ -213,9 +213,9 @@ func _tune_starless_presentation() -> void:
 
 	var starwell := starless_root.get_node_or_null("Starwell") as Node3D
 	if starwell != null:
-		# Hide the old filled cylinders that visually merged into a white egg.
+		# Hide every auto-renamed legacy filled cylinder before adding real rings.
 		for child in starwell.get_children():
-			if child is MeshInstance3D and String(child.name) == "CelestialRing":
+			if child is MeshInstance3D and String(child.name).begins_with("CelestialRing"):
 				(child as MeshInstance3D).visible = false
 		var celestial_root := Node3D.new()
 		celestial_root.name = "V160CelestialRings"
