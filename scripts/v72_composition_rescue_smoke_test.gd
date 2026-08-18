@@ -79,7 +79,9 @@ func _run() -> void:
 	# v1.58 used procedural Forge nodes; v1.59 intentionally replaces those with
 	# imported authored meshes. Preserve the composition contract while accepting
 	# the new implementation instead of forcing deleted blockout node names back.
-	var forge_required: Array[String] = ["ForgeHearthAsset", "ForgeRackAsset", "ForgeAnvilAsset"] if authored_environment else ["ForgeHearth", "ForgeMouth", "ForgeRack", "ForgeAnvilTop"]
+	var forge_required := PackedStringArray(["ForgeHearth", "ForgeMouth", "ForgeRack", "ForgeAnvilTop"])
+	if authored_environment:
+		forge_required = PackedStringArray(["ForgeHearthAsset", "ForgeRackAsset", "ForgeAnvilAsset"])
 	for required in forge_required:
 		if stage.stage_root.get_node_or_null(required) == null:
 			_fail("Forge composition prop missing: %s" % required)
