@@ -26,12 +26,14 @@ func _run() -> void:
 	var player_pos := Vector2(360.0, 665.0)
 
 	world.sync_runtime(player_pos, enemies, [], [], [], Vector2.ZERO, 3.0, 1.0, 0.0, 1)
+	_clear_transition_for_capture(world)
 	for _i in range(2):
 		await process_frame
 	if not await _save_frame("attack_arc"):
 		return
 
 	world.sync_runtime(player_pos, enemies, [], [], [], Vector2.ZERO, 3.15, 0.0, 1.0, 1)
+	_clear_transition_for_capture(world)
 	for _i in range(2):
 		await process_frame
 	if not await _save_frame("skill_ring"):
@@ -42,13 +44,18 @@ func _run() -> void:
 	world.attack_amount = 0.0
 	world.skill_amount = 0.0
 	world.sync_runtime(player_pos, enemies, [], [], [], Vector2.ZERO, 3.30, 0.0, 0.0, 1)
+	_clear_transition_for_capture(world)
 	await process_frame
 	if not await _save_frame("enemy_tells"):
 		return
 
-	# Closer validation view for the player arc/skill geometry. This changes only
-	# the test camera, never the production camera anchors.
+	# Closer validation view for player-only arc/skill geometry. The preceding
+	# enemies are removed, so their death-signature pool is hidden only for this
+	# diagnostic frame. Production timing/state is never changed by the gate.
 	world.sync_runtime(Vector2(360.0, 600.0), [], [], [], [], Vector2.ZERO, 4.0, 1.0, 1.0, 1)
+	_clear_transition_for_capture(world)
+	_hide_signature_pool_for_capture(world.spawn_signature_pool)
+	_hide_signature_pool_for_capture(world.death_signature_pool)
 	world.camera.position = Vector3(0.0, 5.6, 5.9)
 	world.camera.size = 6.2
 	world.camera.look_at(Vector3(0.0, 0.55, 0.0), Vector3.UP)
@@ -60,6 +67,19 @@ func _run() -> void:
 	world.queue_free()
 	await process_frame
 	quit(0)
+
+func _clear_transition_for_capture(world) -> void:
+	# The realm-transition disc is an intentional presentation surface, not a
+	# combat telegraph. Hide it only in this diagnostic so the VFX are readable.
+	world.transition_timer = 0.0
+	if world.transition_root != null:
+		world.transition_root.visible = false
+
+func _hide_signature_pool_for_capture(pool: Array) -> void:
+	for value in pool:
+		var item := value as Node3D
+		if item != null:
+			item.visible = false
 
 func _save_frame(stem: String) -> bool:
 	await RenderingServer.frame_post_draw

@@ -1,12 +1,12 @@
 extends "res://scripts/world3d_chamber_v160_actors.gd"
 
 # ONE MORE FLOOR v1.60 — production combat VFX geometry pass.
-# Keeps every v1.41/v1.48 gameplay timing and state trigger authoritative while
-# replacing filled disc "rings" with true torus geometry and adding a directed
-# melee slash/skill accent. Mobile GL Compatibility remains the target.
+# Keeps every v1.41-v1.52 gameplay timing and state trigger authoritative while
+# replacing legacy filled-disc combat rings with true torus geometry and adding
+# a directed melee slash/skill accent. Mobile GL Compatibility remains target.
 
 const COMBAT_VFX_VERSION := "1.60-production-combat-vfx"
-const STATIC_TRUE_RING_TARGET := 113
+const STATIC_TRUE_RING_TARGET := 229
 
 var v160_true_rings_replaced := 0
 var v160_attack_arc: MeshInstance3D
@@ -70,6 +70,31 @@ func _build_v160_combat_materials() -> void:
 func _upgrade_v160_legacy_combat_rings() -> void:
 	v160_true_rings_replaced = 0
 
+	# v1.46 production vertical slice: combat tells, death/loot feedback, boss
+	# framing and Wanderer attack/skill pulses. Realm transition discs are kept as
+	# intentional full-screen transition surfaces and are not counted here.
+	for tell_value in telegraph_pool:
+		_replace_with_true_ring(tell_value as MeshInstance3D, 0.56, 0.70)
+	for burst_value in death_burst_pool:
+		var burst := burst_value as Node3D
+		if burst != null:
+			_replace_with_true_ring(burst.get_node_or_null("Ring") as MeshInstance3D, 0.47, 0.58)
+	for marker_value in loot_marker_pool:
+		var marker := marker_value as Node3D
+		if marker != null:
+			_replace_with_true_ring(marker.get_node_or_null("FloorGlow") as MeshInstance3D, 0.22, 0.28)
+	_replace_with_true_ring(boss_halo, 0.90, 1.08)
+	_replace_with_true_ring(attack_ring, 0.58, 0.72)
+	_replace_with_true_ring(skill_ring_outer, 1.03, 1.22)
+	_replace_with_true_ring(skill_ring_inner, 0.47, 0.58)
+	if attack_ring != null:
+		attack_ring.material_override = v160_attack_material
+	if skill_ring_outer != null:
+		skill_ring_outer.material_override = v160_skill_material
+	if skill_ring_inner != null:
+		skill_ring_inner.material_override = v160_skill_material
+
+	# v1.48 character combat VFX.
 	if player_chest_sigil != null:
 		_replace_with_true_ring(player_chest_sigil, 0.50, 0.62)
 		player_chest_sigil.material_override = v160_skill_material
@@ -96,10 +121,43 @@ func _upgrade_v160_legacy_combat_rings() -> void:
 			if ring != null:
 				_replace_with_true_ring(ring, 0.42, 0.52)
 
+	# v1.41 projectile impact pool inherited through the stack.
 	for impact_value in impact_pool:
 		var impact := impact_value as MeshInstance3D
 		if impact != null:
 			_replace_with_true_ring(impact, 0.15, 0.22)
+
+	# v1.49 production lookdev: grounding, motion echoes and boss dominance.
+	for grounding_value in enemy_grounding_pool:
+		_replace_with_true_ring(grounding_value as MeshInstance3D, 0.39, 0.48)
+	for echo_value in move_echo_pool:
+		var echo := echo_value as Node3D
+		if echo != null:
+			_replace_with_true_ring(echo.get_node_or_null("Ring") as MeshInstance3D, 0.27, 0.34)
+	_replace_with_true_ring(boss_dominance_ring_outer, 1.08, 1.28)
+	_replace_with_true_ring(boss_dominance_ring_inner, 0.69, 0.82)
+
+	# v1.50 locomotion/contact authority feedback.
+	for authority_value in authority_impact_pool:
+		var authority_root := authority_value as Node3D
+		if authority_root != null:
+			_replace_with_true_ring(authority_root.get_node_or_null("Ring") as MeshInstance3D, 0.18, 0.24)
+
+	# v1.51 projectile/contact authority feedback.
+	for combat_value in combat_authority_impact_pool:
+		var combat_root := combat_value as Node3D
+		if combat_root != null:
+			_replace_with_true_ring(combat_root.get_node_or_null("ImpactRing") as MeshInstance3D, 0.16, 0.22)
+
+	# v1.52 target/NOVA/Warden geometry feedback.
+	for lock_value in target_lock_pool:
+		var lock_root := lock_value as Node3D
+		if lock_root != null:
+			_replace_with_true_ring(lock_root.get_node_or_null("LockRing") as MeshInstance3D, 0.27, 0.34)
+	if nova_volume_visual != null:
+		_replace_with_true_ring(nova_volume_visual.get_node_or_null("NovaBoundary") as MeshInstance3D, 0.86, 1.00)
+	if warden_ring_visual != null:
+		_replace_with_true_ring(warden_ring_visual.get_node_or_null("ThreatRing") as MeshInstance3D, 0.86, 1.00)
 
 func _build_v160_player_combat_accents() -> void:
 	if player_root == null:
