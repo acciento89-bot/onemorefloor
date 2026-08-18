@@ -29,11 +29,15 @@ var tower_iron_mat: StandardMaterial3D
 var tower_rift_mat: StandardMaterial3D
 var tower_spire_mat: StandardMaterial3D
 var tower_brass_mat: StandardMaterial3D
+var v160_star_core_material: StandardMaterial3D
+var v160_star_ring_blue: StandardMaterial3D
+var v160_star_ring_gold: StandardMaterial3D
 
 func _ready() -> void:
 	super._ready()
 	_build_authored_tower_materials()
 	_build_authored_tower_environment()
+	_tune_inherited_realm_presentation()
 
 func authored_tower_environment_ready() -> bool:
 	if not real_model_intake_ready() or authored_tower_root == null:
@@ -54,19 +58,32 @@ func debug_snapshot() -> Dictionary:
 	data["authored_tower_realm"] = authored_realm
 	data["authored_tower_asset_instances"] = tower_asset_instances
 	data["authored_tower_asset_paths"] = tower_asset_paths.duplicate()
+	data["v160_starless_lookdev"] = v160_star_core_material != null
 	return data
 
 func _apply_floor_identity(floor_no: int) -> void:
 	super._apply_floor_identity(floor_no)
 	_sync_authored_realm(floor_no)
 
+func _animate_starless_spire(delta: float) -> void:
+	super._animate_starless_spire(delta)
+	# The inherited v1.45 StarCore was intentionally spectacular at the time,
+	# but in portrait it clips into a huge white blob. v1.60 keeps the motion
+	# while reducing the silhouette to a readable focal jewel.
+	if starless_core != null:
+		var pulse := 0.60 + sin(runtime_elapsed * 3.2) * 0.035
+		starless_core.scale = Vector3.ONE * pulse
+
 func _build_authored_tower_materials() -> void:
-	tower_lower_mat = _material(Color("34384a"), 0.18, 0.66)
-	tower_bone_mat = _material(Color("b9b29d"), 0.04, 0.84)
-	tower_iron_mat = _material(Color("3c414c"), 0.72, 0.32)
-	tower_rift_mat = _emissive_material(Color("8d4bd6"), 1.25)
-	tower_spire_mat = _material(Color("252a38"), 0.34, 0.54)
-	tower_brass_mat = _material(Color("9d6b2f"), 0.68, 0.30)
+	tower_lower_mat = _material(Color("2a3040"), 0.20, 0.72)
+	tower_bone_mat = _material(Color("746f63"), 0.03, 0.96)
+	tower_iron_mat = _material(Color("323741"), 0.76, 0.34)
+	tower_rift_mat = _emissive_material(Color("7740b8"), 0.92)
+	tower_spire_mat = _material(Color("1a2030"), 0.38, 0.64)
+	tower_brass_mat = _material(Color("82592a"), 0.70, 0.34)
+	v160_star_core_material = _emissive_material(Color("91a8dc"), 0.72)
+	v160_star_ring_blue = _emissive_material(Color("5f79c8"), 0.52)
+	v160_star_ring_gold = _emissive_material(Color("b99552"), 0.46)
 
 func _build_authored_tower_environment() -> void:
 	authored_tower_root = Node3D.new()
@@ -90,43 +107,84 @@ func _build_lower_authored(root_node: Node3D) -> void:
 	_place_tower_asset(root_node, "LowerArchAsset", "lower_arch", tower_lower_mat, Vector3(0.0, 0.02, -6.62), Vector3(0.86, 0.86, 0.86))
 	for side in [-1.0, 1.0]:
 		for z in [-4.6, -0.9, 2.8]:
-			_place_tower_asset(root_node, "LowerPillarAsset", "gothic_pillar", tower_lower_mat, Vector3(side * 4.48, 0.02, z), Vector3(0.62, 0.78, 0.62), Vector3(0.0, 0.0, 0.0))
+			_place_tower_asset(root_node, "LowerPillarAsset", "gothic_pillar", tower_lower_mat, Vector3(side * 4.48, 0.02, z), Vector3(0.62, 0.78, 0.62), Vector3.ZERO)
 		_place_tower_asset(root_node, "LowerBrazierAsset", "wall_brazier", tower_brass_mat, Vector3(side * 4.12, 1.88, -3.0), Vector3(0.52, 0.52, 0.52))
+	# Uneven foreground framing breaks the old rectangular prototype silhouette.
+	_place_tower_asset(root_node, "LowerForegroundPillarL", "gothic_pillar", tower_lower_mat, Vector3(-4.72, 0.02, 5.0), Vector3(0.70, 0.92, 0.70), Vector3(0.0, 0.08, 0.0))
+	_place_tower_asset(root_node, "LowerForegroundPillarR", "gothic_pillar", tower_lower_mat, Vector3(4.58, 0.02, 4.35), Vector3(0.58, 0.78, 0.58), Vector3(0.0, -0.06, 0.0))
 
 func _build_ossuary_authored(root_node: Node3D) -> void:
 	for side in [-1.0, 1.0]:
-		for z in [-4.8, -1.2, 2.6]:
-			var totem := _place_tower_asset(root_node, "OssuaryTotemAsset", "ossuary_totem", tower_bone_mat, Vector3(side * 4.28, 0.02, z), Vector3(0.58, 0.72, 0.58))
+		for index in range(3):
+			var z := -4.8 + float(index) * 3.7
+			var scale_y := 0.60 + float(index % 2) * 0.08
+			var totem := _place_tower_asset(root_node, "OssuaryTotemAsset", "ossuary_totem", tower_bone_mat, Vector3(side * (4.18 + 0.12 * float(index % 2)), 0.02, z), Vector3(0.50, scale_y, 0.50))
 			if totem != null:
-				totem.rotation.y = -side * 0.10
-	_place_tower_asset(root_node, "OssuaryRearTotemL", "ossuary_totem", tower_bone_mat, Vector3(-2.25, 0.02, -6.35), Vector3(0.72, 0.82, 0.72))
-	_place_tower_asset(root_node, "OssuaryRearTotemR", "ossuary_totem", tower_bone_mat, Vector3(2.25, 0.02, -6.35), Vector3(0.72, 0.82, 0.72))
+				totem.rotation.y = -side * (0.10 + float(index) * 0.025)
+	_place_tower_asset(root_node, "OssuaryRearTotemL", "ossuary_totem", tower_bone_mat, Vector3(-2.25, 0.02, -6.35), Vector3(0.60, 0.68, 0.60), Vector3(0.0, 0.12, 0.0))
+	_place_tower_asset(root_node, "OssuaryRearTotemR", "ossuary_totem", tower_bone_mat, Vector3(2.25, 0.02, -6.35), Vector3(0.56, 0.64, 0.56), Vector3(0.0, -0.10, 0.0))
 
 func _build_iron_authored(root_node: Node3D) -> void:
 	for side in [-1.0, 1.0]:
-		for z in [-4.7, -1.0, 2.7]:
-			_place_tower_asset(root_node, "IronButtressAsset", "iron_buttress", tower_iron_mat, Vector3(side * 4.35, 0.02, z), Vector3(0.62, 0.78, 0.62))
+		for index in range(3):
+			var z := -4.7 + float(index) * 3.7
+			var buttress := _place_tower_asset(root_node, "IronButtressAsset", "iron_buttress", tower_iron_mat, Vector3(side * 4.35, 0.02, z), Vector3(0.60, 0.72 + float(index % 2) * 0.06, 0.60))
+			if buttress != null:
+				buttress.rotation.y = side * 0.035 * float(index - 1)
 	_place_tower_asset(root_node, "IronRearButtressL", "iron_buttress", tower_iron_mat, Vector3(-2.35, 0.02, -6.42), Vector3(0.72, 0.84, 0.72))
 	_place_tower_asset(root_node, "IronRearButtressR", "iron_buttress", tower_iron_mat, Vector3(2.35, 0.02, -6.42), Vector3(0.72, 0.84, 0.72))
+	_place_tower_asset(root_node, "IronForwardButtress", "iron_buttress", tower_iron_mat, Vector3(3.75, 0.02, 4.65), Vector3(0.68, 0.82, 0.68), Vector3(0.0, -0.10, 0.0))
 
 func _build_rift_authored(root_node: Node3D) -> void:
 	for side in [-1.0, 1.0]:
 		for index in range(3):
 			var z := -4.5 + float(index) * 3.6
-			var crystal := _place_tower_asset(root_node, "RiftCrystalAsset", "rift_crystal", tower_rift_mat, Vector3(side * (4.0 + 0.18 * float(index % 2)), 0.04, z), Vector3(0.46, 0.58 + 0.05 * float(index), 0.46))
+			var crystal := _place_tower_asset(root_node, "RiftCrystalAsset", "rift_crystal", tower_rift_mat, Vector3(side * (4.0 + 0.18 * float(index % 2)), 0.04, z), Vector3(0.42, 0.52 + 0.05 * float(index), 0.42))
 			if crystal != null:
 				crystal.rotation.z = -side * (0.12 + float(index) * 0.025)
-	_place_tower_asset(root_node, "RiftRearCrystal", "rift_crystal", tower_rift_mat, Vector3(0.0, 0.04, -6.48), Vector3(0.72, 0.82, 0.72))
+	_place_tower_asset(root_node, "RiftRearCrystal", "rift_crystal", tower_rift_mat, Vector3(0.0, 0.04, -6.48), Vector3(0.56, 0.64, 0.56))
+	_place_tower_asset(root_node, "RiftForegroundCrystal", "rift_crystal", tower_rift_mat, Vector3(-3.62, 0.04, 4.72), Vector3(0.48, 0.70, 0.48), Vector3(0.0, 0.0, -0.16))
 
 func _build_spire_authored(root_node: Node3D) -> void:
 	for side in [-1.0, 1.0]:
 		for index in range(3):
 			var z := -4.7 + float(index) * 3.7
-			var column := _place_tower_asset(root_node, "SpireColumnAsset", "spire_column", tower_spire_mat, Vector3(side * 4.18, 0.02, z), Vector3(0.54, 0.72 + float(index) * 0.04, 0.54))
+			var column := _place_tower_asset(root_node, "SpireColumnAsset", "spire_column", tower_spire_mat, Vector3(side * 4.18, 0.02, z), Vector3(0.50, 0.64 + float(index) * 0.035, 0.50))
 			if column != null:
 				column.rotation.z = -side * 0.035
-	_place_tower_asset(root_node, "SpireRearColumnL", "spire_column", tower_spire_mat, Vector3(-2.15, 0.02, -6.48), Vector3(0.68, 0.82, 0.68))
-	_place_tower_asset(root_node, "SpireRearColumnR", "spire_column", tower_spire_mat, Vector3(2.15, 0.02, -6.48), Vector3(0.68, 0.82, 0.68))
+	_place_tower_asset(root_node, "SpireRearColumnL", "spire_column", tower_spire_mat, Vector3(-2.30, 0.02, -6.48), Vector3(0.58, 0.68, 0.58), Vector3(0.0, 0.10, 0.0))
+	_place_tower_asset(root_node, "SpireRearColumnR", "spire_column", tower_spire_mat, Vector3(2.30, 0.02, -6.48), Vector3(0.58, 0.68, 0.58), Vector3(0.0, -0.10, 0.0))
+	_place_tower_asset(root_node, "SpireForegroundColumn", "spire_column", tower_spire_mat, Vector3(3.78, 0.02, 4.62), Vector3(0.62, 0.78, 0.62), Vector3(0.0, -0.12, 0.0))
+
+func _tune_inherited_realm_presentation() -> void:
+	# Ossuary: preserve the cold/necro identity without clipping bone props to white.
+	if ossuary_sigil_material != null:
+		ossuary_sigil_material.emission = Color("754eb5")
+		ossuary_sigil_material.emission_energy_multiplier = 0.88
+	_set_realm_light_energy(ossuary_root, "OssuaryColdLight", 1.45)
+	_set_realm_light_energy(ossuary_root, "NecroAltarLight", 1.70)
+	_set_realm_light_energy(ossuary_root, "CryptFill", 0.72)
+
+	# Starless Spire: make the apex a jewel rather than a blown-out white mass.
+	if starless_core != null:
+		starless_core.material_override = v160_star_core_material
+	var starwell := starless_root.get_node_or_null("Starwell") as Node3D if starless_root != null else null
+	if starwell != null:
+		var ring_index := 0
+		for child in starwell.get_children():
+			if child is MeshInstance3D and String(child.name) == "CelestialRing":
+				(child as MeshInstance3D).material_override = v160_star_ring_gold if ring_index == 1 else v160_star_ring_blue
+				ring_index += 1
+	_set_realm_light_energy(starless_root, "StarlessKeyLight", 1.20)
+	_set_realm_light_energy(starless_root, "StarwellLight", 0.95)
+	_set_realm_light_energy(starless_root, "ApexGoldFill", 0.72)
+
+func _set_realm_light_energy(root_node: Node3D, node_name: String, energy: float) -> void:
+	if root_node == null:
+		return
+	var light := root_node.get_node_or_null(node_name) as Light3D
+	if light != null:
+		light.light_energy = energy
 
 func _sync_authored_realm(floor_no: int) -> void:
 	var key := "lower_halls"
