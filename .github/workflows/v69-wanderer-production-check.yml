@@ -24,7 +24,7 @@ on:
       - '.github/workflows/v69-wanderer-production-check.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate-wanderer-production:
@@ -33,28 +33,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-
-      - name: Materialize skeletal Wanderer
-        if: github.head_ref == 'agent/v1.55-wanderer-production-pilot' || github.ref_name == 'agent/v1.55-wanderer-production-pilot'
-        env:
-          WANDERER_ZLIB_B64: "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"
-        run: |
-          python - <<'PY'
-          import base64, os, pathlib, zlib
-          data = zlib.decompress(base64.b64decode(os.environ["WANDERER_ZLIB_B64"]))
-          path = pathlib.Path("assets/models/actors/wanderer.gltf")
-          path.write_bytes(data)
-          print(f"wrote {len(data)} bytes to {path}")
-          PY
-          if ! git diff --quiet -- assets/models/actors/wanderer.gltf; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add assets/models/actors/wanderer.gltf
-            git commit -m "feat: skin production Wanderer rig"
-            git push origin HEAD:agent/v1.55-wanderer-production-pilot
-          fi
 
       - name: Download Godot 4.7.1
         run: |
