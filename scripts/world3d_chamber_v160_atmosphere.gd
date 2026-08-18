@@ -106,20 +106,26 @@ func _configure_v160_atmosphere_structure() -> void:
 
 func _retire_v160_legacy_floor_signals() -> void:
 	# Lower Halls and Ossuary still inherit the bright v1.41/v1.43 decorative
-	# lane sigils. In the authored v1.60 floor composition those permanent rings
-	# compete with real telegraphs, impacts and spawn/death VFX. Keep the historic
-	# realm kits intact for their own regression tests and suppress only their
-	# always-on presentation here at the final v1.60 layer.
-	if production_details_root != null:
-		for child_value in production_details_root.get_children():
-			var child := child_value as Node3D
-			if child != null and child.name == "FloorSigil":
-				child.visible = false
-	if ossuary_root != null:
-		for child_value in ossuary_root.get_children():
-			var child := child_value as Node3D
-			if child != null and child.name == "OssuarySigil":
-				child.visible = false
+	# lane sigils. Duplicate child names are auto-renamed by Godot, so name-only
+	# cleanup misses two of the three rings. Match the distinctive large, low
+	# CylinderMesh signature on the direct realm roots instead. Historic realm
+	# scripts remain untouched and real combat/spawn/death VFX live elsewhere.
+	_hide_v160_decorative_floor_cylinders(production_details_root, 0.60)
+	_hide_v160_decorative_floor_cylinders(ossuary_root, 0.65)
+
+func _hide_v160_decorative_floor_cylinders(root_node: Node3D, min_radius: float) -> void:
+	if root_node == null:
+		return
+	for child_value in root_node.get_children():
+		var mesh_instance := child_value as MeshInstance3D
+		if mesh_instance == null or not (mesh_instance.mesh is CylinderMesh):
+			continue
+		var cylinder := mesh_instance.mesh as CylinderMesh
+		if cylinder == null:
+			continue
+		var radius: float = maxf(cylinder.top_radius, cylinder.bottom_radius)
+		if mesh_instance.position.y <= 0.06 and radius >= min_radius:
+			mesh_instance.visible = false
 
 func _apply_v160_atmosphere_grade(floor_no: int) -> void:
 	if not production_atmosphere_ready():
