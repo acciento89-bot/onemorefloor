@@ -1,6 +1,6 @@
 extends SceneTree
 
-const WorldV160 = preload("res://scripts/world3d_chamber_v160.gd")
+const WorldV160 = preload("res://scripts/world3d_chamber_v160_floor.gd")
 const CAPTURE_DIR := "res://artifacts/v160_tower"
 const FLOORS := [1, 15, 25, 35, 45]
 
@@ -15,6 +15,9 @@ func _run() -> void:
 	world.set_active(true)
 	for _i in range(10):
 		await process_frame
+	if not bool(world.call("production_floor_ready")):
+		_fail("production floor layer is not ready before capture")
+		return
 
 	for floor_no in FLOORS:
 		world.sync_runtime(Vector2(360.0, 600.0), [], [], [], [], Vector2.ZERO, float(floor_no), 0.0, 0.0, floor_no)
