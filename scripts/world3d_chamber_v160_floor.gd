@@ -1,8 +1,8 @@
 extends "res://scripts/world3d_chamber_v160.gd"
 
-# ONE MORE FLOOR v1.60 — production floor/material composition pass.
-# Presentation only: replaces inherited prototype floor/shell geometry with
-# lower-profile realm-specific surfaces while gameplay/runtime stays inherited.
+# ONE MORE FLOOR v1.60 — production floor/material/composition pass.
+# Presentation only: replaces inherited prototype shell geometry, reduces repeated
+# authored dressing and grades each realm while gameplay/runtime stays inherited.
 
 const FLOOR_POLISH_VERSION := "1.60-floor-production"
 
@@ -22,6 +22,10 @@ var rift_floor_a: StandardMaterial3D
 var rift_floor_b: StandardMaterial3D
 var spire_floor_a: StandardMaterial3D
 var spire_floor_b: StandardMaterial3D
+var lower_flame_mat: StandardMaterial3D
+var rift_node_mat: StandardMaterial3D
+var star_mote_blue: StandardMaterial3D
+var star_mote_gold: StandardMaterial3D
 
 func _ready() -> void:
 	super._ready()
@@ -30,6 +34,8 @@ func _ready() -> void:
 	legacy_shell_hidden = _hide_legacy_chamber_shell()
 	legacy_realm_blockouts_hidden = _hide_legacy_realm_blockouts()
 	_build_realm_floor_dressing()
+	_tune_authored_asset_density()
+	_tune_legacy_fx_lighting()
 
 func production_floor_ready() -> bool:
 	return authored_tower_environment_ready() \
@@ -45,7 +51,12 @@ func debug_snapshot() -> Dictionary:
 	data["legacy_shell_hidden"] = legacy_shell_hidden
 	data["legacy_realm_blockouts_hidden"] = legacy_realm_blockouts_hidden
 	data["production_floor_tiles"] = floor_polish_tiles
+	data["production_composition_grade"] = true
 	return data
+
+func _apply_floor_identity(floor_no: int) -> void:
+	super._apply_floor_identity(floor_no)
+	_apply_production_realm_grade(floor_no)
 
 func _build_floor_polish_materials() -> void:
 	lower_floor_a = _material(Color("191b24"), 0.10, 0.90)
@@ -58,6 +69,10 @@ func _build_floor_polish_materials() -> void:
 	rift_floor_b = _material(Color("171021"), 0.16, 0.84)
 	spire_floor_a = _material(Color("090c13"), 0.34, 0.74)
 	spire_floor_b = _material(Color("111522"), 0.38, 0.66)
+	lower_flame_mat = _emissive_material(Color("ff7b38"), 0.58)
+	rift_node_mat = _emissive_material(Color("61b9d9"), 0.42)
+	star_mote_blue = _emissive_material(Color("7896d0"), 0.30)
+	star_mote_gold = _emissive_material(Color("b89a58"), 0.26)
 
 func _hide_legacy_prototype_grid() -> int:
 	var hidden: int = 0
@@ -74,8 +89,6 @@ func _hide_legacy_prototype_grid() -> int:
 	return hidden
 
 func _hide_legacy_chamber_shell() -> int:
-	# Keep the base floor/back wall and all runtime nodes. Only retire the generic
-	# rectangular gate/pillar blockout that sat underneath every authored realm.
 	var hidden: int = 0
 	for node_name_value in ["BackTrim", "GateLeft", "GateRight", "GateHeader", "GateInset", "Threshold"]:
 		var node_name: String = String(node_name_value)
@@ -89,7 +102,6 @@ func _hide_legacy_chamber_shell() -> int:
 		if mesh_instance != null and mesh_instance.mesh is BoxMesh:
 			var box := mesh_instance.mesh as BoxMesh
 			var size: Vector3 = box.size
-			# Catch every auto-renamed vertical gate bar.
 			var gate_bar: bool = size.x <= 0.12 and size.y >= 2.0 and size.z <= 0.16 and mesh_instance.position.z <= -6.0
 			if gate_bar and mesh_instance.visible:
 				mesh_instance.visible = false
@@ -97,8 +109,6 @@ func _hide_legacy_chamber_shell() -> int:
 			continue
 		var child_3d := child as Node3D
 		if child_3d != null and child_3d.visible and _has_direct_child_signature(child_3d, ["Base", "Column", "Cap", "Rune"]):
-			# Eight original generic Pillar groups; authored v1.60 realm dressing now
-			# owns those silhouettes and their lighting instead.
 			child_3d.visible = false
 			hidden += 1
 	return hidden
@@ -128,7 +138,6 @@ func _cleanup_ossuary_blockouts() -> int:
 			continue
 		var child_3d := child as Node3D
 		if child_3d != null and child_3d.visible and _has_direct_child_signature(child_3d, ["Column", "SkullCap", "Rune"]):
-			# The old cone pylons are replaced by the richer reliquary-totem OBJ set.
 			child_3d.visible = false
 			hidden += 1
 	return hidden
@@ -150,7 +159,6 @@ func _cleanup_iron_blockouts() -> int:
 				mesh_instance.visible = false
 				hidden += 1
 		elif mesh_instance.mesh is SphereMesh:
-			# Flat ash-heap spheres read as placeholder ellipses in portrait.
 			var old_ash_heap: bool = mesh_instance.position.y <= 0.15 and mesh_instance.scale.y <= 0.50 and mesh_instance.scale.x >= 1.20
 			if old_ash_heap and mesh_instance.visible:
 				mesh_instance.visible = false
@@ -282,3 +290,135 @@ func _add_floor_slab(
 	slab.rotation.y = rotation_y
 	floor_polish_tiles += 1
 	return slab
+
+func _tune_authored_asset_density() -> void:
+	_tune_imported_asset_group(authored_realm_roots.get("ossuary") as Node3D, [1, 4], 0.055)
+	_tune_imported_asset_group(authored_realm_roots.get("iron_bastion") as Node3D, [1, 4], 0.035)
+	_tune_imported_asset_group(authored_realm_roots.get("rift_descent") as Node3D, [1, 4], 0.080)
+	_tune_imported_asset_group(authored_realm_roots.get("starless_spire") as Node3D, [1, 4, 8], 0.045)
+
+func _tune_imported_asset_group(root_node: Node3D, hidden_indices: Array, rotation_step: float) -> void:
+	if root_node == null:
+		return
+	var imported_index: int = 0
+	for child in root_node.get_children():
+		var mesh_instance := child as MeshInstance3D
+		if mesh_instance == null or mesh_instance.mesh == null or mesh_instance.mesh is PrimitiveMesh:
+			continue
+		if hidden_indices.has(imported_index):
+			mesh_instance.visible = false
+		else:
+			var scale_factor: float = 0.94 + 0.04 * float(imported_index % 3)
+			mesh_instance.scale *= scale_factor
+			mesh_instance.rotation.y += rotation_step * float((imported_index % 3) - 1)
+		imported_index += 1
+
+func _tune_legacy_fx_lighting() -> void:
+	_tune_lower_braziers()
+	_tune_rift_bridge_nodes()
+	_tune_starless_motes()
+
+func _tune_lower_braziers() -> void:
+	if production_details_root == null:
+		return
+	for child in production_details_root.get_children():
+		var child_3d := child as Node3D
+		if child_3d == null:
+			continue
+		var flame := child_3d.get_node_or_null("Flame") as MeshInstance3D
+		var fire_light := child_3d.get_node_or_null("FireLight") as OmniLight3D
+		if flame == null or fire_light == null:
+			continue
+		var sphere := flame.mesh as SphereMesh
+		if sphere != null:
+			sphere.radius = 0.12
+			sphere.height = 0.24
+		flame.material_override = lower_flame_mat
+		fire_light.light_color = Color("ff853f")
+		fire_light.light_energy = 0.72
+		fire_light.omni_range = 2.30
+
+func _tune_rift_bridge_nodes() -> void:
+	if rift_root == null:
+		return
+	var nodes: Array = []
+	_collect_small_spheres(rift_root, 0.13, nodes)
+	for node_value in nodes:
+		var node := node_value as MeshInstance3D
+		if node == null:
+			continue
+		node.material_override = rift_node_mat
+		node.scale *= 0.78
+
+func _tune_starless_motes() -> void:
+	if starless_root == null:
+		return
+	var motes: Array = []
+	_collect_small_spheres(starless_root, 0.11, motes)
+	for index in range(motes.size()):
+		var mote := motes[index] as MeshInstance3D
+		if mote == null:
+			continue
+		if index % 3 == 1:
+			mote.visible = false
+		else:
+			mote.material_override = star_mote_gold if index % 4 == 0 else star_mote_blue
+
+func _collect_small_spheres(node: Node, max_radius: float, output: Array) -> void:
+	if node == null:
+		return
+	for child in node.get_children():
+		var mesh_instance := child as MeshInstance3D
+		if mesh_instance != null:
+			var sphere := mesh_instance.mesh as SphereMesh
+			if sphere != null and sphere.radius <= max_radius:
+				output.append(mesh_instance)
+		_collect_small_spheres(child, max_radius, output)
+
+func _apply_production_realm_grade(floor_no: int) -> void:
+	var world_env := get_node_or_null("WorldEnvironment") as WorldEnvironment
+	var env: Environment = world_env.environment if world_env != null else null
+	var moon := get_node_or_null("MoonKey") as DirectionalLight3D
+
+	var background := Color("02040a")
+	var ambient := Color("5d5870")
+	var ambient_energy: float = 0.23
+	var moon_color := Color("c9c3df")
+	var moon_energy: float = 1.18
+
+	if floor_no >= 41:
+		background = Color("010208")
+		ambient = Color("303b59")
+		ambient_energy = 0.16
+		moon_color = Color("8799c8")
+		moon_energy = 0.86
+	elif floor_no >= 31:
+		background = Color("030107")
+		ambient = Color("493760")
+		ambient_energy = 0.18
+		moon_color = Color("a596cf")
+		moon_energy = 0.92
+	elif floor_no >= 21:
+		background = Color("070302")
+		ambient = Color("65483c")
+		ambient_energy = 0.18
+		moon_color = Color("c6aa98")
+		moon_energy = 1.08
+	elif floor_no >= 11:
+		background = Color("020607")
+		ambient = Color("40585c")
+		ambient_energy = 0.20
+		moon_color = Color("9dbabd")
+		moon_energy = 1.02
+
+	if env != null:
+		env.background_color = background
+		env.ambient_light_color = ambient
+		env.ambient_light_energy = ambient_energy
+		env.adjustment_enabled = true
+		env.adjustment_brightness = 0.99
+		env.adjustment_contrast = 1.13
+		env.adjustment_saturation = 0.90
+	if moon != null:
+		moon.light_color = moon_color
+		moon.light_energy = moon_energy
