@@ -26,12 +26,12 @@ func _run() -> void:
 		if not await _save_frame("floor%02d" % floor_no):
 			return
 
-	# Dedicated close-up gate: same world/model, only the validation camera is
-	# closer so silhouette/material errors cannot hide in a full-room screenshot.
+	# Dedicated FRONT close-up gate: the production face/hood/chest/sword need
+	# their own readable validation view in addition to the real gameplay camera.
 	world.sync_runtime(Vector2(360.0, 580.0), [], [], [], [], Vector2.ZERO, 25.0, 0.0, 0.0, 25)
-	world.camera_base_position = Vector3(0.0, 4.85, 5.35)
-	world.camera_focus = Vector3(0.0, 0.92, 0.0)
-	world.camera_base_size = 4.65
+	world.camera_base_position = Vector3(0.0, 4.65, -5.35)
+	world.camera_focus = Vector3(0.0, 0.90, 0.0)
+	world.camera_base_size = 4.55
 	world.camera.position = world.camera_base_position
 	world.camera.size = world.camera_base_size
 	world.camera.look_at(world.camera_focus, Vector3.UP)
