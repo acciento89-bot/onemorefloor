@@ -1,4 +1,4 @@
-build=24
+build=25
 version=1.26.0
-requested=2026-08-18T06:43:00+02:00
-reason=v1.55 Wanderer production pilot final green release candidate
+requested=2026-08-18T07:54:00+02:00
+reason=v1.55 Wanderer production pilot retry after build 24 did not appear in App Store Connect
