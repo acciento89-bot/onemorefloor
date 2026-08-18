@@ -22,6 +22,12 @@ func _build_world() -> void:
 	if rim != null:
 		rim.light_energy = 0.24
 
+# v1.57 hard-coded 36 degrees into lookdev_ready(). v1.58 deliberately widens
+# the camera, so retain the material/stage contract without inheriting that
+# obsolete visual constant.
+func lookdev_ready() -> bool:
+	return stage_ready() and mat_stone_mid != null and mat_brass != null and camera != null
+
 func composition_ready() -> bool:
 	return lookdev_ready() and camera != null and is_equal_approx(camera.fov, 46.0)
 
