@@ -39,14 +39,15 @@ func _run() -> void:
 		var key_energy := float(snapshot.get("production_atmosphere_key_energy", 9.0))
 		var warm_energy := float(snapshot.get("production_atmosphere_warm_energy", 9.0))
 		var arcane_energy := float(snapshot.get("production_atmosphere_arcane_energy", 9.0))
+		print("V74_ATMOSPHERE_SAMPLE:floor=%d:realm=%s:ambient=%.4f:key=%.4f:warm=%.4f:arcane=%.4f" % [floor_no, expected_realm, ambient, key_energy, warm_energy, arcane_energy])
 		if ambient < 0.08 or ambient > 0.18:
-			_fail("ambient energy outside production range on floor %d" % floor_no)
+			_fail("ambient energy %.4f outside production range on floor %d" % [ambient, floor_no])
 			return
 		if key_energy < 0.70 or key_energy > 1.05:
-			_fail("key energy outside production range on floor %d" % floor_no)
+			_fail("key energy %.4f outside production range on floor %d" % [key_energy, floor_no])
 			return
 		if warm_energy < 0.0 or warm_energy > 1.70 or arcane_energy < 0.0 or arcane_energy > 1.45:
-			_fail("realm omni energy outside production range on floor %d" % floor_no)
+			_fail("realm omni energy warm=%.4f arcane=%.4f outside production range on floor %d" % [warm_energy, arcane_energy, floor_no])
 			return
 		if not world.production_actor_presentation_ready() or not world.production_material_depth_ready():
 			_fail("actor/material readiness regressed on floor %d" % floor_no)
@@ -57,10 +58,10 @@ func _run() -> void:
 		_fail("production environment adjustment is disabled")
 		return
 	if env.adjustment_contrast < 1.15 or env.adjustment_contrast > 1.21:
-		_fail("production contrast is outside controlled range")
+		_fail("production contrast %.4f is outside controlled range" % env.adjustment_contrast)
 		return
 	if world.camera == null or absf(world.camera_base_size - 15.85) > 0.02:
-		_fail("production portrait camera composition was not applied")
+		_fail("production portrait camera composition %.4f was not applied" % world.camera_base_size)
 		return
 	if world.player_rim_light.omni_range > 2.70 or world.player_fill_light.omni_range > 2.25:
 		_fail("player lookdev lights still have oversized range")
