@@ -2,6 +2,13 @@ extends SceneTree
 
 const EXPECTED_ASSET := "res://assets/models/actors/wanderer.gltf"
 const REQUIRED_CLIPS := ["Idle", "Run", "Attack", "Hit", "Skill"]
+const STATE_CLIPS := {
+	"idle": "Idle",
+	"run": "Run",
+	"attack": "Attack",
+	"hit": "Hit",
+	"skill": "Skill",
+}
 
 var _current_stage := "boot"
 
@@ -112,14 +119,20 @@ func _run() -> void:
 		_fail("actor factory model registry has no drive_animation method")
 		return
 
-	for state in ["idle", "run", "attack", "hit", "skill"]:
+	for state_value in STATE_CLIPS.keys():
+		var state := String(state_value)
+		var expected_clip := String(STATE_CLIPS[state])
 		_stage("drive-%s" % state)
 		var driven := bool(registry.drive_animation(imported, state, 1.0))
-		print("V69_DRIVE:state=%s result=%s current=%s playing=%s speed=%s" % [state, str(driven), String(animation_player.current_animation), str(animation_player.is_playing()), str(animation_player.speed_scale)])
+		await process_frame
+		var actual_clip := String(animation_player.current_animation)
+		print("V69_DRIVE:state=%s result=%s expected=%s current=%s player=%s playing=%s speed=%s" % [state, str(driven), expected_clip, actual_clip, str(animation_player.get_path()), str(animation_player.is_playing()), str(animation_player.speed_scale)])
 		if not driven:
 			_fail("runtime could not drive imported animation state: %s" % state)
 			return
-		await process_frame
+		if actual_clip != expected_clip:
+			_fail("runtime drove the wrong animation player/clip for %s; expected=%s actual=%s player=%s" % [state, expected_clip, actual_clip, str(animation_player.get_path())])
+			return
 
 	_stage("snapshot")
 	var snapshot: Dictionary = game.call("_v69_wanderer_snapshot")
