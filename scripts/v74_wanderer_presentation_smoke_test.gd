@@ -37,9 +37,16 @@ func _run() -> void:
 	if not bool(world.call("production_actor_presentation_ready")):
 		_fail("production actor presentation did not become ready")
 		return
+	if not world.actor_factory.has_method("character_quality_player_ready"):
+		_fail("character-quality Wanderer API missing")
+		return
+	if not bool(world.actor_factory.call("character_quality_player_ready", world.player_root)):
+		_fail("final character-quality Wanderer did not become ready")
+		return
 	var snapshot: Dictionary = world.debug_snapshot()
 	var wanderer: Dictionary = snapshot.get("wanderer_v160", {})
 	var authored: Dictionary = snapshot.get("wanderer_v160_authored", {})
+	var quality: Dictionary = snapshot.get("character_quality_v160", {})
 	if int(wanderer.get("mesh_count", 0)) < 22:
 		_fail("base v1.60 Wanderer presentation contract regressed")
 		return
@@ -51,6 +58,9 @@ func _run() -> void:
 		return
 	if int(authored.get("asset_count", 0)) != REQUIRED_AUTHORED_ASSETS.size():
 		_fail("authored Wanderer asset count mismatch")
+		return
+	if not bool(quality.get("ready", false)) or not bool(quality.get("wanderer_ready", false)):
+		_fail("final character-quality snapshot incomplete: %s" % JSON.stringify(quality))
 		return
 
 	var imported := world.player_root.get_node_or_null("Motion/RigMount/ImportedModel") as Node3D
