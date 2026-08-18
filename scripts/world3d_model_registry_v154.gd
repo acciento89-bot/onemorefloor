@@ -1,8 +1,9 @@
-extends "res://scripts/world3d_model_registry.gd"
+extends "res://scripts/world3d_model_registry_v147.gd"
 
 # ONE MORE FLOOR v1.54 — real-model intake.
 # Production actors can arrive as either binary GLB or text glTF. Animation
-# lookup also tolerates common exporter naming conventions.
+# lookup also tolerates common exporter naming conventions while preserving the
+# v1.47 production socket/animation contract used by the actor factory.
 
 const REGISTRY_VERSION := "1.54.0-real-model-intake"
 const DEFAULT_MODEL_ROOT := "res://assets/models/actors"
@@ -68,6 +69,51 @@ func instantiate_model(kind: String) -> Node3D:
 	return root
 
 func resolve_animation_clip(player: AnimationPlayer, state: String) -> String:
+	return _resolve_clip(player, state)
+
+# Real imported rigs may contain more than one AnimationPlayer. Do not bind
+# gameplay to the first player found in the scene tree; select the player that
+# actually owns a compatible clip for the requested production state.
+func drive_animation(model_root: Node3D, state: String, speed: float = 1.0) -> bool:
+	if model_root == null:
+		return false
+	model_root.set_meta("requested_animation_state", state)
+	var binding: Dictionary = _find_animation_binding(model_root, state)
+	if not binding.is_empty():
+		var player: AnimationPlayer = binding.get("player") as AnimationPlayer
+		var clip := String(binding.get("clip", ""))
+		if player != null and not clip.is_empty():
+			player.speed_scale = speed
+			if player.current_animation != clip or not player.is_playing():
+				player.play(clip, 0.10)
+			model_root.set_meta("active_animation_clip", clip)
+			return true
+	var tree: AnimationTree = _find_animation_tree(model_root)
+	if tree != null:
+		tree.active = true
+		var playback: Variant = tree.get("parameters/playback")
+		if playback is AnimationNodeStateMachinePlayback:
+			(playback as AnimationNodeStateMachinePlayback).travel(state)
+			model_root.set_meta("active_animation_clip", state)
+			return true
+	return false
+
+func _find_animation_binding(node: Node, state: String) -> Dictionary:
+	if node is AnimationPlayer:
+		var player := node as AnimationPlayer
+		var clip := _resolve_production_clip(player, state)
+		if not clip.is_empty():
+			return {"player": player, "clip": clip}
+	for child in node.get_children():
+		var found := _find_animation_binding(child, state)
+		if not found.is_empty():
+			return found
+	return {}
+
+# world3d_actor_factory_v147 drives imported models through the production
+# registry API. Keep that path on the v1.54 fuzzy resolver instead of falling
+# back to the older exact-name-only clip lookup.
+func _resolve_production_clip(player: AnimationPlayer, state: String) -> String:
 	return _resolve_clip(player, state)
 
 func snapshot() -> Dictionary:
