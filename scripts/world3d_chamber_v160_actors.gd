@@ -5,7 +5,7 @@ extends "res://scripts/world3d_chamber_v160_materials.gd"
 # combat/world authority remains inherited from the v1.60 material stack.
 
 const ActorFactoryV160 = preload("res://scripts/world3d_actor_factory_v160_enemy_quality_r5.gd")
-const ACTOR_PRESENTATION_VERSION := "1.60-character-quality-r8.1-hood-r9-enemy-r5"
+const ACTOR_PRESENTATION_VERSION := "1.60-character-quality-r8.1-hood-r9-enemy-r5.1"
 
 func _build_player() -> void:
 	actor_factory = ActorFactoryV160.new()

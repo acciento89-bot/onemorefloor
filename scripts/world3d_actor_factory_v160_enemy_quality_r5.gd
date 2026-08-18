@@ -1,12 +1,12 @@
 extends "res://scripts/world3d_actor_factory_v160_enemy_quality_r4.gd"
 
-# ONE MORE FLOOR v1.60 — character body surface sophistication r5.
+# ONE MORE FLOOR v1.60 — character body surface sophistication r5.1.
 # Keeps r2/r3 anatomy and r4 secondary detail geometry fixed. Only the six
-# authored body-core ShaderMaterials move to the character-only mobile shader.
-# Skeleton uses zero extra breakup to preserve its locked visual baseline.
+# authored body-core ShaderMaterials use the character-only mobile shader.
+# Skeleton stays visually locked with zero extra r5.1 breakup.
 
 const CHARACTER_SURFACE_R5_SHADER: Shader = preload("res://assets/shaders/v160_character_surface_r5.gdshader")
-const ENEMY_SURFACE_R5_VERSION := "1.60-enemy-character-surface-r5"
+const ENEMY_SURFACE_R5_VERSION := "1.60-enemy-character-surface-r5.1"
 
 func _init() -> void:
 	super._init()
@@ -22,7 +22,7 @@ func configure_enemy(root: Node3D, kind: String, materials: Dictionary) -> void:
 func character_quality_snapshot(root: Node3D = null) -> Dictionary:
 	var data: Dictionary = super.character_quality_snapshot(root)
 	data["enemy_character_surface_r5_version"] = ENEMY_SURFACE_R5_VERSION
-	data["enemy_character_surface_r5_profile"] = "character-only-procedural-tonal-roughness-breakup"
+	data["enemy_character_surface_r5_profile"] = "subtle-character-only-tonal-roughness-breakup"
 	data["enemy_character_surface_r5_skeleton_extra_breakup"] = false
 	return data
 
@@ -35,9 +35,6 @@ func _upgrade_character_body_material_r5(kind: String) -> void:
 	if material == null:
 		return
 
-	# Preserve the established r2/r3 body color/lighting values while swapping
-	# only the shader implementation. Matching standard uniforms are restored
-	# explicitly so the upgrade cannot silently reset the approved palette.
 	var standard := {
 		"base_color": material.get_shader_parameter("base_color"),
 		"edge_color": material.get_shader_parameter("edge_color"),
@@ -58,23 +55,17 @@ func _upgrade_character_body_material_r5(kind: String) -> void:
 
 	match kind:
 		"goblin":
-			_set_body_detail(material, Color("5a613f"), 0.080, 7.0, 0.10, 0.16)
+			_set_body_detail(material, Color("52603e"), 0.055, 7.0, 0.050, 0.12)
 		"bat":
-			_set_body_detail(material, Color("32233f"), 0.070, 9.5, 0.08, 0.08)
+			_set_body_detail(material, Color("2c2038"), 0.045, 9.5, 0.040, 0.06)
 		"skeleton":
-			# Locked baseline: use the compatible character shader but zero extra
-			# r5 pattern/roughness breakup so the accepted Skeleton look is stable.
-			_set_body_detail(material, Color("858071"), 0.000, 8.0, 0.00, 0.00)
+			_set_body_detail(material, Color("858071"), 0.000, 8.0, 0.000, 0.00)
 		"ghoul":
-			_set_body_detail(material, Color("465442"), 0.075, 6.2, 0.11, 0.20)
+			_set_body_detail(material, Color("414e3f"), 0.055, 6.2, 0.060, 0.16)
 		"necromancer":
-			# Strong directional bias creates subtle fabric-like vertical tonal
-			# variation across the large r3 robe panels without UVs/textures.
-			_set_body_detail(material, Color("382745"), 0.070, 11.5, 0.09, 0.78)
+			_set_body_detail(material, Color("30223c"), 0.050, 11.5, 0.050, 0.74)
 		"warden":
-			# Metal stays low in color breakup but gets more roughness variation,
-			# producing controlled worn-steel response rather than painted plastic.
-			_set_body_detail(material, Color("465669"), 0.045, 13.0, 0.15, 0.10)
+			_set_body_detail(material, Color("3f4f62"), 0.035, 13.0, 0.080, 0.08)
 
 func _set_body_detail(
 	material: ShaderMaterial,
