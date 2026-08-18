@@ -12,6 +12,7 @@ const AUTHORED_ASSETS := {
 	"torso": AUTHORED_ROOT + "wanderer_torso.obj",
 	"chestplate": AUTHORED_ROOT + "wanderer_chestplate.obj",
 	"hood": AUTHORED_ROOT + "wanderer_hood.obj",
+	"mask": AUTHORED_ROOT + "wanderer_mask.obj",
 	"pauldron": AUTHORED_ROOT + "wanderer_pauldron.obj",
 	"arm": AUTHORED_ROOT + "wanderer_arm.obj",
 	"gauntlet": AUTHORED_ROOT + "wanderer_gauntlet.obj",
@@ -44,9 +45,10 @@ func v160_authored_wanderer_ready(root: Node3D) -> bool:
 	var imported := root.get_node_or_null("Motion/RigMount/ImportedModel") as Node3D if root != null else null
 	if imported == null:
 		return false
-	return authored_wanderer_instances >= 15 \
+	return authored_wanderer_instances >= 16 \
 		and _find_named_mesh(imported, "V160AuthoredTorso") != null \
 		and _find_named_mesh(imported, "V160AuthoredHood") != null \
+		and _find_named_mesh(imported, "V160AuthoredMask") != null \
 		and _find_named_mesh(imported, "V160AuthoredCape") != null \
 		and _find_named_mesh(imported, "V160AuthoredBlade") != null
 
@@ -58,6 +60,7 @@ func v160_authored_wanderer_snapshot(root: Node3D) -> Dictionary:
 		"asset_paths": authored_wanderer_paths.duplicate(),
 		"asset_count": AUTHORED_ASSETS.size(),
 		"animation_authority": "v1.55-imported-gltf-pivots",
+		"face_solution": "authored-mask-with-eye-slits",
 	}
 
 func _mount_authored_wanderer(root: Node3D) -> void:
@@ -80,51 +83,65 @@ func _mount_authored_wanderer(root: Node3D) -> void:
 		or left_arm == null or right_arm == null or left_leg == null or right_leg == null or sword == null:
 		return
 
-	# Retire only the large rounded prototype/polish surfaces. Small readable
-	# details (belt/buckle/sigil, face shadow, knees, guard/grip/pommel/rune and
-	# ArcaneCore) remain layered around the authored geometry.
+	# Retire the large rounded prototype/polish surfaces. Small readable details
+	# such as belt hardware, sword grip and ArcaneCore stay on the same pivots.
 	_hide_named_meshes(imported, [
 		"V160Torso", "V160ChestArmor", "V160LowerArmor",
-		"V160Hood", "V160HoodRim", "V160Brow",
+		"V160Hood", "V160HoodRim", "V160Brow", "V160FaceShadow",
 		"V160Pauldron", "V160PauldronCap",
 		"V160Arm", "V160Gauntlet",
-		"V160Leg", "V160Boot", "V160Toe",
+		"V160Leg", "V160Knee", "V160Boot", "V160Toe",
 		"V160Blade", "V160ProductionCape", "V160CapeHem",
 	])
 
-	_place_authored(hips, "V160AuthoredTorso", "torso", wanderer_materials["cloth"], Vector3(0.0, 0.12, 0.0), Vector3(1.0, 1.0, 0.96))
-	_place_authored(hips, "V160AuthoredChestplate", "chestplate", wanderer_materials["steel"], Vector3(0.0, -0.02, 0.02), Vector3(1.0, 1.0, 1.0))
-	var cape := _place_authored(hips, "V160AuthoredCape", "cape", wanderer_materials["cape"], Vector3(0.0, 0.02, 0.25), Vector3(1.0, 1.0, 1.0))
+	_place_authored(hips, "V160AuthoredTorso", "torso", wanderer_materials["cloth"], Vector3(0.0, 0.12, 0.0), Vector3(0.96, 1.0, 0.92))
+	_place_authored(hips, "V160AuthoredChestplate", "chestplate", wanderer_materials["steel_dark"], Vector3(0.0, -0.02, 0.02), Vector3(0.90, 0.92, 0.90))
+	var cape := _place_authored(hips, "V160AuthoredCape", "cape", wanderer_materials["cape"], Vector3(0.0, 0.02, 0.25), Vector3(0.94, 1.0, 0.94))
 	if cape != null:
 		cape.rotation.x = -0.055
 
-	var hood := _place_authored(head, "V160AuthoredHood", "hood", wanderer_materials["cloth"], Vector3(0.0, 0.01, -0.005), Vector3(0.96, 0.96, 0.96))
+	var hood := _place_authored(head, "V160AuthoredHood", "hood", wanderer_materials["cloth"], Vector3(0.0, 0.0, 0.0), Vector3(0.92, 0.94, 0.92))
 	if hood != null:
 		hood.rotation.y = 0.0
+	_place_authored(head, "V160AuthoredMask", "mask", wanderer_materials["void"], Vector3(0.0, -0.015, 0.0), Vector3(0.94, 0.94, 0.94))
+	var eye_l := _box(head, "V160EyeSlitL", Vector3(0.066, 0.018, 0.012), Vector3(-0.067, -0.008, -0.282), wanderer_materials["arcane"])
+	var eye_r := _box(head, "V160EyeSlitR", Vector3(0.066, 0.018, 0.012), Vector3(0.067, -0.008, -0.282), wanderer_materials["arcane"])
+	eye_l.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	eye_r.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 	# The pauldron asset is authored outward on +X. Right uses it directly;
 	# left rotates 180° instead of negative scaling so triangle winding/culling
-	# stays valid under GL Compatibility.
-	var left_pauldron := _place_authored(left_shoulder, "V160AuthoredPauldronL", "pauldron", wanderer_materials["steel"], Vector3.ZERO, Vector3.ONE)
+	# stays valid under GL Compatibility. Reduced scale avoids the prior robot read.
+	var left_pauldron := _place_authored(left_shoulder, "V160AuthoredPauldronL", "pauldron", wanderer_materials["steel_dark"], Vector3.ZERO, Vector3(0.68, 0.80, 0.82))
 	if left_pauldron != null:
 		left_pauldron.rotation.y = PI
-	var right_pauldron := _place_authored(right_shoulder, "V160AuthoredPauldronR", "pauldron", wanderer_materials["steel"], Vector3.ZERO, Vector3.ONE)
+	var right_pauldron := _place_authored(right_shoulder, "V160AuthoredPauldronR", "pauldron", wanderer_materials["steel_dark"], Vector3.ZERO, Vector3(0.68, 0.80, 0.82))
 	if right_pauldron != null:
 		right_pauldron.rotation.y = 0.0
 
 	for arm_data in [[left_arm, "L"], [right_arm, "R"]]:
 		var arm_root := arm_data[0] as Node3D
 		var suffix := String(arm_data[1])
-		_place_authored(arm_root, "V160AuthoredArm%s" % suffix, "arm", wanderer_materials["cloth"], Vector3.ZERO, Vector3.ONE)
-		_place_authored(arm_root, "V160AuthoredGauntlet%s" % suffix, "gauntlet", wanderer_materials["steel_dark"], Vector3(0.0, -0.34, -0.01), Vector3.ONE)
+		_place_authored(arm_root, "V160AuthoredArm%s" % suffix, "arm", wanderer_materials["cloth"], Vector3.ZERO, Vector3(0.90, 1.0, 0.90))
+		_place_authored(arm_root, "V160AuthoredGauntlet%s" % suffix, "gauntlet", wanderer_materials["steel_dark"], Vector3(0.0, -0.34, -0.01), Vector3(0.88, 0.92, 0.88))
 
 	for leg_data in [[left_leg, "L"], [right_leg, "R"]]:
 		var leg_root := leg_data[0] as Node3D
 		var suffix := String(leg_data[1])
-		_place_authored(leg_root, "V160AuthoredLeg%s" % suffix, "leg", wanderer_materials["cloth"], Vector3.ZERO, Vector3.ONE)
-		_place_authored(leg_root, "V160AuthoredBoot%s" % suffix, "boot", wanderer_materials["leather"], Vector3(0.0, -0.38, -0.055), Vector3.ONE)
+		_place_authored(leg_root, "V160AuthoredLeg%s" % suffix, "leg", wanderer_materials["cloth"], Vector3.ZERO, Vector3(0.88, 1.0, 0.90))
+		_place_authored(leg_root, "V160AuthoredBoot%s" % suffix, "boot", wanderer_materials["leather"], Vector3(0.0, -0.38, -0.055), Vector3(0.90, 0.92, 0.92))
 
-	_place_authored(sword, "V160AuthoredBlade", "blade", wanderer_materials["blade"], Vector3(0.0, -0.02, 0.0), Vector3.ONE)
+	_place_authored(sword, "V160AuthoredBlade", "blade", wanderer_materials["blade"], Vector3(0.0, -0.02, 0.0), Vector3(0.94, 1.0, 0.94))
+
+	var chest_sigil := _find_named_mesh(imported, "V160ChestSigil")
+	if chest_sigil != null:
+		chest_sigil.scale = Vector3(0.55, 0.72, 0.22)
+	var belt := _find_named_mesh(imported, "V160Belt")
+	if belt != null:
+		belt.scale = Vector3(0.94, 0.68, 0.76)
+	var clasp := _find_named_mesh(imported, "V160CapeClasp")
+	if clasp != null:
+		clasp.scale = Vector3(0.82, 0.52, 0.48)
 
 	root.set_meta("wanderer_authored_geometry_v160", AUTHORED_WANDERER_VERSION)
 	root.set_meta("wanderer_authored_instances_v160", authored_wanderer_instances)

@@ -5,6 +5,7 @@ const REQUIRED_AUTHORED_ASSETS := [
 	"res://assets/models/actors/v160/wanderer_torso.obj",
 	"res://assets/models/actors/v160/wanderer_chestplate.obj",
 	"res://assets/models/actors/v160/wanderer_hood.obj",
+	"res://assets/models/actors/v160/wanderer_mask.obj",
 	"res://assets/models/actors/v160/wanderer_pauldron.obj",
 	"res://assets/models/actors/v160/wanderer_arm.obj",
 	"res://assets/models/actors/v160/wanderer_gauntlet.obj",
@@ -45,7 +46,7 @@ func _run() -> void:
 	if not bool(wanderer.get("prototype_geometry_hidden", false)):
 		_fail("v1.55 prototype Wanderer geometry was not retired")
 		return
-	if not bool(authored.get("ready", false)) or int(authored.get("instances", 0)) < 15:
+	if not bool(authored.get("ready", false)) or int(authored.get("instances", 0)) < 16:
 		_fail("authored modular Wanderer coverage incomplete: %s" % JSON.stringify(authored))
 		return
 	if int(authored.get("asset_count", 0)) != REQUIRED_AUTHORED_ASSETS.size():
@@ -59,11 +60,15 @@ func _run() -> void:
 	var old_torso := _find_named_mesh(imported, "Torso")
 	var rounded_torso := _find_named_mesh(imported, "V160Torso")
 	var rounded_hood := _find_named_mesh(imported, "V160Hood")
+	var old_face_shadow := _find_named_mesh(imported, "V160FaceShadow")
 	var polish_cape := _find_named_mesh(imported, "V160ProductionCape")
 	var authored_torso := _find_named_mesh(imported, "V160AuthoredTorso")
 	var authored_hood := _find_named_mesh(imported, "V160AuthoredHood")
+	var authored_mask := _find_named_mesh(imported, "V160AuthoredMask")
 	var authored_cape := _find_named_mesh(imported, "V160AuthoredCape")
 	var authored_blade := _find_named_mesh(imported, "V160AuthoredBlade")
+	var eye_l := _find_named_mesh(imported, "V160EyeSlitL")
+	var eye_r := _find_named_mesh(imported, "V160EyeSlitR")
 	var arcane_core := _find_named_mesh(imported, "ArcaneCore")
 	if old_torso == null or old_torso.visible:
 		_fail("v1.55 prototype torso is still visible")
@@ -71,11 +76,14 @@ func _run() -> void:
 	if rounded_torso == null or rounded_torso.visible or rounded_hood == null or rounded_hood.visible:
 		_fail("rounded v1.60 intermediate body geometry is still visible")
 		return
+	if old_face_shadow == null or old_face_shadow.visible:
+		_fail("spherical face shadow is still visible")
+		return
 	if polish_cape == null or polish_cape.visible:
 		_fail("intermediate polish cape is still visible")
 		return
 
-	for mesh_instance in [authored_torso, authored_hood, authored_cape, authored_blade]:
+	for mesh_instance in [authored_torso, authored_hood, authored_mask, authored_cape, authored_blade]:
 		if mesh_instance == null or not mesh_instance.visible:
 			_fail("authored Wanderer landmark mesh missing")
 			return
@@ -85,6 +93,9 @@ func _run() -> void:
 		if not String(mesh_instance.mesh.resource_path).ends_with(".obj"):
 			_fail("authored Wanderer landmark is not backed by imported OBJ geometry")
 			return
+	if eye_l == null or eye_r == null or not eye_l.visible or not eye_r.visible:
+		_fail("authored mask eye slits are missing")
+		return
 	if arcane_core == null or not arcane_core.visible:
 		_fail("animated ArcaneCore was not preserved")
 		return
