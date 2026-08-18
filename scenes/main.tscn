@@ -39,8 +39,9 @@
 ; v1.55 production Wanderer baseline retained: res://scripts/main_v69.gd
 ; v1.56 full 3D menu-stage baseline retained: res://scripts/main_v70.gd
 ; v1.57 production 3D lookdev baseline retained: res://scripts/main_v71.gd
-; v1.58 composition rescue removes foreground blockers and restores focal framing.
-[ext_resource type="Script" path="res://scripts/main_v72.gd" id="1_main"]
+; v1.58 composition rescue baseline retained: res://scripts/main_v72.gd
+; v1.59 authored OBJ environment assets replace Home/Hero/Forge focal blockouts.
+[ext_resource type="Script" path="res://scripts/main_v73.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
