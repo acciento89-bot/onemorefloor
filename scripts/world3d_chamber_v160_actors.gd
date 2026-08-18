@@ -4,8 +4,8 @@ extends "res://scripts/world3d_chamber_v160_materials.gd"
 # Only swaps the actor factory used by the already-proven v1.54 chamber. All
 # combat/world authority remains inherited from the v1.60 material stack.
 
-const ActorFactoryV160 = preload("res://scripts/world3d_actor_factory_v160.gd")
-const ACTOR_PRESENTATION_VERSION := "1.60-production-wanderer"
+const ActorFactoryV160 = preload("res://scripts/world3d_actor_factory_v160_polish.gd")
+const ACTOR_PRESENTATION_VERSION := "1.60-production-wanderer-polish"
 
 func _build_player() -> void:
 	actor_factory = ActorFactoryV160.new()
@@ -16,7 +16,9 @@ func production_actor_presentation_ready() -> bool:
 	return production_material_depth_ready() \
 		and actor_factory != null \
 		and actor_factory.has_method("v160_wanderer_presentation_ready") \
-		and bool(actor_factory.call("v160_wanderer_presentation_ready", player_root))
+		and bool(actor_factory.call("v160_wanderer_presentation_ready", player_root)) \
+		and actor_factory.has_method("v160_wanderer_polish_ready") \
+		and bool(actor_factory.call("v160_wanderer_polish_ready", player_root))
 
 func debug_snapshot() -> Dictionary:
 	var data: Dictionary = super.debug_snapshot()
@@ -24,4 +26,6 @@ func debug_snapshot() -> Dictionary:
 	data["production_actor_presentation_version"] = ACTOR_PRESENTATION_VERSION
 	if actor_factory != null and actor_factory.has_method("v160_wanderer_presentation_snapshot"):
 		data["wanderer_v160"] = actor_factory.call("v160_wanderer_presentation_snapshot", player_root)
+	if actor_factory != null and actor_factory.has_method("v160_wanderer_polish_snapshot"):
+		data["wanderer_v160_polish"] = actor_factory.call("v160_wanderer_polish_snapshot", player_root)
 	return data
