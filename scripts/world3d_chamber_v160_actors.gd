@@ -17,8 +17,6 @@ func production_actor_presentation_ready() -> bool:
 		and actor_factory != null \
 		and actor_factory.has_method("v160_wanderer_presentation_ready") \
 		and bool(actor_factory.call("v160_wanderer_presentation_ready", player_root)) \
-		and actor_factory.has_method("v160_wanderer_polish_ready") \
-		and bool(actor_factory.call("v160_wanderer_polish_ready", player_root)) \
 		and actor_factory.has_method("v160_authored_wanderer_ready") \
 		and bool(actor_factory.call("v160_authored_wanderer_ready", player_root))
 
