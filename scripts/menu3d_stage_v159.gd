@@ -115,9 +115,11 @@ func _build_hero_stage() -> void:
 	_place_environment_asset(stage_root, "HeroBrazierRAsset", "brazier", mat_dark_metal, Vector3(2.18, 2.62, -2.52), Vector3(0.62, 0.62, 0.62))
 	_add_environment_light("HeroRuneL", Vector3(-2.18, 2.78, -2.34), Color("8559da"), 0.50, 3.0)
 	_add_environment_light("HeroRuneR", Vector3(2.18, 2.78, -2.34), Color("8559da"), 0.50, 3.0)
-	_place_environment_asset(stage_root, "HeroPedestalAsset", "pedestal", mat_dark_metal, Vector3(0.0, 0.76, -0.06), Vector3(0.90, 0.90, 0.90))
-	_add_actor(Vector3(0.0, 2.06, -0.02), 0.70)
-	_add_character_key(Vector3(0.0, 3.10, 2.35), Color("e1d8ff"), 1.15, 5.0)
+	# Keep both the pedestal and the full character above the stats card in the
+	# portrait frame. This preserves the v1.58 composition contract visually.
+	_place_environment_asset(stage_root, "HeroPedestalAsset", "pedestal", mat_dark_metal, Vector3(0.0, 1.68, -0.06), Vector3(0.86, 0.86, 0.86))
+	_add_actor(Vector3(0.0, 3.25, -0.02), 0.68)
+	_add_character_key(Vector3(0.0, 4.05, 2.35), Color("e1d8ff"), 1.12, 5.0)
 
 func _build_forge_stage() -> void:
 	# Forge is the first prop-dense authored environment: imported hearth, anvil,
@@ -128,21 +130,23 @@ func _build_forge_stage() -> void:
 	_place_environment_asset(stage_root, "ForgeHearthAsset", "hearth", mat_stone_hi, Vector3(-1.58, 0.42, -2.78), Vector3(0.76, 0.76, 0.76))
 	_make_box(stage_root, "ForgeEmberVFX", Vector3(1.12, 0.72, 0.035), mat_ember, Vector3(-1.58, 1.45, -2.31))
 	_add_environment_light("ForgeFire", Vector3(-1.58, 1.55, -2.12), Color("ff7435"), 0.92, 3.8)
-	_place_environment_asset(stage_root, "ForgeAnvilAsset", "anvil", mat_dark_metal, Vector3(0.18, 0.92, -1.98), Vector3(0.72, 0.72, 0.72))
-	_place_environment_asset(stage_root, "ForgeRackAsset", "rack", mat_dark_metal, Vector3(1.92, 0.52, -2.72), Vector3(0.64, 0.64, 0.64))
+	# Lift the hero props into the visible upper presentation zone; the previous
+	# first render proved they were technically loaded but hidden behind the card.
+	_place_environment_asset(stage_root, "ForgeAnvilAsset", "anvil", mat_stone_hi, Vector3(0.20, 2.12, -2.18), Vector3(0.76, 0.76, 0.76))
+	_place_environment_asset(stage_root, "ForgeRackAsset", "rack", mat_stone_hi, Vector3(1.92, 1.22, -2.72), Vector3(0.64, 0.64, 0.64))
 	_place_environment_asset(stage_root, "ForgeBrazierAsset", "brazier", mat_brass, Vector3(2.72, 2.64, -2.48), Vector3(0.58, 0.58, 0.58))
 	_add_environment_light("ForgeWarmRim", Vector3(2.72, 2.78, -2.28), Color("e7a05b"), 0.42, 2.8)
 
 func _camera_position_for(screen: String) -> Vector3:
 	match screen:
 		"home": return Vector3(0.0, 2.84, 10.55)
-		"hero": return Vector3(0.0, 2.92, 9.95)
+		"hero": return Vector3(0.0, 3.20, 10.05)
 		"forge": return Vector3(0.0, 2.86, 10.75)
 		_: return super._camera_position_for(screen)
 
 func _camera_target_for(screen: String) -> Vector3:
 	match screen:
 		"home": return Vector3(0.0, 2.42, -0.72)
-		"hero": return Vector3(0.0, 2.78, -0.22)
-		"forge": return Vector3(0.0, 2.20, -1.78)
+		"hero": return Vector3(0.0, 3.18, -0.22)
+		"forge": return Vector3(0.0, 2.30, -1.78)
 		_: return super._camera_target_for(screen)
