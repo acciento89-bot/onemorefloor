@@ -19,12 +19,13 @@ func _run() -> void:
 
 	_stage("version-gate")
 	if not game.has_method("_v72_composition_snapshot") or not bool(game.call("_v72_composition_ready")):
-		_fail("main scene is not running the v1.58 composition rescue")
+		_fail("main scene is not running the v1.58 composition contract")
 		return
 	var stage = game.v70_menu_stage
 	if stage == null or not stage.has_method("composition_ready"):
-		_fail("v1.58 menu stage is missing")
+		_fail("v1.58 composition-capable menu stage is missing")
 		return
+	var authored_environment := stage.has_method("environment_assets_ready")
 
 	_stage("all-menu-stages")
 	for screen in SCREENS:
@@ -75,9 +76,13 @@ func _run() -> void:
 	_stage("forge-background-only")
 	stage.call("set_screen", "forge")
 	await process_frame
-	for required in ["ForgeHearth", "ForgeMouth", "ForgeRack", "ForgeAnvilTop"]:
+	# v1.58 used procedural Forge nodes; v1.59 intentionally replaces those with
+	# imported authored meshes. Preserve the composition contract while accepting
+	# the new implementation instead of forcing deleted blockout node names back.
+	var forge_required := ["ForgeHearthAsset", "ForgeRackAsset", "ForgeAnvilAsset"] if authored_environment else ["ForgeHearth", "ForgeMouth", "ForgeRack", "ForgeAnvilTop"]
+	for required in forge_required:
 		if stage.stage_root.get_node_or_null(required) == null:
-			_fail("Forge rescue prop missing: %s" % required)
+			_fail("Forge composition prop missing: %s" % required)
 			return
 	for blocker in ["ForgeBody", "ForgeChimney", "WeaponRack", "AnvilHornB"]:
 		if stage.stage_root.get_node_or_null(blocker) != null:
