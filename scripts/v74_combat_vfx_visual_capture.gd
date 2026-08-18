@@ -18,6 +18,12 @@ func _run() -> void:
 		_fail("combat VFX layer is not ready before capture")
 		return
 
+	# CI/Xvfb frame durations are not guaranteed to match a 60-FPS device. Freeze
+	# processing after construction so each sync_runtime() state is captured at its
+	# exact presentation peak instead of decaying for an arbitrary number of ms.
+	# Rendering remains active; only time-driven _process() callbacks are paused.
+	world.set_active(false)
+
 	var enemies := [
 		{"type":"goblin", "pos":Vector2(255.0, 445.0), "radius":23.0, "phase":0.2, "attack_cd":0.09},
 		{"type":"skeleton", "pos":Vector2(465.0, 445.0), "radius":25.0, "phase":0.8, "attack_cd":0.12},
@@ -27,15 +33,11 @@ func _run() -> void:
 
 	world.sync_runtime(player_pos, enemies, [], [], [], Vector2.ZERO, 3.0, 1.0, 0.0, 1)
 	_clear_transition_for_capture(world)
-	for _i in range(2):
-		await process_frame
 	if not await _save_frame("attack_arc"):
 		return
 
 	world.sync_runtime(player_pos, enemies, [], [], [], Vector2.ZERO, 3.15, 0.0, 1.0, 1)
 	_clear_transition_for_capture(world)
-	for _i in range(2):
-		await process_frame
 	if not await _save_frame("skill_ring"):
 		return
 
@@ -45,7 +47,6 @@ func _run() -> void:
 	world.skill_amount = 0.0
 	world.sync_runtime(player_pos, enemies, [], [], [], Vector2.ZERO, 3.30, 0.0, 0.0, 1)
 	_clear_transition_for_capture(world)
-	await process_frame
 	if not await _save_frame("enemy_tells"):
 		return
 
@@ -58,7 +59,6 @@ func _run() -> void:
 	world.camera.position = Vector3(0.0, 5.6, 5.9)
 	world.camera.size = 6.2
 	world.camera.look_at(Vector3(0.0, 0.55, 0.0), Vector3.UP)
-	await process_frame
 	if not await _save_frame("player_vfx_closeup"):
 		return
 
