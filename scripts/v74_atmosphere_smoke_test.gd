@@ -15,6 +15,10 @@ const EXPECTED_GRADE := {
 	"rift_descent": {"ambient":0.17, "key":0.88, "warm":0.16, "arcane":1.20},
 	"starless_spire": {"ambient":0.16, "key":0.82, "warm":0.08, "arcane":0.82},
 }
+const RETIRED_DECORATIVE_RING_ROOTS := [
+	"ProductionDetails/V160LowerFloorRings",
+	"OssuaryRealm/V160OssuaryRitualRings",
+]
 
 func _init() -> void:
 	call_deferred("_run")
@@ -65,15 +69,15 @@ func _run() -> void:
 			_fail("actor/material readiness regressed on floor %d" % floor_no)
 			return
 
-	# Diagnostic: resolve the actual final source of the persistent decorative
-	# rings seen in the frozen portrait captures. No enemies are spawned here, so
-	# attack telegraphs and spawn/death signatures cannot contaminate the trace.
-	for diagnostic_floor in [1, 15]:
-		world.sync_runtime(Vector2(360.0, 650.0), [], [], [], [], Vector2.ZERO, 9.0, 0.0, 0.0, diagnostic_floor)
-		await process_frame
-		print("V74_FLOOR_SIGNAL_TRACE_BEGIN:%d" % diagnostic_floor)
-		_trace_visible_floor_signals(world)
-		print("V74_FLOOR_SIGNAL_TRACE_END:%d" % diagnostic_floor)
+	for path_value in RETIRED_DECORATIVE_RING_ROOTS:
+		var path := String(path_value)
+		var ring_root := world.get_node_or_null(path) as Node3D
+		if ring_root == null:
+			_fail("retired decorative ring root missing: %s" % path)
+			return
+		if ring_root.visible:
+			_fail("retired decorative ring root became visible: %s" % path)
+			return
 
 	var env := world.atmosphere_world.environment as Environment
 	if env == null or not env.adjustment_enabled:
@@ -93,27 +97,6 @@ func _run() -> void:
 	world.queue_free()
 	await process_frame
 	quit(0)
-
-func _trace_visible_floor_signals(node: Node) -> void:
-	if node is MeshInstance3D:
-		var mesh_instance := node as MeshInstance3D
-		if _effective_visible(mesh_instance) and mesh_instance.global_position.y <= 0.12:
-			if mesh_instance.mesh is CylinderMesh:
-				var cylinder := mesh_instance.mesh as CylinderMesh
-				print("V74_FLOOR_SIGNAL:%s:type=CylinderMesh:global=%s:radius=%.3f:height=%.3f" % [mesh_instance.get_path(), mesh_instance.global_position, maxf(cylinder.top_radius, cylinder.bottom_radius), cylinder.height])
-			elif mesh_instance.mesh is TorusMesh:
-				var torus := mesh_instance.mesh as TorusMesh
-				print("V74_FLOOR_SIGNAL:%s:type=TorusMesh:global=%s:inner=%.3f:outer=%.3f" % [mesh_instance.get_path(), mesh_instance.global_position, torus.inner_radius, torus.outer_radius])
-	for child_value in node.get_children():
-		_trace_visible_floor_signals(child_value as Node)
-
-func _effective_visible(node: Node) -> bool:
-	var current: Node = node
-	while current != null:
-		if current is Node3D and not (current as Node3D).visible:
-			return false
-		current = current.get_parent()
-	return true
 
 func _near(actual: float, expected: float) -> bool:
 	return absf(actual - expected) <= 0.005
