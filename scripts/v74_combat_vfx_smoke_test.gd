@@ -22,7 +22,7 @@ func _run() -> void:
 	if not bool(snapshot.get("production_actor_presentation_ready", false)):
 		_fail("actor presentation regression under VFX layer")
 		return
-	if not bool(snapshot.get("character_combat_vfx", false)):
+	if not bool(snapshot.get("character_combat_vfx_ready", false)):
 		_fail("v1.48 combat VFX regression")
 		return
 
