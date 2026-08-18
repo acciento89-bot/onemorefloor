@@ -2,11 +2,11 @@ extends "res://scripts/main_v73.gd"
 
 # ONE MORE FLOOR v1.60 — authored environment milestone.
 # Expands the authored OBJ takeover across meta screens and the complete tower,
-# including production floors, focals, materials, actors and combat VFX.
+# including floors, focals, materials, actors, combat VFX and atmosphere grade.
 # Gameplay, input, saves and v1.54 real-model combat authority remain inherited.
 
 const Menu3DStageV160Scene = preload("res://scripts/menu3d_stage_v160.gd")
-const AuthoredTowerWorldV160 = preload("res://scripts/world3d_chamber_v160_combat_polish.gd")
+const AuthoredTowerWorldV160 = preload("res://scripts/world3d_chamber_v160_atmosphere.gd")
 const V74_VERSION := "1.60.0-authored-environment-milestone"
 const V74_BUILD := "47-dev"
 
@@ -67,7 +67,9 @@ func _v74_tower_environment_ready() -> bool:
 		and v52_world_root.has_method("production_actor_presentation_ready") \
 		and bool(v52_world_root.call("production_actor_presentation_ready")) \
 		and v52_world_root.has_method("production_combat_vfx_ready") \
-		and bool(v52_world_root.call("production_combat_vfx_ready"))
+		and bool(v52_world_root.call("production_combat_vfx_ready")) \
+		and v52_world_root.has_method("production_atmosphere_ready") \
+		and bool(v52_world_root.call("production_atmosphere_ready"))
 
 func _v74_meta_environment_snapshot() -> Dictionary:
 	var stage_snapshot: Dictionary = {}
