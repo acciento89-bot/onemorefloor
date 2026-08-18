@@ -27,6 +27,7 @@ func _run() -> void:
 	world.set_process(false)
 	if world.player_root != null:
 		world.player_root.visible = false
+	_hide_environment_validation_noise(world)
 
 	var staged: Array[Node3D] = []
 	var gallery_positions := [
@@ -77,6 +78,15 @@ func _run() -> void:
 	world.queue_free()
 	await process_frame
 	quit(0)
+
+func _hide_environment_validation_noise(world: Node) -> void:
+	for path_value in [
+		"ProductionVerticalSlice/RealmTransition",
+		"ProductionDetails/V160LowerFloorRings",
+	]:
+		var node := world.get_node_or_null(String(path_value)) as Node3D
+		if node != null:
+			node.visible = false
 
 func _hide_validation_overlays(enemy: Node3D) -> void:
 	if enemy == null:
