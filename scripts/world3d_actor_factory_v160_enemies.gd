@@ -287,10 +287,18 @@ func _e_material(name_value: String, color: Color, metallic_value: float, roughn
 	return material
 
 func _e_mesh(parent: Node3D, node_name: String, mesh: Mesh, pos: Vector3, material: Material, scale_value: Vector3 = Vector3.ONE, cast_shadow: bool = true) -> MeshInstance3D:
-	var node := _v153_mesh(parent, node_name, mesh, pos, material)
+	# v1.53's helper is intentionally typed to PrimitiveMesh. v1.60 also uses
+	# SurfaceTool ArrayMesh geometry for frustums/wedges/wings/shields, so create
+	# the MeshInstance3D directly here instead of narrowing the mesh type.
+	var node := MeshInstance3D.new()
+	node.name = node_name
+	node.mesh = mesh
+	node.material_override = material
+	node.position = pos
 	node.scale = scale_value
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if cast_shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	node.set_meta("enemy_v160_piece", true)
+	parent.add_child(node)
 	_enemy_build_mesh_count += 1
 	return node
 
