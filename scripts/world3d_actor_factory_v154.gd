@@ -11,6 +11,20 @@ func _init() -> void:
 	super._init()
 	model_registry = RealModelRegistryV154.new()
 
+func animate_player(root: Node3D, elapsed: float, move_amount: float, attack_amount: float, skill_amount: float) -> void:
+	super.animate_player(root, elapsed, move_amount, attack_amount, skill_amount)
+	_drive_current_imported_state(root)
+
+func animate_enemy(root: Node3D, elapsed: float, phase: float, tell: float, hit: float, index: int) -> void:
+	super.animate_enemy(root, elapsed, phase, tell, hit, index)
+	_drive_current_imported_state(root)
+
+func _drive_current_imported_state(root: Node3D) -> void:
+	if root == null or not is_instance_valid(root) or not imported_model_active(root):
+		return
+	var state := String(root.get_meta("production_animation_state", "idle"))
+	_drive_imported(root, state, 1.0)
+
 func real_model_intake_ready() -> bool:
 	return model_registry != null \
 		and model_registry.has_method("candidate_paths") \
