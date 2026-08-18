@@ -81,7 +81,6 @@ func _place_meta_asset(
 	return instance
 
 func _build_talents_stage() -> void:
-	# Arcane observatory: four authored obelisks frame a central imported pedestal.
 	_place_environment_asset(stage_root, "TalentPedestalAsset", "pedestal", mat_dark_metal, Vector3(0.0, 0.30, -0.25), Vector3(0.84, 0.84, 0.84))
 	for i in range(4):
 		var x := -2.65 + float(i) * 1.77
@@ -92,18 +91,23 @@ func _build_talents_stage() -> void:
 	_add_environment_light("TalentBlueFill", Vector3(2.2, 2.25, -1.20), Color("43a0ff"), 0.62, 4.0)
 
 func _build_vault_stage() -> void:
-	# A readable authored vault door now owns the background silhouette.
-	_place_meta_asset(stage_root, "VaultDoorAsset", "vault_door", mat_dark_metal, Vector3(0.0, 0.18, -3.00), Vector3(0.94, 0.94, 0.94))
+	# Portrait gate pass 2: the first door read as a featureless black monolith.
+	# Pull it back, use lighter authored-stone treatment and give the chamber two
+	# warm side braziers so the lock silhouette remains readable behind the UI.
+	_place_meta_asset(stage_root, "VaultDoorAsset", "vault_door", mat_stone_hi, Vector3(0.0, 0.22, -3.08), Vector3(0.82, 0.82, 0.82))
 	for i in range(4):
 		var x := -2.45 + float(i) * 1.63
 		var z := -0.85 if i % 2 == 0 else -1.18
 		_place_meta_asset(stage_root, "VaultChest%dAsset" % i, "chest", mat_gold if i in [1, 2] else mat_stone_hi, Vector3(x, 0.18, z), Vector3(0.74, 0.74, 0.74))
 	_place_environment_asset(stage_root, "VaultPillarLAsset", "pillar", mat_stone_mid, Vector3(-3.20, 0.04, -3.00), Vector3(0.72, 0.94, 0.72))
 	_place_environment_asset(stage_root, "VaultPillarRAsset", "pillar", mat_stone_mid, Vector3(3.20, 0.04, -3.00), Vector3(0.72, 0.94, 0.72))
-	_add_environment_light("VaultGoldKey", Vector3(0.0, 2.45, -1.65), Color("ffc85d"), 0.80, 4.5)
+	_place_environment_asset(stage_root, "VaultBrazierLAsset", "brazier", mat_brass, Vector3(-2.82, 2.46, -2.48), Vector3(0.56, 0.56, 0.56))
+	_place_environment_asset(stage_root, "VaultBrazierRAsset", "brazier", mat_brass, Vector3(2.82, 2.46, -2.48), Vector3(0.56, 0.56, 0.56))
+	_add_environment_light("VaultGoldKey", Vector3(0.0, 2.35, -1.55), Color("ffc85d"), 0.72, 4.3)
+	_add_environment_light("VaultWarmL", Vector3(-2.65, 2.55, -2.05), Color("ff9f4c"), 0.48, 3.0)
+	_add_environment_light("VaultWarmR", Vector3(2.65, 2.55, -2.05), Color("ff9f4c"), 0.48, 3.0)
 
 func _build_missions_stage() -> void:
-	# Mission command room with authored tactical table and two contract boards.
 	_place_meta_asset(stage_root, "MissionTableAsset", "mission_table", mat_stone_hi, Vector3(0.0, 0.04, -0.55), Vector3(0.82, 0.82, 0.82))
 	_place_meta_asset(stage_root, "MissionBoardLAsset", "mission_board", mat_green, Vector3(-2.45, 0.10, -2.83), Vector3(0.72, 0.72, 0.72))
 	_place_meta_asset(stage_root, "MissionBoardRAsset", "mission_board", mat_green, Vector3(2.45, 0.10, -2.83), Vector3(0.72, 0.72, 0.72))
@@ -112,7 +116,6 @@ func _build_missions_stage() -> void:
 	_add_environment_light("MissionWarmFill", Vector3(2.5, 2.10, -1.20), Color("e3b06a"), 0.40, 3.2)
 
 func _build_pass_stage() -> void:
-	# Tower Pass becomes a trophy/relic shrine instead of flat procedural panels.
 	_place_meta_asset(stage_root, "PassShrineAsset", "pass_shrine", mat_stone_hi, Vector3(0.0, 0.08, -2.72), Vector3(0.92, 0.92, 0.92))
 	_place_environment_asset(stage_root, "PassBannerLAsset", "banner", mat_cloth, Vector3(-2.35, 2.12, -2.48), Vector3(0.78, 0.78, 0.78))
 	_place_environment_asset(stage_root, "PassBannerRAsset", "banner", mat_cloth, Vector3(2.35, 2.12, -2.48), Vector3(0.78, 0.78, 0.78))
@@ -121,7 +124,6 @@ func _build_pass_stage() -> void:
 	_add_environment_light("PassGoldRim", Vector3(2.1, 2.10, 0.55), Color("ffd26e"), 0.44, 3.2)
 
 func _build_store_stage() -> void:
-	# Store is now a compact merchant alcove with an authored counter and shelves.
 	_place_meta_asset(stage_root, "StoreCounterAsset", "store_counter", mat_dark_metal, Vector3(0.0, 0.02, -2.12), Vector3(0.84, 0.84, 0.84))
 	_place_environment_asset(stage_root, "StorePedestalLAsset", "pedestal", mat_brass, Vector3(-2.45, 0.10, -0.30), Vector3(0.54, 0.54, 0.54))
 	_place_environment_asset(stage_root, "StorePedestalRAsset", "pedestal", mat_brass, Vector3(2.45, 0.10, -0.30), Vector3(0.54, 0.54, 0.54))
