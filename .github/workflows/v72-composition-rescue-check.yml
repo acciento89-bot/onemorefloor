@@ -55,11 +55,11 @@ jobs:
           ./godot --headless --path . --script res://scripts/v72_composition_rescue_smoke_test.gd --quit-after 120 2>&1 | tee v72-composition.log
           grep -q "v1.58 composition rescue smoke test passed" v72-composition.log
 
-      - name: Re-run v1.57 lookdev regression
+      - name: Re-run v1.56 full 3D presentation regression
         run: |
           set -o pipefail
-          ./godot --headless --path . --script res://scripts/v71_3d_lookdev_smoke_test.gd --quit-after 120 2>&1 | tee v71-lookdev.log
-          grep -q "v1.57 production 3D lookdev smoke test passed" v71-lookdev.log
+          ./godot --headless --path . --script res://scripts/v70_full_3d_presentation_smoke_test.gd --quit-after 120 2>&1 | tee v70-presentation.log
+          grep -q "v1.56 full 3D presentation smoke test passed" v70-presentation.log
 
       - name: Re-run v1.55 Wanderer regression
         run: |
@@ -83,7 +83,7 @@ jobs:
           path: |
             parse.log
             v72-composition.log
-            v71-lookdev.log
+            v70-presentation.log
             v69-wanderer.log
             v66-input-flow.log
           if-no-files-found: ignore
