@@ -132,8 +132,12 @@ func _run() -> void:
 		return
 	var arc_arrays: Array = (world.v160_attack_arc.mesh as ArrayMesh).surface_get_arrays(0)
 	var arc_normals: PackedVector3Array = arc_arrays[Mesh.ARRAY_NORMAL]
-	if arc_normals.is_empty() or arc_normals[0].y <= 0.5:
-		_fail("v1.60 attack arc does not face the isometric camera")
+	if arc_normals.is_empty() or absf(arc_normals[0].y) <= 0.5:
+		_fail("v1.60 attack arc plane normal is invalid")
+		return
+	var arc_material := world.v160_attack_arc.material_override as StandardMaterial3D
+	if arc_material == null or arc_material.cull_mode != BaseMaterial3D.CULL_DISABLED:
+		_fail("v1.60 attack arc is not double-sided for isometric view")
 		return
 	if world.v160_skill_outer_ring == null or not world.v160_skill_outer_ring.visible or not _is_torus(world.v160_skill_outer_ring):
 		_fail("v1.60 skill outer ring did not activate")
