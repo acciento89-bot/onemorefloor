@@ -47,7 +47,9 @@ func _run() -> void:
 		return
 
 	# Drive the same required production states through the existing v1.54
-	# registry. We only changed visible geometry, not animation authority.
+	# registry. Read the chosen clip immediately: waiting a frame would allow the
+	# normal world process to legitimately request its current gameplay state and
+	# turn this into a state-leak test instead of an animation-contract test.
 	var cases := [
 		["idle", 0.0, 0.0, 0.0],
 		["run", 1.0, 0.0, 0.0],
@@ -57,7 +59,6 @@ func _run() -> void:
 	for case_value in cases:
 		var case: Array = case_value
 		world.actor_factory.animate_player(world.player_root, 0.25, float(case[1]), float(case[2]), float(case[3]))
-		await process_frame
 		var active_clip := String(imported.get_meta("active_animation_clip", "")).to_lower()
 		if active_clip.is_empty() or not active_clip.contains(String(case[0])):
 			_fail("animation state %s no longer drives imported clip (got %s)" % [case[0], active_clip])
