@@ -19,9 +19,9 @@ func _run() -> void:
 		_fail("actor stack is not ready before enemy capture")
 		return
 
-	# Establish a real realm/background first, then freeze gameplay processing so
-	# manually staged enemy shells are not hidden by an empty gameplay snapshot.
-	world.sync_runtime(Vector2(360.0, 580.0), [], [], [], [], Vector2.ZERO, 25.0, 0.0, 0.0, 25)
+	# Neutral Lower Halls lighting makes material and silhouette differences much
+	# easier to judge than the orange Iron Bastion validation background.
+	world.sync_runtime(Vector2(360.0, 580.0), [], [], [], [], Vector2.ZERO, 1.0, 0.0, 0.0, 1)
 	await process_frame
 	world.set_active(false)
 	world.set_process(false)
@@ -39,6 +39,7 @@ func _run() -> void:
 		world.actor_factory.configure_enemy(enemy, kind, world.actor_materials)
 		enemy.position = gallery_positions[index]
 		enemy.visible = true
+		_hide_validation_overlays(enemy)
 		staged.append(enemy)
 	for index in range(ENEMY_KINDS.size(), world.enemy_pool.size()):
 		var unused := world.enemy_pool[index] as Node3D
@@ -54,7 +55,8 @@ func _run() -> void:
 		return
 
 	# Individual front close-ups make silhouette regressions obvious even though
-	# the actual game camera shows enemies much smaller.
+	# the actual game camera shows enemies much smaller. Gameplay overlays are
+	# hidden only in this validation view; runtime telegraphs remain untouched.
 	for index in range(ENEMY_KINDS.size()):
 		var kind := String(ENEMY_KINDS[index])
 		for other_index in range(staged.size()):
@@ -64,7 +66,7 @@ func _run() -> void:
 		world.camera.position = Vector3(0.0, 4.55 if kind != "warden" else 5.35, -5.3 if kind != "warden" else -6.1)
 		world.camera.size = 3.45 if kind != "warden" else 4.35
 		world.camera.look_at(Vector3(0.0, 0.82 if kind != "warden" else 1.02, 0.0), Vector3.UP)
-		world.actor_factory.animate_enemy(enemy, 1.4, float(index) * 0.31, 0.35, 0.0, index)
+		world.actor_factory.animate_enemy(enemy, 1.4, float(index) * 0.31, 0.0, 0.0, index)
 		for _i in range(4):
 			await process_frame
 		if not await _save_frame(kind):
@@ -75,6 +77,18 @@ func _run() -> void:
 	world.queue_free()
 	await process_frame
 	quit(0)
+
+func _hide_validation_overlays(enemy: Node3D) -> void:
+	if enemy == null:
+		return
+	_hide_overlay_recursive(enemy)
+
+func _hide_overlay_recursive(node: Node) -> void:
+	var node_name := String(node.name).to_lower()
+	if node is GeometryInstance3D and ("tell" in node_name or "rank" in node_name or "crest" in node_name or "shadow" in node_name):
+		(node as GeometryInstance3D).visible = false
+	for child in node.get_children():
+		_hide_overlay_recursive(child)
 
 func _save_frame(stem: String) -> bool:
 	await RenderingServer.frame_post_draw

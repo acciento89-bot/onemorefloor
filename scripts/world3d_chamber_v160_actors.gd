@@ -4,8 +4,8 @@ extends "res://scripts/world3d_chamber_v160_materials.gd"
 # Swaps only the actor factory used by the already-proven v1.54 chamber. All
 # combat/world authority remains inherited from the v1.60 material stack.
 
-const ActorFactoryV160 = preload("res://scripts/world3d_actor_factory_v160_enemies.gd")
-const ACTOR_PRESENTATION_VERSION := "1.60-authored-wanderer-enemy-silhouettes"
+const ActorFactoryV160 = preload("res://scripts/world3d_actor_factory_v160_enemy_lookdev.gd")
+const ACTOR_PRESENTATION_VERSION := "1.60-authored-wanderer-enemy-lookdev"
 
 func _build_player() -> void:
 	actor_factory = ActorFactoryV160.new()
@@ -29,6 +29,8 @@ func debug_snapshot() -> Dictionary:
 	data["production_enemy_presentation_pipeline_ready"] = actor_factory != null \
 		and actor_factory.has_method("enemy_presentation_pipeline_ready") \
 		and bool(actor_factory.call("enemy_presentation_pipeline_ready"))
+	if actor_factory != null and actor_factory.has_method("enemy_lookdev_snapshot"):
+		data["enemy_v160_lookdev"] = actor_factory.call("enemy_lookdev_snapshot")
 	if actor_factory != null and actor_factory.has_method("v160_wanderer_presentation_snapshot"):
 		data["wanderer_v160"] = actor_factory.call("v160_wanderer_presentation_snapshot", player_root)
 	if actor_factory != null and actor_factory.has_method("v160_wanderer_polish_snapshot"):
