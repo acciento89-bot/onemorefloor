@@ -9,6 +9,7 @@ on:
       - 'scripts/main_v72.gd'
       - 'scripts/menu3d_stage_v158.gd'
       - 'scripts/v72_composition_rescue_smoke_test.gd'
+      - 'scripts/v72_visual_capture.gd'
       - 'scenes/main.tscn'
       - '.github/workflows/v72-composition-rescue-check.yml'
   pull_request:
@@ -16,6 +17,7 @@ on:
       - 'scripts/main_v72.gd'
       - 'scripts/menu3d_stage_v158.gd'
       - 'scripts/v72_composition_rescue_smoke_test.gd'
+      - 'scripts/v72_visual_capture.gd'
       - 'scenes/main.tscn'
       - '.github/workflows/v72-composition-rescue-check.yml'
 
@@ -55,6 +57,27 @@ jobs:
           ./godot --headless --path . --script res://scripts/v72_composition_rescue_smoke_test.gd --quit-after 120 2>&1 | tee v72-composition.log
           grep -q "v1.58 composition rescue smoke test passed" v72-composition.log
 
+      - name: Render real 720x1280 Home Hero Forge captures
+        run: |
+          set -o pipefail
+          rm -rf artifacts/v158
+          xvfb-run -a ./godot --path . --audio-driver Dummy --script res://scripts/v72_visual_capture.gd --quit-after 120 2>&1 | tee v72-visual-capture.log
+          grep -q "v1.58 portrait visual capture passed" v72-visual-capture.log
+          test -s artifacts/v158/home.png
+          test -s artifacts/v158/hero.png
+          test -s artifacts/v158/forge.png
+
+      - name: Upload portrait visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v72-composition-visuals
+          path: |
+            artifacts/v158/home.png
+            artifacts/v158/hero.png
+            artifacts/v158/forge.png
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Re-run v1.56 full 3D presentation regression
         run: |
           set -o pipefail
@@ -83,6 +106,7 @@ jobs:
           path: |
             parse.log
             v72-composition.log
+            v72-visual-capture.log
             v70-presentation.log
             v69-wanderer.log
             v66-input-flow.log
