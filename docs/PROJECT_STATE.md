@@ -10,7 +10,8 @@ Canonical handoff for continued development. Read this file before changing art 
 - Base: `main`
 - Last fully validated technical Wanderer candidate: `5a5d4b2fa915b609b521912bb79761149eabe475` (r7), but visual lock was rejected after manual capture inspection.
 - Last accepted safe rollback baseline remains `090b7ce8a702229b9d52600f9d540f68cb73ac9c` (r6).
-- Current active candidate: r8 capture-driven silhouette correction; activation commit `8486af39db2c91d28974cc2febab2b3659e71941`.
+- Current Wanderer candidate: r8 capture-driven silhouette correction.
+- Current actor stack before this state commit: `d88d84998e7a09ed16a60dddf2600850a1a8af97` = Wanderer r8 + Enemy Quality r1.
 - PR stays DRAFT.
 - No TestFlight trigger, App Store build-number bump or version jump until a visibly meaningful bundled milestone is approved.
 
@@ -101,7 +102,6 @@ Activation commit: `8486af39db2c91d28974cc2febab2b3659e71941`.
 - Pauldron mass is reduced again without changing shoulder pivots.
 - Preserved animated glTF `ArcaneCore` remains visible for the production contract but is reduced to 6% scale; authored chest sigil is reduced further.
 - Warm highlight contamination is reduced with darker cloth/cape, cooler steel and even more restrained gold/arcane response.
-- `world3d_chamber_v160_actors.gd` activates the r8 factory.
 - r8 is NOT accepted until its Production Wanderer workflow and idle/attack/gameplay captures are manually inspected.
 
 Do not restore pre-r3 head/chest geometry, pre-r4 rounded torso/broad cape or pre-r5 rod-like authored limb meshes unless a demonstrated regression requires it.
@@ -110,7 +110,7 @@ Do not restore pre-r3 head/chest geometry, pre-r4 rounded torso/broad cape or pr
 
 Authored body bases exist for Goblin, Bat, Skeleton, Ghoul, Necromancer and Warden. Retain weapons, eyes, runes and archetype details while avoiding blockout body cores.
 
-Current gameplay-scale visual review shows:
+### Gameplay-scale review before Enemy Quality r1
 
 - Skeleton is the clearest of the six current silhouettes.
 - Goblin remains too round/chibi.
@@ -119,7 +119,33 @@ Current gameplay-scale visual review shows:
 - Necromancer robe/body is still too block-like.
 - Warden remains too toy-like and needs a more human armored proportion plus clearer armor-layer separation.
 
-First enemy quality priority after Wanderer lock: Goblin, Ghoul and Warden, then Bat/Necromancer, with Skeleton preserved unless a clear regression is visible.
+### Enemy Quality r1 — active
+
+Actor stack activation commit: `d88d84998e7a09ed16a60dddf2600850a1a8af97`.
+
+`world3d_actor_factory_v160_enemy_quality_r1.gd` extends Wanderer r8 and is presentation-only.
+
+Focus 1 — Goblin:
+- authored OBJ body core remains active
+- body width/depth is reduced to move away from the round/chibi silhouette
+- scrap shoulder, dagger and eye accents stay visible but are restrained
+- body surface is darker/rougher with clearer green edge separation
+
+Focus 2 — Ghoul:
+- authored OBJ body core remains active and receives a stronger hunch
+- hidden spine details and jaw layer are restored for one predatory silhouette
+- claws/eyes are reduced slightly rather than allowed to dominate
+- flesh surface is darker/rougher
+
+Focus 3 — Warden:
+- authored OBJ core becomes the slimmer dark under-armor body
+- existing metal chest, helm and pauldron pieces are restored as an outer armor layer
+- shield/blade/horns/eyes/rune remain but are reduced to stop the toy-knight read
+- body surface shifts toward dark cool armor rather than purple block mass
+
+Enemy Quality r1 does not alter enemy roots, hitboxes, tell timing, targeting, movement, combat authority or saves.
+
+Bat/Necromancer remain next after visual validation. Skeleton should be preserved unless a capture shows a clear regression.
 
 ## Required regression gates
 
@@ -137,11 +163,13 @@ Before release/upload decisions preserve and rerun relevant checks, especially:
 
 ## Current next priorities
 
-1. Validate r8 through Production Wanderer/Godot/import plus v1.55, v1.54 and v1.52.1 regressions.
-2. Download and manually inspect r8 idle/attack close-ups plus gameplay-camera captures.
-3. Lock Wanderer only if chest accent, arm-bar read and hood/cap read are materially resolved without new clipping.
-4. Once locked, start enemy quality pass with Goblin + Ghoul + Warden while retaining proven weapon/eye/rune detail layers.
-5. Do not upload TestFlight from character micro-passes; bundle a visibly meaningful milestone first.
+1. Validate the current actor stack: Wanderer r8 + Enemy Quality r1.
+2. Download and manually inspect r8 Wanderer idle/attack/gameplay captures.
+3. Download and manually inspect Enemy Quality r1 Goblin/Ghoul/Warden gameplay captures.
+4. Lock Wanderer only if chest accent, arm-bar read and hood/cap read are materially resolved without new clipping.
+5. Keep Enemy Quality r1 only where the visual capture is materially better; revise narrowly if an overlay causes clipping/double geometry.
+6. After the first enemy trio is accepted, continue Bat + Necromancer; preserve Skeleton unless necessary.
+7. Do not upload TestFlight from character micro-passes; bundle a visibly meaningful milestone first.
 
 ## Release policy
 
