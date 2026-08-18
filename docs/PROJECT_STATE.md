@@ -8,7 +8,8 @@ This file is the canonical handoff for continued development. Read it before cha
 - Pull request: #82 — `v1.60 authored environment milestone`
 - Branch: `agent/v1.60-meta-environments`
 - Base: `main`
-- Last art implementation commit at this checkpoint: `4aeaf732463cfe6ddaa19e2f1f9e9bbe4e3884b4`
+- Last fully validated geometry baseline: `ac65a14c717cd2962cfbbdc3de1f7961cfc5e246`
+- Current active character layer: `1.60-wanderer-proportions-r4`
 - PR remains intentionally DRAFT.
 - Do not trigger TestFlight, increment the App Store build number, or create a version jump until a visibly meaningful bundled milestone is approved.
 
@@ -48,18 +49,32 @@ Accepted silhouette rules:
 - readable dark cloth / cool steel / restrained brass / arcane accent materials
 - preserve cape, blade and animation readability
 
-### Character-quality pass r3 — 2026-08-18
+### Character-quality pass r3 — accepted baseline
 
 Starting point was PR #82 head `6b6f5909af5b0fb6d9973a15bd5291cd3cb10445`.
 
-New accepted work on top of that baseline:
+Accepted work:
 
-- `wanderer_hood.obj` rebuilt from the prior simple shell into a more authored angular hood with crown shaping, broader cowl skirt, brow overhang and side drape wedges.
-- `wanderer_chestplate.obj` rebuilt from the prior minimal 12-vertex plate into a layered slim cuirass with tapered core, central keel, clavicle plates, lower lames and restrained side ribs.
-- `wanderer_mask.obj` rebuilt from the prior flat extruded hexagonal plate into a faceted face solution with center ridge, cheek planes and split brow geometry.
-- Existing HeadPivot/Hips placement, glTF animation authority and combat pivots are intentionally unchanged.
+- `wanderer_hood.obj` rebuilt into an authored angular hood with crown shaping, cowl skirt, brow overhang and side drape wedges.
+- `wanderer_chestplate.obj` rebuilt into a layered slim cuirass with tapered core, central keel, clavicle plates, lower lames and restrained side ribs.
+- `wanderer_mask.obj` rebuilt into a faceted face solution with center ridge, cheek planes and split brow geometry.
+- Existing HeadPivot/Hips placement, glTF animation authority and combat pivots remain unchanged.
 
-Do not replace this pass with the previous simpler hood/chest/mask geometry unless a regression is demonstrated.
+### Character-quality pass r4 — active
+
+The r4 geometry baseline at `ac65a14c717cd2962cfbbdc3de1f7961cfc5e246` passed the dedicated Wanderer job, including Godot compile/import, production presentation, main v1.60 actor integration, runtime/close-up captures, v1.55 Wanderer regression and v1.52.1 input-flow regression.
+
+Changes on top of r3:
+
+- `wanderer_torso.obj` rebuilt from the rounded/tubular core into a tapered tailored torso with narrower waist, readable ribcage/shoulder transition, collar volume and restrained front seam/sash detail.
+- `wanderer_cape.obj` rebuilt into a narrower layered fold shell with uneven hem and depth variation instead of the broad flat trapezoid.
+- r4 proportion layer reduces hood/mask scale, shoulder armor, arm/gauntlet width, boot bulk and chest ornament dominance while slightly lengthening the legs.
+- eye slits are moved inward with the smaller face solution rather than floating at the previous mask dimensions.
+- chest sigil, ArcaneCore, belt and cape clasp are reduced further.
+- cloth, cape and steel receive stronger material separation under warm tower lighting.
+- No articulated pivot or gameplay authority is changed by this pass.
+
+Do not restore the pre-r3 head/chest geometry or the pre-r4 rounded torso/broad cape unless an actual regression is demonstrated.
 
 ### Enemies
 
@@ -81,11 +96,10 @@ Before release/upload decisions, preserve and rerun the relevant existing checks
 
 ## Current next priorities
 
-1. Validate the new Hood + Mask + Chestplate r3 geometry in Godot runtime/front close-up captures.
-2. Only if the runtime silhouette exposes clipping/scale issues, tune authored mesh placement/scales without changing pivots.
-3. Continue the Wanderer quality pass on remaining torso/cape transitions and material breakup only after the head/chest read is accepted.
-4. Then revisit enemy quality where the six new authored body bases still read too coarse in gameplay camera.
-5. Keep environment/gameplay systems stable while character presentation is being finalized.
+1. Validate the r4 proportion/material layer in Godot front close-up idle/attack and gameplay-camera captures.
+2. If r4 removes the remaining oversized-head / robot-arm read without clipping, lock the Wanderer silhouette for this milestone.
+3. Only after the Wanderer silhouette is locked, move to the six enemy authored body bases and improve whichever still read too coarse at gameplay scale.
+4. Keep environment/gameplay systems stable while character presentation is finalized.
 
 ## Release policy
 
