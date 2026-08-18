@@ -22,6 +22,7 @@ func _ready() -> void:
 	super._ready()
 	_resolve_v160_atmosphere_lights()
 	_configure_v160_atmosphere_structure()
+	_retire_v160_legacy_floor_signals()
 
 func _process(delta: float) -> void:
 	super._process(delta)
@@ -102,6 +103,23 @@ func _configure_v160_atmosphere_structure() -> void:
 	if camera != null:
 		camera_base_size = 15.85
 		camera.size = camera_base_size
+
+func _retire_v160_legacy_floor_signals() -> void:
+	# Lower Halls and Ossuary still inherit the bright v1.41/v1.43 decorative
+	# lane sigils. In the authored v1.60 floor composition those permanent rings
+	# compete with real telegraphs, impacts and spawn/death VFX. Keep the historic
+	# realm kits intact for their own regression tests and suppress only their
+	# always-on presentation here at the final v1.60 layer.
+	if production_details_root != null:
+		for child_value in production_details_root.get_children():
+			var child := child_value as Node3D
+			if child != null and child.name == "FloorSigil":
+				child.visible = false
+	if ossuary_root != null:
+		for child_value in ossuary_root.get_children():
+			var child := child_value as Node3D
+			if child != null and child.name == "OssuarySigil":
+				child.visible = false
 
 func _apply_v160_atmosphere_grade(floor_no: int) -> void:
 	if not production_atmosphere_ready():
