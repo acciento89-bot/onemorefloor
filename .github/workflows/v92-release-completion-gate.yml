@@ -8,10 +8,16 @@ on:
     paths:
       - '.github/workflows/v92-release-completion-gate.yml'
       - 'docs/RELEASE_READINESS.md'
+      - 'scripts/main_v88.gd'
+      - 'scripts/v93_release_surface_smoke_test.gd'
+      - 'scenes/main.tscn'
   pull_request:
     paths:
       - '.github/workflows/v92-release-completion-gate.yml'
       - 'docs/RELEASE_READINESS.md'
+      - 'scripts/main_v88.gd'
+      - 'scripts/v93_release_surface_smoke_test.gd'
+      - 'scenes/main.tscn'
 
 permissions:
   contents: read
@@ -54,6 +60,7 @@ jobs:
           project = Path('project.godot').read_text()
           preset = Path('export_presets.cfg').read_text()
           trigger = Path('.github/testflight-trigger').read_text()
+          scene = Path('scenes/main.tscn').read_text()
 
           project_version = re.search(r'config/version="([^"]+)"', project)
           ios_short = re.search(r'application/short_version="([^"]+)"', preset)
@@ -78,8 +85,19 @@ jobs:
               raise SystemExit('GL Compatibility release renderer missing')
           if 'build=30' not in trigger:
               raise SystemExit('Expected preserved Build 30 TestFlight trigger state')
+          if 'res://scripts/main_v88.gd' not in scene:
+              raise SystemExit('Production release-hardening main layer is not active')
           print(f'Release metadata OK: {project_version.group(1)} / checked-in iOS build {ios_build.group(1)}')
           PY
+
+      - name: Validate production Store/pass release surfaces
+        env:
+          OMF_FORCE_RELEASE_SURFACES: '1'
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v93_release_surface_smoke_test.gd --quit-after 320 2>&1 | tee release-surfaces.log
+          grep -q "v1.66 production release surface smoke test passed" release-surfaces.log
 
       - name: Validate current v1.66 r1.1 actor candidate
         run: |
@@ -168,6 +186,7 @@ jobs:
           name: v92-final-release-gate-failure
           path: |
             release-import.log
+            release-surfaces.log
             v166-character.log
             gameplay.log
             release-smoke.log

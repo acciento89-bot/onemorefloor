@@ -25,6 +25,14 @@ func _ready() -> void:
 func _v88_release_surfaces_active() -> bool:
 	return OS.get_environment("OMF_FORCE_RELEASE_SURFACES") == "1" or not OS.is_debug_build()
 
+func _v50_store_requests_available() -> bool:
+	# A headless release-surface smoke still runs inside a debug Godot binary.
+	# Force the same fail-closed provider state that a signed production export
+	# receives so CI cannot mistake the editor purchase simulator for StoreKit.
+	if _v88_release_surfaces_active():
+		return false
+	return super._v50_store_requests_available()
+
 func _v88_apply_release_entitlements() -> void:
 	if not _v88_release_surfaces_active() or monetization == null:
 		return
