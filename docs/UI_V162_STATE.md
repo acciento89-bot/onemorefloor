@@ -8,7 +8,8 @@ Canonical checkpoint for the active UI/menu presentation milestone. **Read this 
 - Base: `agent/v1.61-combat-presentation` / PR #90.
 - Locked combat implementation below this branch: v1.61 r3.2 `bb367aad35338dd6d32fbdf7d4de4208efef2ad0`.
 - Do not reopen Combat r3.2, Wanderer r11, enemy anatomy/surface baselines, combat timing/radius/damage/input, or save/progression authority while doing UI work.
-- PR #92 remains **DRAFT**. No TestFlight upload/build bump/version jump from UI micro-passes.
+- PR #92 remains **DRAFT**.
+- No TestFlight upload/build bump/version jump has been authorized or performed for v1.62.
 
 ## Current accepted v1.62 implementation
 
@@ -64,14 +65,14 @@ Dedicated workflow: **`32272029788` — fully green.**
 r3 adds `main_v80.gd` as a narrow presentation-only top layer over r2.1.
 
 ### Exact r3 scope
-- `draw_decision()` still calls the inherited renderer first, then redraws only the visible surfaces inside exact inherited `CASH` and `NEXT` rectangles.
-- `draw_game_over()` still calls the inherited renderer first, then redraws only the visible surfaces inside exact inherited `RETRY` and `HOME_BTN` rectangles.
+- `draw_decision()` calls the inherited renderer first, then redraws only the visible surfaces inside exact inherited `CASH` and `NEXT` rectangles.
+- `draw_game_over()` calls the inherited renderer first, then redraws only the visible surfaces inside exact inherited `RETRY` and `HOME_BTN` rectangles.
 - **No `pointer()` override exists in r3.** Input ownership remains inherited.
 - Cash-out, continue, retry, home, run state, economy and progression logic are unchanged.
 - `ONE MORE FLOOR` remains the stronger primary CTA; `CASH OUT` is clear but quieter.
 - `RETRY` remains the stronger primary CTA; `HOME` is a quieter secondary exit.
-- Primary runtime CTAs use the shared forged `_v76_primary_plate` language rather than saturated full-color slabs.
-- Secondary runtime CTAs use the shared dark `_v76_surface` language.
+- Primary runtime CTAs use shared forged `_v76_primary_plate` language rather than saturated full-color slabs.
+- Secondary runtime CTAs use shared dark `_v76_surface` language.
 
 ### r3 manual image acceptance
 `decision.png` — **accepted**:
@@ -96,8 +97,25 @@ Primary and secondary eight-screen capture sets were regenerated successfully un
 
 Therefore **v1.62 r3 / `71c8ecec...` is the current fully validated and visually accepted UI implementation baseline.**
 
+## UI action-state matrix — accepted diagnostic lock
+Diagnostic commit: **`64fec7921f9f898442f90900ce3265c034dbce79`**.
+Dedicated workflow: **`32272995156` — fully green.**
+
+The state matrix changes no production UI/game code. It captures the real Store renderer with three runtime-visible action families:
+- `store_try.png` — **accepted**: actionable debug `TRY` chips retain gold accent + chevron and read clearly clickable without dominating the product card.
+- `store_owned.png` — **accepted**: Premium Pass / Starter Cache / Remove Ads show restrained green `OWNED` chips; consumables remain actionable `TRY`; ownership is immediately legible without filling whole cards green.
+- `store_unavailable.png` — **accepted**: fail-closed release presentation is clearly muted; `UNAVAILABLE` chips and Bonus Cache are visibly disabled while product information remains readable.
+
+State coverage already present in the accepted r3 capture set:
+- Settings contains enabled and disabled/toggle states.
+- Vault contains active toolbar controls plus disabled Workshop/Item Progression states.
+- Tower Pass contains locked premium/reward hierarchy.
+- Decision/Game Over cover strong primary versus quieter secondary CTA hierarchy.
+
+There is **no persistent generic pressed-state in the current shared Canvas button API**. Existing pointer routing acts on press and transitions/actions immediately. Do not invent new input ownership merely to create a cosmetic pressed-state during this presentation milestone.
+
 ## Current validation
-Dedicated `v1.62 UI Foundation Check` run **`32272029788`** on `71c8ecec...` is fully green:
+Dedicated `v1.62 UI Foundation Check` run `32272029788` on `71c8ecec...` is fully green:
 - Godot 4.7.1 compile/import: PASS
 - r1 shared UI contract: PASS
 - r1.1 dark-panel balance contract: PASS
@@ -111,20 +129,41 @@ Dedicated `v1.62 UI Foundation Check` run **`32272029788`** on `71c8ecec...` is 
 - v1.38 MenuShell/router regression: PASS
 - v1.52.1 tutorial/game-over input-flow regression: PASS
 
+Dedicated `v1.62 UI State Matrix Check` run `32272995156` on diagnostic commit `64fec792...` is fully green:
+- current v1.62 project compile/import: PASS
+- accepted r3 contract: PASS
+- TRY / OWNED / UNAVAILABLE captures: PASS
+
+## iOS/device milestone gate
+`ONE MORE FLOOR iOS Playtest` run **`32272995220`** on the r3 + state-diagnostic stack is fully green:
+- release metadata verification: PASS
+- Godot 4.7.1 import: PASS
+- Godot Xcode export: PASS
+- generated Xcode project inspection: PASS
+- unsigned iPhone/iPad device build: PASS
+- unsigned device app packaging/artifact upload: PASS
+- TestFlight build override: SKIPPED
+- App Store Connect key preparation: SKIPPED
+- release archive/TestFlight export: SKIPPED
+- TestFlight upload: **SKIPPED**
+
+Therefore **v1.62 r3 is a TestFlight-ready candidate from UI + unsigned-device-build perspective, but no upload is authorized or performed.** PR #92 remains Draft until a deliberate milestone/release decision.
+
 ## Non-negotiable UI rules
-1. Preserve **`71c8ecec...`** as the current accepted UI rollback point.
-2. Preserve r2 Vault compaction, r2.1 Store action chips and r3 Decision/Game Over CTA hierarchy unless a real visual regression is demonstrated.
-3. Preserve Settings, Pause and Upgrade from unnecessary rewrites.
-4. Do not move or resize established pointer hit rectangles during presentation-only UI work.
-5. Do not regress to flat generic rectangles, bright full-card slabs, cheap neon/full-ring icon language, naked text actions, or inconsistent per-screen component families.
-6. Primary actions stay dominant; secondary navigation/utilities stay quieter.
-7. CI green is necessary but runtime captures decide visual acceptance.
-8. Keep v1.62 presentation-only on top of v1.61 unless separately scoped.
-9. **Update this file after every meaningful accepted/rejected UI pass.**
-10. No TestFlight/build/version jump for individual UI micro-passes.
+1. Preserve **`71c8ecec...`** as the current accepted production UI implementation rollback point.
+2. `64fec792...` is diagnostic state-matrix coverage only; do not confuse it with a new production visual layer.
+3. Preserve r2 Vault compaction, r2.1 Store action chips and r3 Decision/Game Over CTA hierarchy unless a real visual regression is demonstrated.
+4. Preserve Settings, Pause and Upgrade from unnecessary rewrites.
+5. Do not move or resize established pointer hit rectangles during presentation-only UI work.
+6. Do not regress to flat generic rectangles, bright full-card slabs, cheap neon/full-ring icon language, naked text actions, or inconsistent per-screen component families.
+7. Primary actions stay dominant; secondary navigation/utilities stay quieter.
+8. CI green is necessary but runtime captures decide visual acceptance.
+9. Keep v1.62 presentation-only on top of v1.61 unless separately scoped.
+10. **Update this file after every meaningful accepted/rejected UI pass.**
+11. No TestFlight/build/version jump from individual UI micro-passes.
 
 ## Current next priorities
-1. Preserve `71c8ecec...` and audit the actual **selected / pressed / disabled** component states exposed by the current runtime; do not invent new input authority.
-2. Focus only on state feedback that still looks flat/inconsistent after r3; keep all 13 accepted menu/runtime captures as regressions.
-3. After state-feedback polish, perform a coherent full UI review at 720×1280 before declaring v1.62 menu presentation complete.
-4. Before any v1.62 TestFlight-ready decision, deliberately run the v1.62 iOS/device-build gate and make a milestone-level upload decision.
+1. **Treat the v1.62 UI foundation as visually complete at the current r3 baseline unless a new device capture demonstrates a regression.**
+2. Preserve all 13 accepted main/runtime screens plus the three Store action-state captures as regression references.
+3. Return development focus to the next largest game-wide presentation problem rather than adding UI decoration quantity. Candidate: projectile/trail identity or boss-specific combat presentation on top of the accepted v1.61/v1.62 stack.
+4. If a TestFlight build is desired, make that decision deliberately as a bundled milestone; do not upload automatically from this checkpoint.
