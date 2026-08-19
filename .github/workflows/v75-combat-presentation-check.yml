@@ -11,6 +11,7 @@ on:
       - 'scripts/world3d_chamber_v161_combat_presentation_r22.gd'
       - 'scripts/world3d_chamber_v161_combat_presentation_r3.gd'
       - 'scripts/world3d_chamber_v161_combat_presentation_r31.gd'
+      - 'scripts/world3d_chamber_v161_combat_presentation_r32.gd'
       - 'scripts/main_v75.gd'
       - 'scenes/main.tscn'
       - 'scripts/v75_combat_presentation_smoke_test.gd'
@@ -18,12 +19,14 @@ on:
       - 'scripts/v75_combat_presentation_r22_smoke_test.gd'
       - 'scripts/v75_combat_presentation_r3_smoke_test.gd'
       - 'scripts/v75_combat_presentation_r31_smoke_test.gd'
+      - 'scripts/v75_combat_presentation_r32_smoke_test.gd'
       - 'scripts/v75_combat_presentation_visual_capture.gd'
       - 'scripts/v75_combat_presentation_r21_visual_capture.gd'
       - 'scripts/v75_combat_presentation_r22_visual_capture.gd'
       - 'scripts/v75_combat_presentation_gameplay_review_capture.gd'
       - 'scripts/v75_combat_presentation_r3_visual_capture.gd'
       - 'scripts/v75_combat_presentation_r31_visual_capture.gd'
+      - 'scripts/v75_combat_presentation_r32_visual_capture.gd'
       - '.github/workflows/v75-combat-presentation-check.yml'
   pull_request:
     paths:
@@ -32,6 +35,7 @@ on:
       - 'scripts/world3d_chamber_v161_combat_presentation_r22.gd'
       - 'scripts/world3d_chamber_v161_combat_presentation_r3.gd'
       - 'scripts/world3d_chamber_v161_combat_presentation_r31.gd'
+      - 'scripts/world3d_chamber_v161_combat_presentation_r32.gd'
       - 'scripts/main_v75.gd'
       - 'scenes/main.tscn'
       - 'scripts/v75_combat_presentation_smoke_test.gd'
@@ -39,12 +43,14 @@ on:
       - 'scripts/v75_combat_presentation_r22_smoke_test.gd'
       - 'scripts/v75_combat_presentation_r3_smoke_test.gd'
       - 'scripts/v75_combat_presentation_r31_smoke_test.gd'
+      - 'scripts/v75_combat_presentation_r32_smoke_test.gd'
       - 'scripts/v75_combat_presentation_visual_capture.gd'
       - 'scripts/v75_combat_presentation_r21_visual_capture.gd'
       - 'scripts/v75_combat_presentation_r22_visual_capture.gd'
       - 'scripts/v75_combat_presentation_gameplay_review_capture.gd'
       - 'scripts/v75_combat_presentation_r3_visual_capture.gd'
       - 'scripts/v75_combat_presentation_r31_visual_capture.gd'
+      - 'scripts/v75_combat_presentation_r32_visual_capture.gd'
       - '.github/workflows/v75-combat-presentation-check.yml'
 
 permissions:
@@ -53,7 +59,7 @@ permissions:
 jobs:
   validate-combat-presentation:
     runs-on: ubuntu-latest
-    timeout-minutes: 32
+    timeout-minutes: 34
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -101,11 +107,17 @@ jobs:
           ./godot --headless --path . --script res://scripts/v75_combat_presentation_r3_smoke_test.gd --quit-after 260 2>&1 | tee v161-r3-smoke.log
           grep -q "v1.61 combat presentation r3 smoke test passed" v161-r3-smoke.log
 
-      - name: Validate v1.61 r3.1 spawn and death signatures
+      - name: Preserve v1.61 r3.1 spawn and death signatures
         run: |
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v75_combat_presentation_r31_smoke_test.gd --quit-after 260 2>&1 | tee v161-r31-smoke.log
           grep -q "v1.61 combat presentation r3.1 smoke test passed" v161-r31-smoke.log
+
+      - name: Validate v1.61 r3.2 directional danger language
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v75_combat_presentation_r32_smoke_test.gd --quit-after 260 2>&1 | tee v161-r32-smoke.log
+          grep -q "v1.61 combat presentation r3.2 smoke test passed" v161-r32-smoke.log
 
       - name: Validate main scene integration
         run: |
@@ -142,7 +154,7 @@ jobs:
           test -s artifacts/v161_combat_presentation/r3_gameplay_skill_pressure.png
           test -s artifacts/v161_combat_presentation/r3_gameplay_kill_loot.png
 
-      - name: Render v1.61 r3.1 signature and steady-state review
+      - name: Preserve v1.61 r3.1 signature and steady-state review
         run: |
           set -o pipefail
           xvfb-run -a ./godot --path . --script res://scripts/v75_combat_presentation_r31_visual_capture.gd --quit-after 300 2>&1 | tee v161-r31-capture.log
@@ -150,6 +162,15 @@ jobs:
           test -s artifacts/v161_combat_presentation/r31_spawn_signatures.png
           test -s artifacts/v161_combat_presentation/r31_steady_attack_pressure.png
           test -s artifacts/v161_combat_presentation/r31_kill_loot_signatures.png
+
+      - name: Render v1.61 r3.2 directional danger review
+        run: |
+          set -o pipefail
+          xvfb-run -a ./godot --path . --script res://scripts/v75_combat_presentation_r32_visual_capture.gd --quit-after 300 2>&1 | tee v161-r32-capture.log
+          grep -q "v1.61 combat presentation r3.2 visual capture passed" v161-r32-capture.log
+          test -s artifacts/v161_combat_presentation/r32_focus_pressure.png
+          test -s artifacts/v161_combat_presentation/r32_mobility_phase.png
+          test -s artifacts/v161_combat_presentation/r32_slam_ritual.png
 
       - name: Upload v1.61 combat visual gate
         uses: actions/upload-artifact@v4
@@ -197,11 +218,13 @@ jobs:
             v161-r22-smoke.log
             v161-r3-smoke.log
             v161-r31-smoke.log
+            v161-r32-smoke.log
             main-integration.log
             v161-capture.log
             v161-gameplay-review.log
             v161-r3-capture.log
             v161-r31-capture.log
+            v161-r32-capture.log
             v160-combat.log
             wanderer.log
             enemies.log
