@@ -1,0 +1,174 @@
+name: Monitor TestFlight Build 30
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/testflight-build30-monitor.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  monitor-testflight-build-30:
+    runs-on: macos-15
+    timeout-minutes: 55
+    env:
+      TRIGGER_SHA: 567c83c0cace9c6028075266aa36beb622b554fc
+      TRIGGER_TIME: '2026-08-19T19:31:21Z'
+    steps:
+      - name: Verify monitor tooling
+        run: |
+          set -euo pipefail
+          gh --version
+          python3 --version
+
+      - name: Locate the single dispatched TestFlight run
+        id: locate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN_ID=""
+          for attempt in $(seq 1 180); do
+            gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --workflow ios-testflight.yml \
+              --branch main \
+              --event workflow_dispatch \
+              --limit 100 \
+              --json databaseId,createdAt,status,conclusion,url,headSha > "$RUNNER_TEMP/testflight-runs.json"
+
+            MATCH_INFO=$(python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          runs = json.loads(Path(os.environ['RUNNER_TEMP'], 'testflight-runs.json').read_text())
+          trigger_sha = os.environ['TRIGGER_SHA']
+          trigger_time = os.environ['TRIGGER_TIME']
+          matches = [r for r in runs if r.get('headSha') == trigger_sha and r.get('createdAt', '') >= trigger_time]
+          matches.sort(key=lambda r: r.get('createdAt', ''))
+          if len(matches) > 1:
+              print('DUPLICATE:' + ','.join(str(r['databaseId']) for r in matches))
+          elif len(matches) == 1:
+              print('FOUND:' + str(matches[0]['databaseId']))
+          else:
+              print('NONE')
+          PY
+            )
+
+            case "$MATCH_INFO" in
+              DUPLICATE:*)
+                echo "More than one workflow_dispatch run exists for trigger SHA $TRIGGER_SHA: ${MATCH_INFO#DUPLICATE:}"
+                echo "Refusing to guess which run is Build 30."
+                exit 1
+                ;;
+              FOUND:*)
+                RUN_ID="${MATCH_INFO#FOUND:}"
+                echo "Located single TestFlight workflow run: $RUN_ID"
+                break
+                ;;
+            esac
+
+            echo "Build 30 dispatch not visible yet (attempt $attempt); waiting 10s..."
+            sleep 10
+          done
+
+          test -n "$RUN_ID"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "TESTFLIGHT_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+
+      - name: Wait for the already-dispatched run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          set +e
+          gh run watch "$TESTFLIGHT_RUN_ID" --repo "$GITHUB_REPOSITORY" --interval 10 --exit-status
+          WATCH_STATUS=$?
+          set -e
+          echo "TESTFLIGHT_WATCH_STATUS=$WATCH_STATUS" >> "$GITHUB_ENV"
+          echo "Observed TestFlight run $TESTFLIGHT_RUN_ID through completion (watch status $WATCH_STATUS)."
+
+      - name: Verify Build 30 upload contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run view "$TESTFLIGHT_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json databaseId,status,conclusion,url,headSha,event,jobs \
+            > "$RUNNER_TEMP/testflight-build30-report.json"
+
+          gh run view "$TESTFLIGHT_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --log > "$RUNNER_TEMP/testflight-build30.log" || true
+
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          report = json.loads(Path(os.environ['RUNNER_TEMP'], 'testflight-build30-report.json').read_text())
+          expected_sha = os.environ['TRIGGER_SHA']
+
+          if report.get('event') != 'workflow_dispatch':
+              raise SystemExit(f"Expected workflow_dispatch, got {report.get('event')!r}")
+          if report.get('headSha') != expected_sha:
+              raise SystemExit(f"Expected head SHA {expected_sha}, got {report.get('headSha')}")
+          if report.get('status') != 'completed':
+              raise SystemExit(f"TestFlight run is not completed: {report.get('status')}")
+          if report.get('conclusion') != 'success':
+              raise SystemExit(f"TestFlight workflow conclusion is {report.get('conclusion')}")
+
+          jobs = report.get('jobs') or []
+          job = next((j for j in jobs if j.get('name') == 'ios-playtest'), None)
+          if not job:
+              raise SystemExit('ios-playtest job missing')
+          if job.get('conclusion') != 'success':
+              raise SystemExit(f"ios-playtest conclusion is {job.get('conclusion')}")
+
+          steps = {s.get('name'): s.get('conclusion') for s in (job.get('steps') or [])}
+          required_success = [
+              'Apply TestFlight build override',
+              'Verify release metadata',
+              'Import project headlessly',
+              'Export Godot Xcode project',
+              'Compile unsigned iPhone/iPad device build',
+              'Package unsigned device app',
+              'Detect App Store Connect signing secrets',
+              'Prepare App Store Connect API key',
+              'Create unsigned release archive',
+              'Create TestFlight export options',
+              'Upload to TestFlight with Apple cloud distribution signing',
+              'Upload TestFlight diagnostics',
+              'Remove App Store Connect key',
+          ]
+          bad = {name: steps.get(name) for name in required_success if steps.get(name) != 'success'}
+          if bad:
+              raise SystemExit(f"Required TestFlight steps were not successful: {bad}")
+
+          fail_step = steps.get('Fail if TestFlight upload failed')
+          if fail_step not in ('skipped', 'success'):
+              raise SystemExit(f"Unexpected upload-failure guard conclusion: {fail_step}")
+
+          print('TESTFLIGHT_BUILD30_WORKFLOW_SUCCESS')
+          print('run_id=' + str(report['databaseId']))
+          print('url=' + str(report['url']))
+          for name in required_success:
+              print(f"STEP_SUCCESS:{name}")
+          print(f"FAIL_GUARD:{fail_step}")
+          PY
+
+          grep -F "Preparing TestFlight build 30" "$RUNNER_TEMP/testflight-build30.log"
+          grep -E "Release metadata OK: .+ \(30\)" "$RUNNER_TEMP/testflight-build30.log"
+          echo "Build 30 workflow completed successfully and the Apple upload step returned success."
+
+      - name: Upload read-only monitor report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testflight-build30-monitor-report
+          path: |
+            ${{ runner.temp }}/testflight-build30-report.json
+          if-no-files-found: ignore
+          retention-days: 7
