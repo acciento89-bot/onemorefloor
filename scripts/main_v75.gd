@@ -4,7 +4,7 @@ extends "res://scripts/main_v74.gd"
 # Keeps the fully validated v1.60 authored environment/character stack and swaps
 # only the combat-world presentation layer. Gameplay authority remains inherited.
 
-const CombatPresentationWorldV161 = preload("res://scripts/world3d_chamber_v161_combat_presentation_r21.gd")
+const CombatPresentationWorldV161 = preload("res://scripts/world3d_chamber_v161_combat_presentation_r22.gd")
 const V75_VERSION := "1.61.0-combat-presentation"
 const V75_BUILD := "48-dev"
 

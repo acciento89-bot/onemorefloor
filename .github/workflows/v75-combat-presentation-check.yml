@@ -8,23 +8,29 @@ on:
     paths:
       - 'scripts/world3d_chamber_v161_combat_presentation.gd'
       - 'scripts/world3d_chamber_v161_combat_presentation_r21.gd'
+      - 'scripts/world3d_chamber_v161_combat_presentation_r22.gd'
       - 'scripts/main_v75.gd'
       - 'scenes/main.tscn'
       - 'scripts/v75_combat_presentation_smoke_test.gd'
       - 'scripts/v75_combat_presentation_r21_smoke_test.gd'
+      - 'scripts/v75_combat_presentation_r22_smoke_test.gd'
       - 'scripts/v75_combat_presentation_visual_capture.gd'
       - 'scripts/v75_combat_presentation_r21_visual_capture.gd'
+      - 'scripts/v75_combat_presentation_r22_visual_capture.gd'
       - '.github/workflows/v75-combat-presentation-check.yml'
   pull_request:
     paths:
       - 'scripts/world3d_chamber_v161_combat_presentation.gd'
       - 'scripts/world3d_chamber_v161_combat_presentation_r21.gd'
+      - 'scripts/world3d_chamber_v161_combat_presentation_r22.gd'
       - 'scripts/main_v75.gd'
       - 'scenes/main.tscn'
       - 'scripts/v75_combat_presentation_smoke_test.gd'
       - 'scripts/v75_combat_presentation_r21_smoke_test.gd'
+      - 'scripts/v75_combat_presentation_r22_smoke_test.gd'
       - 'scripts/v75_combat_presentation_visual_capture.gd'
       - 'scripts/v75_combat_presentation_r21_visual_capture.gd'
+      - 'scripts/v75_combat_presentation_r22_visual_capture.gd'
       - '.github/workflows/v75-combat-presentation-check.yml'
 
 permissions:
@@ -63,11 +69,17 @@ jobs:
           ./godot --headless --path . --script res://scripts/v75_combat_presentation_smoke_test.gd --quit-after 260 2>&1 | tee v161-r2-smoke.log
           grep -q "v1.61 combat presentation smoke test passed" v161-r2-smoke.log
 
-      - name: Validate v1.61 r2.1 motion presentation
+      - name: Preserve v1.61 r2.1 motion contract
         run: |
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v75_combat_presentation_r21_smoke_test.gd --quit-after 260 2>&1 | tee v161-r21-smoke.log
           grep -q "v1.61 combat presentation r2.1 smoke test passed" v161-r21-smoke.log
+
+      - name: Validate v1.61 r2.2 death presentation
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v75_combat_presentation_r22_smoke_test.gd --quit-after 260 2>&1 | tee v161-r22-smoke.log
+          grep -q "v1.61 combat presentation r2.2 smoke test passed" v161-r22-smoke.log
 
       - name: Validate main scene integration
         run: |
@@ -75,19 +87,16 @@ jobs:
           ./godot --headless --path . --script res://scripts/v74_meta_environment_smoke_test.gd --quit-after 260 2>&1 | tee main-integration.log
           grep -q "v1.60 authored meta environment smoke test passed" main-integration.log
 
-      - name: Render real v1.61 r2.1 combat captures
+      - name: Render isolated v1.61 r2.2 diagnostics
         run: |
           set -o pipefail
           rm -rf artifacts/v161_combat_presentation
           mkdir -p artifacts/v161_combat_presentation
-          xvfb-run -a ./godot --path . --script res://scripts/v75_combat_presentation_r21_visual_capture.gd --quit-after 300 2>&1 | tee v161-capture.log
-          grep -q "v1.61 combat presentation r2.1 visual capture passed" v161-capture.log
-          test -s artifacts/v161_combat_presentation/attack_blade_trail.png
-          test -s artifacts/v161_combat_presentation/skill_arcane_wave.png
-          test -s artifacts/v161_combat_presentation/enemy_segmented_tells.png
+          xvfb-run -a ./godot --path . --script res://scripts/v75_combat_presentation_r22_visual_capture.gd --quit-after 300 2>&1 | tee v161-capture.log
+          grep -q "v1.61 combat presentation r2.2 visual capture passed" v161-capture.log
+          test -s artifacts/v161_combat_presentation/death_bursts.png
           test -s artifacts/v161_combat_presentation/movement_streaks.png
           test -s artifacts/v161_combat_presentation/impact_bursts.png
-          test -s artifacts/v161_combat_presentation/player_blade_closeup.png
 
       - name: Upload v1.61 combat visual gate
         uses: actions/upload-artifact@v4
@@ -132,6 +141,7 @@ jobs:
             v161-import.log
             v161-r2-smoke.log
             v161-r21-smoke.log
+            v161-r22-smoke.log
             main-integration.log
             v161-capture.log
             v160-combat.log
