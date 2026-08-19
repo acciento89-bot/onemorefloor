@@ -47,35 +47,49 @@ func _run() -> void:
 		_fail("legacy circular loot floor glow was not replaced by r3 glint geometry")
 		return
 
-	# Use the inherited gameplay paths to verify the visual replacements remain
-	# active under real pressure and that primary danger telegraphs stay intact.
-	var enemies: Array = [
-		{"type":"necromancer", "pos":Vector2(285.0, 430.0), "radius":27.0, "phase":0.8, "attack_cd":0.05},
-		{"type":"warden", "pos":Vector2(435.0, 390.0), "radius":31.0, "phase":1.2, "attack_cd":0.09, "elite":true},
-	]
+	# Exercise the inherited presentation paths deterministically. The full r3
+	# gameplay-distance capture below remains the authority for real combined visual
+	# behavior; this smoke verifies that the new meshes survive those old triggers.
+	var enemy: Dictionary = {
+		"type":"necromancer",
+		"pos":Vector2(285.0, 430.0),
+		"radius":27.0,
+		"phase":0.8,
+		"attack_cd":0.05,
+	}
+	var proxy := world.enemy_pool[0] as Node3D
+	world.actor_factory.configure_enemy(proxy, "necromancer", world.actor_materials)
+	proxy.visible = true
+	proxy.position = world.design_to_world(enemy["pos"])
+	world.runtime_elapsed = 4.0
+	world.call("_sync_actor_grounding", [enemy])
+	if not ground.visible:
+		_fail("r3 grounding did not activate through inherited grounding path")
+		return
+	if not (ground.mesh is ArrayMesh):
+		_fail("visible r3 grounding regressed to non-ArrayMesh geometry")
+		return
+
 	var coins: Array = [
 		{"pos":Vector2(300.0, 520.0), "value":1},
 		{"pos":Vector2(350.0, 535.0), "value":8},
 	]
-	world.sync_runtime(Vector2(360.0, 665.0), enemies, [], [], coins, Vector2.ZERO, 4.0, 0.0, 0.0, 7)
-	if world.transition_root != null:
-		world.transition_root.visible = false
-
-	var visible_ground := false
-	for value in world.enemy_grounding_pool:
-		var item := value as MeshInstance3D
-		if item != null and item.visible:
-			visible_ground = true
-			if not (item.mesh is ArrayMesh):
-				_fail("visible r3 enemy grounding regressed to non-ArrayMesh geometry")
-				return
-	if not visible_ground:
-		_fail("r3 grounding did not activate under enemy pressure")
-		return
+	world.call("_sync_loot_presentation", coins)
 	if not marker.visible:
-		_fail("r3 loot marker did not activate through inherited loot sync")
+		_fail("r3 loot marker did not activate through inherited loot path")
 		return
-	if world.telegraph_pool.is_empty() or not ((world.telegraph_pool[0] as MeshInstance3D).mesh is ArrayMesh):
+	if beam == null or not (beam.mesh is ArrayMesh) or floor_glow == null or not (floor_glow.mesh is ArrayMesh):
+		_fail("r3 loot geometry regressed after inherited loot sync")
+		return
+
+	# Primary danger telegraphs are gameplay-significant and must remain the
+	# segmented v1.61 tell geometry rather than being folded into the new grounding.
+	world.call("_sync_ground_telegraphs", [enemy])
+	if world.telegraph_pool.is_empty():
+		_fail("primary danger telegraph pool missing")
+		return
+	var tell := world.telegraph_pool[0] as MeshInstance3D
+	if tell == null or not tell.visible or not (tell.mesh is ArrayMesh):
 		_fail("primary segmented danger telegraph regressed under r3")
 		return
 
