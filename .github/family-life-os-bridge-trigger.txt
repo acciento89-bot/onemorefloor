@@ -2,3 +2,4 @@ Internal Family Life OS TestFlight bridge trigger.
 Source repository: acciento89-bot/appideenchatgpt
 Source path: apps/011-family-life-os
 Build: 1
+Probe revision: 2
