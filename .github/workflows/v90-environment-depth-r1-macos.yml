@@ -12,6 +12,15 @@ on:
       - 'scripts/v90_environment_depth_r1_smoke_test.gd'
       - 'scripts/v90_environment_depth_r1_capture.gd'
       - '.github/workflows/v90-environment-depth-r1-macos.yml'
+  pull_request:
+    paths:
+      - 'assets/shaders/v165_environment_surface.gdshader'
+      - 'scripts/world3d_chamber_v165_environment_depth.gd'
+      - 'scripts/main_v86.gd'
+      - 'scenes/main.tscn'
+      - 'scripts/v90_environment_depth_r1_smoke_test.gd'
+      - 'scripts/v90_environment_depth_r1_capture.gd'
+      - '.github/workflows/v90-environment-depth-r1-macos.yml'
 
 permissions:
   contents: read
