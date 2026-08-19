@@ -51,9 +51,9 @@ func _run() -> void:
 		if tell == null or not tell.visible:
 			_fail("inherited tell trigger did not activate for %s" % String(case["mode"]))
 			return
-		var inherited_scale := tell.scale
+		var inherited_scale: Vector3 = tell.scale
 		world.call("_apply_v161_enemy_presentation", [enemy])
-		var mode := String(world.call("_v161_tell_mode", enemy))
+		var mode: String = String(world.call("_v161_tell_mode", enemy))
 		if mode != String(case["mode"]):
 			_fail("r3.2 tell classification mismatch: expected %s got %s" % [String(case["mode"]), mode])
 			return
@@ -68,16 +68,16 @@ func _run() -> void:
 			_fail("r3.2 tell geometry exceeded accepted 0.68 local radius for %s" % mode)
 			return
 		if mode == "focus" or mode == "charge":
-			var to_player := world.player_root.global_position - tell.global_position
+			var to_player: Vector3 = world.player_root.global_position - tell.global_position
 			to_player.y = 0.0
-			var expected_angle := atan2(to_player.x, -to_player.z)
-			var angular_error := absf(wrapf(tell.rotation.y - expected_angle, -PI, PI))
+			var expected_angle: float = atan2(to_player.x, -to_player.z)
+			var angular_error: float = absf(wrapf(tell.rotation.y - expected_angle, -PI, PI))
 			if angular_error > 0.001:
 				_fail("r3.2 directional tell did not point at player for %s" % mode)
 				return
 
 	# Lowest active cooldown must continue to decide the inherited warning window.
-	var mixed := {"type":"ghoul", "pos":Vector2(320.0, 430.0), "radius":24.0, "attack_cd":0.22, "lunge_cd":0.07}
+	var mixed: Dictionary = {"type":"ghoul", "pos":Vector2(320.0, 430.0), "radius":24.0, "attack_cd":0.22, "lunge_cd":0.07}
 	if String(world.call("_v161_active_tell_key", mixed)) != "lunge_cd":
 		_fail("r3.2 active tell key no longer follows the lowest inherited cooldown")
 		return
@@ -93,12 +93,12 @@ func _run() -> void:
 func _mesh_within_accepted_radius(mesh: ArrayMesh) -> bool:
 	if mesh == null:
 		return false
-	var box := mesh.get_aabb()
-	var min_x := box.position.x
-	var max_x := box.position.x + box.size.x
-	var min_z := box.position.z
-	var max_z := box.position.z + box.size.z
-	var extent := maxf(maxf(absf(min_x), absf(max_x)), maxf(absf(min_z), absf(max_z)))
+	var box: AABB = mesh.get_aabb()
+	var min_x: float = box.position.x
+	var max_x: float = box.position.x + box.size.x
+	var min_z: float = box.position.z
+	var max_z: float = box.position.z + box.size.z
+	var extent: float = maxf(maxf(absf(min_x), absf(max_x)), maxf(absf(min_z), absf(max_z)))
 	return extent <= 0.681
 
 func _fail(message: String) -> void:
