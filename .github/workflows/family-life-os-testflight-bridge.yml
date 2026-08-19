@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: family-life-os-testflight-bridge
@@ -193,8 +194,37 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Report bridge run for handoff
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          TESTFLIGHT_STATUS: ${{ steps.testflight.outputs.status }}
+          TESTFLIGHT_CONCLUSION: ${{ steps.testflight.conclusion }}
+        with:
+          script: |
+            const status = process.env.TESTFLIGHT_STATUS || 'not-run';
+            const conclusion = process.env.TESTFLIGHT_CONCLUSION || 'not-run';
+            const title = `Family Life OS TestFlight bridge run ${context.runId}`;
+            const body = [
+              'Automated internal handoff for the Family Life OS TestFlight bridge.',
+              '',
+              `- run_id: ${context.runId}`,
+              `- source_sha: ${context.sha}`,
+              `- testflight_exit_status: ${status}`,
+              `- testflight_step_conclusion: ${conclusion}`,
+              `- run: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              'No App Store Connect secret values are included in this issue.'
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body
+            });
+
       - name: Fail if Family Life OS TestFlight upload failed
-        if: steps.testflight.outputs.status != '0'
+        if: always() && steps.testflight.outputs.status != '0'
         shell: bash
         run: |
           echo "Family Life OS TestFlight upload failed with exit code ${{ steps.testflight.outputs.status }}."
