@@ -5,178 +5,181 @@ Canonical checkpoint for the active v1.63 combat-identity milestone. **Read this
 ## Branch / parent
 - Pull request: **#93 — `v1.63 combat identity milestone`**.
 - Active branch: `agent/v1.63-combat-identity`.
-- Parent branch: `agent/v1.62-ui-foundation` / PR #92.
+- Parent: `agent/v1.62-ui-foundation` / PR #92.
 - Starting parent head: `1d05a87b347bcdcfda5b21d40b74b476cadab42f`.
-- Accepted production UI rollback: v1.62 r3 `71c8ecec5387400af7ef1c4bd29a3f87f9323d17`.
-- Accepted combat presentation rollback below that: v1.61 r3.2 `bb367aad35338dd6d32fbdf7d4de4208efef2ad0`.
+- Accepted v1.62 UI rollback: `71c8ecec5387400af7ef1c4bd29a3f87f9323d17`.
+- Accepted v1.61 combat-presentation rollback: `bb367aad35338dd6d32fbdf7d4de4208efef2ad0`.
 - PR #93 remains **Draft**. No TestFlight/build/version jump is authorized from individual v1.63 passes.
 
 ## Protected systems
-1. Do not reopen or modify accepted v1.62 UI presentation, routes or hitboxes.
-2. Preserve v1.61 combat authority: timing, damage, targeting, hit radii, warning windows, projectile collision/input authority and save/progression behavior.
-3. Preserve Wanderer r11, accepted enemy anatomy/surface work, imported animation authority and pivots.
-4. VFX work remains presentation-only unless a separate gameplay milestone is explicitly opened.
+1. Keep v1.63 presentation-only. Do not change combat damage, timing, targeting, hit radii, warning windows, projectile collision/input authority, saves or progression.
+2. Preserve v1.61 r3.2 Focus/Charge/Phase/Slam/Ritual warning geometry and semantics.
+3. Preserve v1.62 r3 UI, routes and hitboxes.
+4. Preserve Wanderer r11, enemy anatomy/surface work, imported animation authority and pivots.
 5. CI green is necessary but runtime captures decide visual acceptance.
-6. Preserve accepted passes as rollback points; prefer narrow subclasses rather than rewriting validated lower layers.
-7. Update this file after every meaningful accepted/rejected pass.
+6. A technically green but visually ineffective pass stays rejected.
+7. Update this file immediately after every meaningful accepted/rejected pass.
 
-## Projectile baseline — verified active legacy path
-Baseline diagnostic commit: `3eb4d60bb4701a78b7366249285326ba803dbda1`.
-Workflow-marker correction only: `1b399f9d892013e139f1b07504077a559449b150`.
+# Projectile / trail identity
 
-Verified source chain before changing production visuals:
-- active projectile heads were still inherited from `world3d_chamber.gd` as `SphereMesh`;
-- active trails were still inherited from `world3d_chamber_v141.gd` as straight `BoxMesh` history bars;
-- v1.61 r3.2 modernized impacts/tells but did not replace airborne projectile geometry;
-- v1.51 `world3d_projectile_authority_v151.gd` owns projectile collision separately from those visible meshes.
+## Frozen legacy projectile baseline
+Diagnostic commit: `3eb4d60bb4701a78b7366249285326ba803dbda1`.
+Workflow-marker-only correction: `1b399f9d892013e139f1b07504077a559449b150`.
 
-Frozen 720x1280 baseline captures:
+Verified active legacy visuals before r1:
+- player projectile head: `SphereMesh`;
+- enemy projectile head: `SphereMesh`;
+- player/enemy trails: straight `BoxMesh` history bars from v1.41;
+- v1.51 `world3d_projectile_authority_v151.gd` owns collision separately from visible meshes.
+
+Frozen captures:
 - `baseline_player_projectiles.png`
 - `baseline_enemy_projectiles.png`
 - `baseline_mixed_projectiles.png`
 
-Baseline visual verdict: **rejected as production quality / retained only as comparison**. Friendly and hostile fire both read primarily as bright glowing balls with straight luminous sticks behind them; identity depended too heavily on color.
+Visual verdict: **rejected as production quality / retained only as comparison**. Friendly and hostile fire looked like the same bright ball + luminous stick family and relied too much on color.
 
-Important CI note:
-- first dedicated baseline run `32275001380` successfully compiled, validated SphereMesh/BoxMesh legacy geometry, preserved v1.61 r3.2 and rendered/uploaded all three baseline images;
-- its final status was red only because the new workflow grepped the wrong success string for the existing v1.62 r3 UI smoke;
-- the UI smoke itself printed `v1.62 UI foundation r3 runtime CTA smoke test passed`;
-- `1b399f9d...` corrected only that workflow marker. Do not treat the first red run as a game/UI regression.
-
-## r1 — accepted current production lock: projectile / trail identity
+## r1 — accepted projectile identity
 Implementation: **`4877c228d11319ad1db18e6bf12b5d2442b37ac9`**.
 Dedicated workflow: **`32276028440` — fully green.**
 
-### Exact r1 scope
-- Added `world3d_chamber_v163_projectile_identity.gd` as a narrow presentation subclass over accepted v1.61 r3.2.
-- Player projectile visible head: old sphere -> slim faceted **blade shard** ArrayMesh.
-- Enemy projectile visible head: old sphere -> wider faceted **thorn dart** ArrayMesh.
-- Player trail: old rectangular BoxMesh -> tapered emissive wake.
-- Enemy trail: old rectangular BoxMesh -> tapered wake using the projectile's inherited hostile color.
-- Existing inherited history calculation still owns trail midpoint, length and direction.
-- New projectile heads only align to the already-computed trail direction.
-- No new particle pools or gameplay nodes were added.
-- `main_v82.gd` preserves the accepted v1.62 UI top layer and swaps only the combat-world presentation class.
-- No release version/build metadata is changed by r1.
+Accepted changes:
+- player head -> slim faceted blade-shard ArrayMesh;
+- enemy head -> wider thorn/crystal-dart ArrayMesh;
+- player trail -> tapered emissive wake;
+- enemy trail -> tapered wake using the shot's inherited hostile color;
+- inherited trail history still owns midpoint, length and direction;
+- no new particle pools/gameplay nodes;
+- no release metadata change.
 
-### Authority explicitly preserved
-Dedicated smoke verifies:
-- v1.51 projectile authority is still ready and separate;
-- player projectile design radius remains `10.0`;
-- enemy projectile design radius remains `9.0`;
-- player hit radius remains `28.0`;
-- new visible heads/trails are ArrayMeshes rather than the old SphereMesh/BoxMesh family;
-- v1.62 r3 UI readiness remains intact.
+Authority smoke explicitly preserves:
+- player shot design radius `10.0`;
+- enemy shot design radius `9.0`;
+- player hit radius `28.0`;
+- v1.51 projectile authority readiness;
+- v1.62 r3 UI readiness.
 
-### r1 manual image acceptance
-`r1_player_projectiles.png` — **accepted**:
-- friendly fire reads as narrow directional blade/arcane shards rather than round bulbs;
-- wake tapers behind the head instead of ending as a uniform rectangular stick;
-- critical scale remains inherited/readable.
+Accepted captures:
+- `r1_player_projectiles.png`
+- `r1_enemy_projectiles.png`
+- `r1_mixed_projectiles.png`
 
-`r1_enemy_projectiles.png` — **accepted**:
-- hostile heads read as chunkier thorn/crystal darts rather than player-like spheres;
-- cyan/purple/red hostile wakes now follow each shot's actual inherited color instead of sharing one generic purple trail;
-- hostile silhouette stays compact at gameplay distance.
+Friendly and hostile fire now separate through **shape + color**, while actors and arena remain dominant.
 
-`r1_mixed_projectiles.png` — **accepted**:
-- friendly and hostile projectiles now separate through **shape plus color**, not color alone;
-- projectile hierarchy is clearer without adding ring clutter or large particle volume;
-- actors and the authored room remain visually dominant.
+# Boss presentation
 
-Therefore **v1.63 r1 / `4877c228...` remains the current accepted production implementation baseline until a boss pass is visually accepted.**
+## Frozen boss baseline
+Initial diagnostic: `606fd07a401858a4ff5223b95536791d607c8fbb`.
+Runtime-class inspection: `05f71abf32014d59353517a000638cd24807aae1`.
+Final baseline lock: `b8b68f1d8a2cb07b418d4ff028c9cd5c4b646eb7`.
+Workflow: **`32277193240` — fully green.**
 
-## Boss presentation baseline — verified active legacy/decorative frame
-Initial diagnostic commit: `606fd07a401858a4ff5223b95536791d607c8fbb`.
-Runtime inspection-only correction: `05f71abf32014d59353517a000638cd24807aae1`.
-Final baseline-lock correction: `b8b68f1d8a2cb07b418d4ff028c9cd5c4b646eb7`.
-Dedicated workflow: **`32277193240` — fully green.**
+Recovered active legacy/decorative layers:
+- v1.46 boss frame: runtime `boss_halo` TorusMesh ~2.16 X/Z, `boss_beam` CylinderMesh ~2.75 high, four BoxMesh crown rods, red OmniLight;
+- v1.49 **BossDominanceLookdev**: outer ring ~1.28, inner ring ~0.82, eight `DominanceMark` BoxMeshes and separate range-4.4 dominance light;
+- `_sync_boss_dominance()` keeps that v1.49 root persistently visible on Warden boss floors.
 
-### Active runtime geometry recovered
-The historical v1.46 construction helper originally creates a cylinder halo, beam and four box crown rods, but repository/runtime evidence showed the release-facing stacked world is now:
-- persistent `boss_halo`: **TorusMesh**, AABB footprint approximately **2.16 × 2.16** in X/Z;
-- persistent `boss_beam`: **CylinderMesh**, approximately **2.75** high;
-- persistent `boss_crown`: **four BoxMesh rods**;
-- persistent red OmniLight remains part of the same decorative boss frame.
+Frozen captures:
+- `baseline_boss_intro.png`
+- `baseline_boss_fan.png`
+- `baseline_boss_crown_slam.png`
 
-Important diagnostic history:
-- the first boss-baseline smoke failed because it assumed the source-construction class (`CylinderMesh`) was still the runtime halo class;
-- compile was green and no production code was broken;
-- runtime dump proved `boss_halo.mesh.get_class() == "TorusMesh"`, `boss_beam == "CylinderMesh"`, crown = four BoxMesh children;
-- the test was corrected to the actual runtime class **and** locked the 2.16 halo footprint / 2.75 beam height rather than weakening the gate.
+Visual verdict: **rejected production target / retained comparison**. Persistent circular boss decoration competed with the gameplay-significant r3.2 fan/focus and slam tells.
 
-### Frozen boss baseline captures
-`baseline_boss_intro.png`, `baseline_boss_fan.png`, `baseline_boss_crown_slam.png` remain the frozen comparison set.
-Visual verdict: **rejected as production target / retained as comparison** because the boss is surrounded by a dominant segmented/full circular floor language that competes with r3.2 gameplay tells.
-
-### Boss authority that must remain untouched
-- `main_v65.gd` owns Warden cast planning/execution and chooses fan/ring/crown behavior through the tested 3D authority path;
-- v1.61 r3.2 owns modern focus/slam/etc. warning geometry and preserves its 0.34-s warning window, inherited position and scale;
-- boss presentation work may replace decorative layers only, not cast semantics, projectile behavior, tell timing, damage or radii.
-
-## r2 — technically green, visually rejected: wrong dominant boss layer
+## r2 — technically green, visually rejected
 Implementation: **`9f4ea8d51f32ec712385db6d5d7263502f9998d0`**.
-Dedicated workflow: **`32278164808` — fully green.**
+Workflow: **`32278164808` — fully green.**
 
-r2 correctly replaced the v1.46 `boss_halo` / `boss_beam` / four crown rods with:
-- broken floor-anchor ArrayMesh;
-- shorter fractured-spire ArrayMesh;
-- four faceted crown shards;
-- reduced boss-frame light range/energy.
+r2 correctly cleaned the older v1.46 frame:
+- old boss halo -> broken floor anchors;
+- tall cylinder beam -> shorter fractured spire;
+- four Box crown rods -> faceted crown shards;
+- boss-frame light reduced.
 
-The strict r2 smoke also proved:
-- boss-frame halo footprint reduced below the old 2.16 ring;
-- spire reduced below the old 2.75 beam;
-- no BoxMesh crown pieces remain in the v1.46 frame;
-- all five v1.61 r3.2 Focus/Charge/Phase/Slam/Ritual tell AABBs remain exactly identical to the r1 reference world;
-- r1 projectile identity, v1.62 UI and v1.52.1 input remain intact.
+Strict smoke proved all five r3.2 tell AABBs remained exactly identical to the accepted r1 reference world. r1 projectiles, v1.62 UI and v1.52.1 input also passed.
 
-### r2 manual image verdict — **REJECTED**
-The six-image before/after artifact proved `r2_boss_intro.png`, `r2_boss_fan.png` and `r2_boss_crown_slam.png` remained visually almost identical to the frozen baseline. The dominant segmented circle around the Warden was still present in Intro/Fan/Slam.
+**Manual verdict: REJECTED.** `r2_boss_intro.png`, `r2_boss_fan.png` and `r2_boss_crown_slam.png` remained visually almost identical to baseline because the dominant visible ring was not the v1.46 halo. Root cause was recovered as the still-active v1.49 `BossDominanceLookdev`.
 
-**Do not call `9f4ea8d5...` an accepted production lock merely because CI is green.** r2 remains a useful intermediate/fallback for the v1.46 frame replacement, but it did not solve the visible boss-ring problem.
+Keep `9f4ea8d5...` only as a technically valid intermediate fallback. Do not call it accepted visual completion.
 
-### Corrected root cause recovered after r2
-The dominant release-facing ring is primarily owned by **v1.49 `BossDominanceLookdev`**, not the v1.46 `boss_halo`:
-- `boss_dominance_ring_outer`: persistent ring radius ~1.28;
-- `boss_dominance_ring_inner`: persistent ring radius ~0.82;
-- eight `DominanceMark` BoxMesh markers arranged around the boss;
-- separate `boss_dominance_light` with inherited range 4.4;
-- `_sync_boss_dominance()` keeps this root visible on Warden boss floors;
-- `_animate_boss_dominance()` continuously pulses/rotates both rings and keeps the light active.
+## r2.1 — accepted current production lock: active BossDominance correction
+Implementation: **`7262f42002aeeba338559190e8a87a616329ec54`**.
+Dedicated workflow: **`32279185350` — fully green.**
+Before/after artifact: **`9375230747`**.
 
-This layer survived all later presentation passes because no later repository override targets `boss_dominance_ring_outer` / `boss_dominance_ring_inner`. It is the correct visual target for r2.1.
+r2.1 extends r2 and targets the **actual dominant v1.49 visual owner**:
+- `boss_dominance_ring_outer` -> four open L-like bracket groups; no closed perimeter;
+- `boss_dominance_ring_inner` -> four small inward chevrons; no inner ring;
+- inherited eight `DominanceMark` nodes remain structurally present, but all use faceted ArrayMesh shards and only four are visually active;
+- separate dominance-light range reduced from inherited 4.4 to 2.85 with restrained energy;
+- dominance rotation/pulse slowed and reduced;
+- r2's quieter v1.46 frame remains underneath.
 
-## Current validation
-Dedicated `v1.63 Projectile Identity Check` run `32276028440` on `4877c228...` is fully green.
-Dedicated `v1.63 Boss Presentation Baseline Check` run `32277193240` on `b8b68f1d...` is fully green.
-Dedicated `v1.63 Boss Identity Check` run **`32278164808`** on `9f4ea8d5...` is fully green:
-- compile/import: PASS
-- strict boss r2 geometry/tell-preservation contract: PASS
-- accepted r1 projectile identity: PASS
+### Authority / regression proof
+r2.1 smoke verifies:
+- active dominance outer/inner meshes are ArrayMeshes, not TorusMesh;
+- only four of eight dominance marker nodes are visible and none use BoxMesh;
+- dominance-light range <= 2.90;
+- r2 technical boss-frame contract remains ready;
+- r1 projectile identity remains ready;
+- v1.62 r3 UI remains ready;
+- Focus/Charge/Phase/Slam/Ritual tell AABBs are **exactly identical** to an untouched accepted r1 world.
+
+Dedicated run `32279185350` is fully green:
+- Godot 4.7.1 compile/import: PASS
+- r2.1 BossDominance contract: PASS
+- r2 boss-frame regression: PASS
+- r1 projectile identity regression: PASS
 - frozen boss baseline contract: PASS
 - v1.61 r3.2 danger-language regression: PASS
-- frozen boss baseline render: PASS
-- r2 boss render: PASS
-- before/after artifact: PASS
+- frozen baseline render: PASS
+- r2.1 Intro/Fan/Crown-Slam render: PASS
+- before/after artifact upload: PASS
 - v1.62 r3 UI regression: PASS
-- v1.52.1 input regression: PASS
-- **visual acceptance: FAIL / rejected after manual comparison**
+- v1.52.1 input-flow regression: PASS
 
-## Non-negotiable v1.63 rules
-1. Preserve **`4877c228...`** as the current accepted v1.63 production rollback point until a boss pass is visually accepted.
-2. Preserve `9f4ea8d5...` only as a technically valid intermediate boss-frame fallback; do not confuse it with accepted visual completion.
-3. Preserve the frozen projectile and boss baseline scripts/captures; do not rewrite history to make later passes look better.
-4. Do not change v1.51 projectile collision/radii, damage, timing, targeting or lifetime while polishing visuals.
-5. Do not change Warden cast semantics, warning windows, danger-tell position/scale or damage in the boss presentation pass.
-6. Do not regress to generic glowing balls, straight debug bars, full decorative rings, tall generic light columns, box-rod crowns or excessive particle clutter.
+### r2.1 manual image acceptance
+`r21_boss_intro.png` — **accepted**:
+- permanent large red ring is gone;
+- Warden remains focal;
+- only sparse broken floor signature pieces remain;
+- boss identity no longer reads as a generic floor telegraph.
+
+`r21_boss_fan.png` — **accepted**:
+- the r3.2 forward/focus warning and r1 hostile shards are now the dominant readable combat intent;
+- decorative boss framing no longer reconstructs a second full circle around the warning.
+
+`r21_boss_crown_slam.png` — **accepted**:
+- radial teeth remain clearly visible because they are the intended gameplay-significant slam tell;
+- the former second decorative dominance-ring layer is gone;
+- boss identity and warning language are visually separable.
+
+Therefore **v1.63 r2.1 / `7262f420...` is the current accepted production implementation baseline.**
+
+# Current validation summary
+- v1.63 Projectile Identity `32276028440`: green.
+- v1.63 Boss Baseline `32277193240`: green.
+- v1.63 Boss r2 `32278164808`: technically green, **visually rejected**.
+- v1.63 Boss Dominance r2.1 `32279185350`: **fully green and visually accepted**.
+- v1.61 r3.2 danger language: preserved.
+- v1.62 r3 UI: preserved.
+- v1.52.1 input flow: preserved.
+
+# Non-negotiable v1.63 rules
+1. Preserve **`7262f420...`** as the current accepted v1.63 production rollback point.
+2. Preserve `4877c228...` as the accepted projectile-only fallback.
+3. Preserve `9f4ea8d5...` only as the rejected/technical r2 intermediate; do not promote it over r2.1.
+4. Preserve frozen projectile and boss baseline captures for honest before/after comparison.
+5. Do not change v1.51 projectile collision/radii, Warden cast semantics, warning windows, danger-tell position/scale, damage, input, saves or progression during presentation work.
+6. Do not regress to generic glowing balls, straight debug bars, full decorative boss rings, tall generic light columns, box-rod crowns or excessive particle clutter.
 7. Preserve v1.61 r3.2 danger language and v1.62 r3 UI.
-8. No TestFlight/build/version jump from individual v1.63 micro-passes.
-9. Update this file immediately after each meaningful boss/projectile pass.
+8. CI green does not override a visual rejection.
+9. No TestFlight/build/version jump from individual v1.63 micro-passes.
+10. Update this file immediately after every meaningful pass.
 
-## Current next priorities
-1. **Implement boss presentation r2.1 over r2 by targeting the actual v1.49 `BossDominanceLookdev` layer.**
-2. Replace both persistent dominance rings with clearly separated non-circular anchor/shard geometry; reduce the eight box markers so they no longer reconstruct a dashed circle; reduce the separate dominance-light footprint.
-3. Preserve r2's quieter v1.46 frame underneath and preserve the exact r3.2 danger-tell geometry/timing.
-4. Re-render the exact same Intro/Fan/Crown-Slam before/after gate. If the visible ring remains, trace again rather than weakening tests or accepting a cosmetic no-op.
-5. Make any TestFlight decision only after a bundled v1.63 milestone is visually complete and deliberately approved.
+# Current next priorities
+1. Run a **coherent combined v1.63 gameplay review** with accepted r1 projectile identity + accepted r2.1 boss identity together in one gameplay-distance sequence/capture set.
+2. Look specifically for VFX density conflicts between projectile wakes, boss focus/slam tells, impacts, spawn/death signatures and the new sparse boss-dominance pieces.
+3. If the combined review is clean, treat v1.63 combat identity as visually complete rather than adding decoration quantity.
+4. Then run a deliberate unsigned iPhone/iPad device-build milestone gate on the accepted stack.
+5. Keep PR #93 Draft and do **not** upload to TestFlight unless a bundled milestone upload is deliberately approved.
