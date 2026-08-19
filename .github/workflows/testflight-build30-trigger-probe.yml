@@ -1,0 +1,45 @@
+name: Probe TestFlight Build 30 Trigger
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/testflight-build30-trigger-probe.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  probe-trigger:
+    runs-on: macos-15
+    timeout-minutes: 10
+    env:
+      TRIGGER_SHA: 567c83c0cace9c6028075266aa36beb622b554fc
+    steps:
+      - name: Inspect existing trigger workflow only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow testflight-dispatch-trigger.yml \
+            --branch main \
+            --event push \
+            --limit 50 \
+            --json databaseId,createdAt,status,conclusion,url,headSha \
+            > "$RUNNER_TEMP/trigger-runs.json"
+
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          runs = json.loads(Path(os.environ['RUNNER_TEMP'], 'trigger-runs.json').read_text())
+          target = [r for r in runs if r.get('headSha') == os.environ['TRIGGER_SHA']]
+          if len(target) != 1:
+              raise SystemExit(f"Expected exactly one trigger workflow run for {os.environ['TRIGGER_SHA']}, found {len(target)}: {target}")
+          run = target[0]
+          print('BUILD30_TRIGGER_RUN_ID=' + str(run['databaseId']))
+          print('BUILD30_TRIGGER_STATUS=' + str(run['status']))
+          print('BUILD30_TRIGGER_CONCLUSION=' + str(run['conclusion']))
+          print('BUILD30_TRIGGER_URL=' + str(run['url']))
+          PY
