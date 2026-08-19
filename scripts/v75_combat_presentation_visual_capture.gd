@@ -18,7 +18,6 @@ func _run() -> void:
 		_fail("combat presentation layer is not ready before capture")
 		return
 
-	# Freeze time-driven decay but keep direct sync_runtime presentation updates.
 	world.set_active(false)
 
 	var enemies := [
@@ -46,11 +45,33 @@ func _run() -> void:
 	if not await _save_frame("enemy_segmented_tells"):
 		return
 
+	_set_player_peak_state(world, 0.0, 0.0)
+	world.sync_runtime(player_pos, [], [], [], [], Vector2.ZERO, 3.45, 0.0, 0.0, 1)
+	_clear_transition_for_capture(world)
+	_hide_signature_pool_for_capture(world.spawn_signature_pool)
+	_hide_signature_pool_for_capture(world.death_signature_pool)
+	_hide_signature_pool_for_capture(world.enemy_vfx_slots)
+	_hide_signature_pool_for_capture(world.telegraph_pool)
+	_hide_signature_pool_for_capture(world.target_lock_pool)
+	_hide_signature_pool_for_capture(world.enemy_grounding_pool)
+	world.call("_spawn_impact", Vector3(-1.15, 0.0, -0.65), true)
+	world.call("_spawn_combat_authority_impact", Vector3(0.0, 0.0, -0.95), world.player_hit_material, true)
+	world.call("_spawn_combat_authority_impact", Vector3(1.15, 0.0, -0.65), world.enemy_hit_material, false)
+	if not await _save_frame("impact_bursts"):
+		return
+
 	_set_player_peak_state(world, 1.0, 0.0)
 	world.sync_runtime(Vector2(360.0, 600.0), [], [], [], [], Vector2.ZERO, 4.0, 1.0, 0.0, 1)
 	_clear_transition_for_capture(world)
 	_hide_signature_pool_for_capture(world.spawn_signature_pool)
 	_hide_signature_pool_for_capture(world.death_signature_pool)
+	_hide_signature_pool_for_capture(world.enemy_vfx_slots)
+	_hide_signature_pool_for_capture(world.telegraph_pool)
+	_hide_signature_pool_for_capture(world.target_lock_pool)
+	_hide_signature_pool_for_capture(world.enemy_grounding_pool)
+	_hide_signature_pool_for_capture(world.impact_pool)
+	_hide_signature_pool_for_capture(world.authority_impact_pool)
+	_hide_signature_pool_for_capture(world.combat_authority_impact_pool)
 	world.camera.position = Vector3(0.0, 5.6, 5.9)
 	world.camera.size = 6.2
 	world.camera.look_at(Vector3(0.0, 0.55, 0.0), Vector3.UP)

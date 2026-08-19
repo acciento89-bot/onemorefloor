@@ -6,7 +6,7 @@ extends "res://scripts/world3d_chamber_v160_atmosphere.gd"
 # ribbon and segmented-wave geometry. Gameplay timing, radii, hitboxes,
 # targeting, saves, input and the v1.60 actor/environment baselines stay inherited.
 
-const COMBAT_PRESENTATION_VERSION := "1.61-combat-presentation-r1.1"
+const COMBAT_PRESENTATION_VERSION := "1.61-combat-presentation-r2"
 
 var v161_attack_trail: MeshInstance3D
 var v161_attack_hot_edge: MeshInstance3D
@@ -27,12 +27,15 @@ var v161_warden_tell_material: StandardMaterial3D
 var v161_enemy_tell_mesh: ArrayMesh
 var v161_head_rune_mesh: ArrayMesh
 var v161_warden_shock_mesh: ArrayMesh
+var v161_impact_burst_mesh: ArrayMesh
+var v161_contact_burst_mesh: ArrayMesh
 
 func _ready() -> void:
 	super._ready()
 	_build_v161_combat_materials()
 	_build_v161_player_presentation()
 	_upgrade_v161_enemy_presentation()
+	_upgrade_v161_impact_presentation()
 	_sync_v161_combat_presentation()
 
 func _process(delta: float) -> void:
@@ -69,6 +72,16 @@ func production_combat_presentation_ready() -> bool:
 		if slot != null:
 			shock = slot.get_node_or_null("Shockwave0") as MeshInstance3D
 		shock_ready = shock != null and shock.mesh is ArrayMesh
+	var impact_ready := not impact_pool.is_empty() \
+		and impact_pool[0] is MeshInstance3D \
+		and (impact_pool[0] as MeshInstance3D).mesh is ArrayMesh
+	var combat_impact_ready := false
+	if not combat_authority_impact_pool.is_empty():
+		var combat_root := combat_authority_impact_pool[0] as Node3D
+		var combat_mesh: MeshInstance3D = null
+		if combat_root != null:
+			combat_mesh = combat_root.get_node_or_null("ImpactRing") as MeshInstance3D
+		combat_impact_ready = combat_mesh != null and combat_mesh.mesh is ArrayMesh
 	return production_atmosphere_ready() \
 		and v161_attack_trail != null \
 		and v161_attack_trail.mesh is ArrayMesh \
@@ -83,7 +96,9 @@ func production_combat_presentation_ready() -> bool:
 		and v161_skill_runes != null \
 		and v161_skill_runes.mesh is ArrayMesh \
 		and tell_ready \
-		and shock_ready
+		and shock_ready \
+		and impact_ready \
+		and combat_impact_ready
 
 func debug_snapshot() -> Dictionary:
 	var data: Dictionary = super.debug_snapshot()
@@ -94,6 +109,9 @@ func debug_snapshot() -> Dictionary:
 	data["combat_presentation_v161_segmented_tells"] = not telegraph_pool.is_empty() \
 		and telegraph_pool[0] is MeshInstance3D \
 		and (telegraph_pool[0] as MeshInstance3D).mesh is ArrayMesh
+	data["combat_presentation_v161_impact_bursts"] = not impact_pool.is_empty() \
+		and impact_pool[0] is MeshInstance3D \
+		and (impact_pool[0] as MeshInstance3D).mesh is ArrayMesh
 	return data
 
 func _build_v161_combat_materials() -> void:
@@ -200,6 +218,51 @@ func _upgrade_v161_enemy_presentation() -> void:
 				wave.mesh = v161_warden_shock_mesh
 				wave.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
+func _upgrade_v161_impact_presentation() -> void:
+	v161_impact_burst_mesh = _build_v161_impact_burst(8, 0.12, 0.48, 0.055, 0.020)
+	v161_contact_burst_mesh = _build_v161_impact_burst(6, 0.10, 0.36, 0.050, 0.018)
+
+	for value in impact_pool:
+		var impact := value as MeshInstance3D
+		if impact == null:
+			continue
+		impact.mesh = v161_impact_burst_mesh
+		impact.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	for value in authority_impact_pool:
+		var root := value as Node3D
+		if root == null:
+			continue
+		var ring := root.get_node_or_null("Ring") as MeshInstance3D
+		if ring != null:
+			ring.mesh = v161_contact_burst_mesh
+			ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		for tick_index in range(4):
+			var tick := root.get_node_or_null("Tick%d" % tick_index) as MeshInstance3D
+			if tick != null:
+				tick.scale = Vector3(0.68, 0.62, 0.42)
+
+	for value in combat_authority_impact_pool:
+		var root := value as Node3D
+		if root == null:
+			continue
+		var ring := root.get_node_or_null("ImpactRing") as MeshInstance3D
+		if ring != null:
+			ring.mesh = v161_impact_burst_mesh
+			ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var core := root.get_node_or_null("ImpactCore") as MeshInstance3D
+		if core != null:
+			core.scale = Vector3.ONE * 0.58
+		for shard_index in range(6):
+			var shard := root.get_node_or_null("ImpactShard%d" % shard_index) as MeshInstance3D
+			if shard != null:
+				shard.scale = Vector3(0.52, 0.72, 0.52)
+
+func _spawn_combat_authority_impact(world_pos: Vector3, material: Material, critical: bool) -> void:
+	super._spawn_combat_authority_impact(world_pos, material, critical)
+	if critical:
+		camera_kick = maxf(camera_kick, 0.24)
+
 func _apply_v161_enemy_presentation(enemies: Array) -> void:
 	for index in range(telegraph_pool.size()):
 		var tell := telegraph_pool[index] as MeshInstance3D
@@ -210,8 +273,6 @@ func _apply_v161_enemy_presentation(enemies: Array) -> void:
 			var enemy: Dictionary = enemies[index]
 			kind = String(enemy.get("type", ""))
 		tell.material_override = v161_warden_tell_material if kind == "warden" else v161_enemy_tell_material
-		# Preserve the inherited gameplay-owned footprint/scale; only keep the
-		# new warning surface almost flush with the authored floor.
 		tell.position.y = maxf(tell.position.y, 0.055)
 
 	for index in range(mini(enemy_vfx_slots.size(), enemies.size())):
@@ -226,8 +287,6 @@ func _apply_v161_enemy_presentation(enemies: Array) -> void:
 			shock.material_override = v161_warden_tell_material
 
 func _sync_v161_combat_presentation() -> void:
-	# The v1.60 geometry remains instantiated for its regression contract, but the
-	# new top presentation layer owns what the player actually sees.
 	if v160_attack_arc != null:
 		v160_attack_arc.visible = false
 	if v160_attack_edge != null:
@@ -345,6 +404,29 @@ func _build_v161_segmented_ring(
 		var i1 := _v161_polar_point(a1, inner_radius, 0.0)
 		var o1 := _v161_polar_point(a1, outer_radius, 0.0)
 		_v161_add_quad(tool, i0, o0, o1, i1)
+	return tool.commit()
+
+func _build_v161_impact_burst(
+	ray_count: int,
+	inner_radius: float,
+	outer_radius: float,
+	inner_half_width: float,
+	outer_half_width: float
+) -> ArrayMesh:
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for index in range(ray_count):
+		var angle := TAU * float(index) / float(ray_count)
+		var length_scale := 1.0 if index % 2 == 0 else 0.72
+		var radial := Vector3(sin(angle), 0.0, -cos(angle))
+		var tangent := Vector3(cos(angle), 0.0, sin(angle))
+		var inner_center := radial * inner_radius
+		var outer_center := radial * (outer_radius * length_scale)
+		var inner_left := inner_center - tangent * inner_half_width
+		var inner_right := inner_center + tangent * inner_half_width
+		var outer_left := outer_center - tangent * outer_half_width
+		var outer_right := outer_center + tangent * outer_half_width
+		_v161_add_quad(tool, inner_left, outer_left, outer_right, inner_right)
 	return tool.commit()
 
 func _build_v161_radial_runes(count: int, radius: float, half_width: float, half_length: float) -> ArrayMesh:

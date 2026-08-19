@@ -26,7 +26,7 @@ func _run() -> void:
 		return
 
 	var snapshot: Dictionary = world.debug_snapshot()
-	if String(snapshot.get("combat_presentation_v161_version", "")) != "1.61-combat-presentation-r1.1":
+	if String(snapshot.get("combat_presentation_v161_version", "")) != "1.61-combat-presentation-r2":
 		_fail("v1.61 presentation marker missing")
 		return
 	if not bool(snapshot.get("combat_presentation_v161_attack_ribbon", false)):
@@ -37,6 +37,9 @@ func _run() -> void:
 		return
 	if not bool(snapshot.get("combat_presentation_v161_segmented_tells", false)):
 		_fail("v1.61 segmented enemy tells missing")
+		return
+	if not bool(snapshot.get("combat_presentation_v161_impact_bursts", false)):
+		_fail("v1.61 impact-burst geometry missing")
 		return
 
 	var enemies := [
@@ -103,6 +106,23 @@ func _run() -> void:
 		warden_shock = warden_slot.get_node_or_null("Shockwave0") as MeshInstance3D
 	if warden_shock == null or not (warden_shock.mesh is ArrayMesh):
 		_fail("v1.61 Warden shock is not segmented planar geometry")
+		return
+
+	if world.impact_pool.is_empty() or not ((world.impact_pool[0] as MeshInstance3D).mesh is ArrayMesh):
+		_fail("legacy projectile impact was not upgraded to v1.61 burst geometry")
+		return
+	if world.combat_authority_impact_pool.is_empty():
+		_fail("combat-authority impact pool missing")
+		return
+	var combat_impact_root := world.combat_authority_impact_pool[0] as Node3D
+	var combat_impact_mesh := combat_impact_root.get_node_or_null("ImpactRing") as MeshInstance3D
+	if combat_impact_mesh == null or not (combat_impact_mesh.mesh is ArrayMesh):
+		_fail("combat-authority impact ring was not upgraded to burst geometry")
+		return
+	world.camera_kick = 0.0
+	world.call("_spawn_combat_authority_impact", Vector3.ZERO, world.player_hit_material, true)
+	if world.camera_kick < 0.20:
+		_fail("critical impact did not add restrained camera response")
 		return
 
 	print("v1.61 combat presentation smoke test passed")

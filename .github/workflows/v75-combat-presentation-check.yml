@@ -72,6 +72,7 @@ jobs:
           test -s artifacts/v161_combat_presentation/attack_blade_trail.png
           test -s artifacts/v161_combat_presentation/skill_arcane_wave.png
           test -s artifacts/v161_combat_presentation/enemy_segmented_tells.png
+          test -s artifacts/v161_combat_presentation/impact_bursts.png
           test -s artifacts/v161_combat_presentation/player_blade_closeup.png
 
       - name: Upload v1.61 combat visual gate
