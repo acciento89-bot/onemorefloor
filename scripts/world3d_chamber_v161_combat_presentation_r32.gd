@@ -136,8 +136,9 @@ func _build_v161_charge_tell() -> ArrayMesh:
 	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 	# Two compact lane rails plus a single forward arrowhead. Maximum reach stays
 	# at the same 0.68 local radius as the accepted segmented tell.
-	for side in [-1.0, 1.0]:
-		var x := side * 0.21
+	for side_value in [-1.0, 1.0]:
+		var side: float = float(side_value)
+		var x: float = side * 0.21
 		_v161_add_quad(tool,
 			Vector3(x - 0.032, 0.0, 0.28), Vector3(x + 0.032, 0.0, 0.28),
 			Vector3(x + 0.032, 0.0, -0.43), Vector3(x - 0.032, 0.0, -0.43)
