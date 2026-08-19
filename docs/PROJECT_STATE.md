@@ -36,7 +36,7 @@ Accepted r1.1 behavior:
 - Accepted visual verdict: characters are materially more readable while realm mood, Warden dominance and dark-fantasy contrast remain intact.
 
 ## Current device/release gate
-Latest verified current-head device workflow before this documentation-only update:
+Latest verified device workflow before the final documentation-only checkpoint:
 - `ONE MORE FLOOR iOS Playtest` run **`32286619525` — fully green**.
 - Release metadata: PASS.
 - Godot headless import: PASS.
@@ -55,7 +55,7 @@ Therefore v1.64 r1.1 is device-build validated without performing a TestFlight u
 ## Post-acceptance hardening
 - `scripts/v89_character_lighting_r1_smoke_test.gd` now explicitly creates a runtime Necromancer + Skeleton and checks that the r1.1 enemy material response survives inherited `configure_enemy()` while Skeleton remains unchanged.
 - This is an additional regression lock on top of the already-green accepted r1.1 production review; it does not alter accepted production values.
-- At the last pre-documentation check, the latest GitHub runner for this hardened v89 test was still queued behind the repository's broad historical workflow fanout. Do not falsely report it as passed until Actions completes it.
+- At the last pre-documentation check, the newest GitHub runner for this hardened v89 test was still queued behind the repository's broad historical workflow fanout. Do not falsely report it as passed until Actions completes it.
 
 # Parent milestone locks
 
@@ -162,7 +162,7 @@ Preserve at minimum:
 
 **v1.64 r1.1 is visually accepted and unsigned-device-build validated. Do not keep brightening it by habit.**
 
-1. Let the queued post-acceptance runtime-order smoke hardening complete and record its result when available.
+1. Record the queued post-acceptance runtime-order smoke hardening result when Actions completes it.
 2. Use new gameplay/device captures to identify the next largest game-wide quality gap rather than reopening accepted character geometry, combat VFX, UI or lighting.
 3. Create the next stacked milestone branch/PR before production implementation.
 4. Save a new milestone-specific state file immediately.
