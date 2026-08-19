@@ -1,11 +1,11 @@
 extends "res://scripts/world3d_chamber_v165_environment_depth_r13.gd"
 
-# ONE MORE FLOOR v1.66 r1 — Character Form & Readability world layer.
+# ONE MORE FLOOR v1.66 r1.1 — Character Form & Readability world layer.
 # Keeps the accepted v1.65 r1.3 environment, camera and all gameplay authority;
 # only the actor factory is promoted to the presentation-only v1.66 form pass.
 
 const ActorFactoryV166 = preload("res://scripts/world3d_actor_factory_v166_character_form.gd")
-const CHARACTER_FORM_WORLD_VERSION := "1.66-character-form-r1"
+const CHARACTER_FORM_WORLD_VERSION := "1.66-character-form-r1.1"
 
 func _build_player() -> void:
 	actor_factory = ActorFactoryV166.new()
