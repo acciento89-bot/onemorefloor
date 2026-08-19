@@ -10,6 +10,8 @@ on:
       - 'docs/RELEASE_READINESS.md'
       - 'scripts/main_v88.gd'
       - 'scripts/v93_release_surface_smoke_test.gd'
+      - 'scripts/v91_character_form_r1_capture.gd'
+      - 'scripts/v91_character_form_r1_smoke_test.gd'
       - 'scenes/main.tscn'
   pull_request:
     paths:
@@ -17,6 +19,8 @@ on:
       - 'docs/RELEASE_READINESS.md'
       - 'scripts/main_v88.gd'
       - 'scripts/v93_release_surface_smoke_test.gd'
+      - 'scripts/v91_character_form_r1_capture.gd'
+      - 'scripts/v91_character_form_r1_smoke_test.gd'
       - 'scenes/main.tscn'
 
 permissions:
