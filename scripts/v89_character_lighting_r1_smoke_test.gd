@@ -31,7 +31,7 @@ func _run() -> void:
 		await process_frame
 
 	if not bool(world.call("production_character_lighting_ready")):
-		_fail("v1.64 character lighting r1 world is not ready")
+		_fail("v1.64 character lighting r1.1 world is not ready")
 		return
 	if not bool(world.call("production_boss_dominance_ready")):
 		_fail("accepted v1.63 boss dominance was not preserved")
@@ -41,38 +41,55 @@ func _run() -> void:
 		return
 
 	if not _color_close(_material_color(world.actor_factory.wanderer_materials, "cloth", "base_color"), Color("293750")):
-		_fail("Wanderer cloth r1 base color missing")
+		_fail("Wanderer cloth r1.1 base color missing")
 		return
 	if not _color_close(_material_color(world.actor_factory.wanderer_materials, "steel_dark", "base_color"), Color("36465b")):
-		_fail("Wanderer dark steel r1 base color missing")
+		_fail("Wanderer dark steel r1.1 base color missing")
 		return
 	if not _color_close(_material_color(world.actor_factory.character_enemy_materials, "necromancer", "base_color"), Color("2d203b")):
-		_fail("Necromancer r1 midtone recovery missing")
+		_fail("Necromancer r1.1 initial midtone recovery missing")
 		return
 	if not _color_close(_material_color(world.actor_factory.character_enemy_materials, "skeleton", "base_color"), accepted_skeleton):
-		_fail("Skeleton visual lock changed")
+		_fail("Skeleton visual lock changed before runtime configure")
+		return
+
+	# Regression for the r1 -> r1.1 fix: enemy quality configure_enemy() rewrites
+	# archetype base colors during sync_runtime. r1.1 must be the final material
+	# presentation write after that inherited configuration has completed.
+	var runtime_enemies: Array = [
+		{"type":"necromancer", "pos":Vector2(490.0, 415.0), "radius":27.0, "phase":0.85, "attack_cd":1.1},
+		{"type":"skeleton", "pos":Vector2(365.0, 355.0), "radius":25.0, "phase":0.45, "attack_cd":1.2},
+	]
+	world.sync_runtime(Vector2(360.0, 700.0), runtime_enemies, [], [], [], Vector2.ZERO, 61.0, 0.0, 0.0, 16)
+	await process_frame
+	if not _color_close(_material_color(world.actor_factory.character_enemy_materials, "necromancer", "base_color"), Color("2d203b")):
+		_fail("runtime enemy configure overwrote v1.64 r1.1 Necromancer response")
+		return
+	if not _color_close(_material_color(world.actor_factory.character_enemy_materials, "skeleton", "base_color"), accepted_skeleton):
+		_fail("Skeleton visual lock changed after runtime configure")
 		return
 
 	# Exercise the three frozen comparison realms and verify the existing player
-	# lights receive only the intended restrained r1 energy/range adjustment.
+	# lights receive only the intended restrained r1.1 energy/range adjustment.
 	for floor_no in [6, 16, 30]:
-		world.sync_runtime(Vector2(360.0, 700.0), [], [], [], [], Vector2.ZERO, 50.0 + float(floor_no), 0.0, 0.0, floor_no)
+		world.sync_runtime(Vector2(360.0, 700.0), [], [], [], [], Vector2.ZERO, 70.0 + float(floor_no), 0.0, 0.0, floor_no)
 		await process_frame
 		if world.player_rim_light == null or world.player_fill_light == null:
 			_fail("existing Wanderer rim/fill lights missing")
 			return
 		if world.player_rim_light.omni_range < 2.80 or world.player_fill_light.omni_range < 2.40:
-			_fail("v1.64 r1 local light ranges not applied")
+			_fail("v1.64 r1.1 local light ranges not applied")
 			return
 		if world.atmosphere_player_fill_base < 0.28 or world.atmosphere_player_rim_base < 0.53:
-			_fail("v1.64 r1 local light grade not applied")
+			_fail("v1.64 r1.1 local light grade not applied")
 			return
 
 	if String(ProjectSettings.get_setting("rendering/renderer/rendering_method", "")) != "gl_compatibility":
 		_fail("renderer moved away from GL Compatibility")
 		return
 
-	print("v1.64 character lighting r1 smoke test passed")
+	# Keep the historical grep token so the existing v89 workflow remains valid.
+	print("v1.64 character lighting r1 smoke test passed (r1.1 runtime enemy lock)")
 	world.queue_free()
 	await process_frame
 	quit(0)
