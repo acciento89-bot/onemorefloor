@@ -51,8 +51,9 @@
 ; v1.63 r1 projectile/trail identity baseline retained: res://scripts/main_v82.gd
 ; v1.63 r2 technical boss-frame replacement retained: res://scripts/main_v83.gd
 ; v1.63 r2.1 BossDominance correction retained: res://scripts/main_v84.gd
-; v1.64 r1.1 active character lighting/material integration top layer.
-[ext_resource type="Script" path="res://scripts/main_v85.gd" id="1_main"]
+; v1.64 r1.1 character lighting/material integration baseline retained: res://scripts/main_v85.gd
+; v1.65 r1 active environment surface/depth top layer.
+[ext_resource type="Script" path="res://scripts/main_v86.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]

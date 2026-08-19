@@ -1,0 +1,119 @@
+name: v1.65 Environment Surface and Depth r1
+
+on:
+  push:
+    branches:
+      - agent/v1.65-environment-depth
+    paths:
+      - 'assets/shaders/v165_environment_surface.gdshader'
+      - 'scripts/world3d_chamber_v165_environment_depth.gd'
+      - 'scripts/main_v86.gd'
+      - 'scenes/main.tscn'
+      - 'scripts/v90_environment_depth_r1_smoke_test.gd'
+      - 'scripts/v90_environment_depth_r1_capture.gd'
+      - '.github/workflows/v90-environment-depth-r1.yml'
+  pull_request:
+    paths:
+      - 'assets/shaders/v165_environment_surface.gdshader'
+      - 'scripts/world3d_chamber_v165_environment_depth.gd'
+      - 'scripts/main_v86.gd'
+      - 'scenes/main.tscn'
+      - 'scripts/v90_environment_depth_r1_smoke_test.gd'
+      - 'scripts/v90_environment_depth_r1_capture.gd'
+      - '.github/workflows/v90-environment-depth-r1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  environment-depth-r1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile active v1.65 stack
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v165-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v165-import.log; then
+            echo "Godot reported v1.65 compile/import errors"
+            exit 1
+          fi
+          grep -q 'path="res://scripts/main_v86.gd"' scenes/main.tscn
+
+      - name: Validate v1.65 environment depth r1
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v90_environment_depth_r1_smoke_test.gd --quit-after 360 2>&1 | tee v165-smoke.log
+          grep -q "v1.65 environment surface and depth r1 smoke test passed" v165-smoke.log
+
+      - name: Preserve hardened v1.64 runtime material ordering
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v89_character_lighting_r1_smoke_test.gd --quit-after 340 2>&1 | tee v164-hardened.log
+          grep -q "v1.64 character lighting r1 smoke test passed" v164-hardened.log
+
+      - name: Preserve accepted v1.63 combined combat stack
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v87_combined_combat_review_smoke_test.gd --quit-after 320 2>&1 | tee v163-combined.log
+          grep -q "v1.63 combined combat identity review smoke test passed" v163-combined.log
+
+      - name: Render five matched 720x1280 realm pairs
+        run: |
+          set -o pipefail
+          rm -rf artifacts/v165_environment_depth_r1
+          mkdir -p artifacts/v165_environment_depth_r1
+          xvfb-run -a ./godot --path . --script res://scripts/v90_environment_depth_r1_capture.gd --quit-after 520 2>&1 | tee v165-capture.log
+          grep -q "v1.65 environment surface and depth r1 matched visual capture passed" v165-capture.log
+          for realm in lower_halls ossuary iron_warden rift_descent starless_spire; do
+            test -s "artifacts/v165_environment_depth_r1/before_${realm}.png"
+            test -s "artifacts/v165_environment_depth_r1/after_${realm}.png"
+          done
+
+      - name: Upload v1.65 matched visual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: v90-environment-depth-r1-before-after
+          path: artifacts/v165_environment_depth_r1/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve v1.62 r3 UI contract
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v80_ui_runtime_cta_smoke_test.gd --quit-after 280 2>&1 | tee v162-ui.log
+          grep -q "v1.62 UI foundation r3 runtime CTA smoke test passed" v162-ui.log
+
+      - name: Preserve v1.52.1 input flow
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 280 2>&1 | tee v66-input.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" v66-input.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v90-environment-depth-r1-failure-logs
+          path: |
+            v165-import.log
+            v165-smoke.log
+            v164-hardened.log
+            v163-combined.log
+            v165-capture.log
+            v162-ui.log
+            v66-input.log
+          if-no-files-found: ignore
