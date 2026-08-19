@@ -1,0 +1,185 @@
+name: v1.66 Final Release Completion Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/v1.66-character-form
+    paths:
+      - '.github/workflows/v92-release-completion-gate.yml'
+      - 'docs/RELEASE_READINESS.md'
+  pull_request:
+    paths:
+      - '.github/workflows/v92-release-completion-gate.yml'
+      - 'docs/RELEASE_READINESS.md'
+
+permissions:
+  contents: read
+
+jobs:
+  final-release-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 36
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile complete active project
+        run: |
+          set -euo pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee release-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" release-import.log; then
+            echo "Godot reported release compile/import errors"
+            exit 1
+          fi
+
+      - name: Validate production release metadata
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          project = Path('project.godot').read_text()
+          preset = Path('export_presets.cfg').read_text()
+          trigger = Path('.github/testflight-trigger').read_text()
+
+          project_version = re.search(r'config/version="([^"]+)"', project)
+          ios_short = re.search(r'application/short_version="([^"]+)"', preset)
+          ios_build = re.search(r'application/version="([0-9]+)"', preset)
+          bundle = re.search(r'application/bundle_identifier="([^"]+)"', preset)
+          target = re.search(r'application/targeted_device_family=([0-9]+)', preset)
+          viewport_w = re.search(r'window/size/viewport_width=([0-9]+)', project)
+          viewport_h = re.search(r'window/size/viewport_height=([0-9]+)', project)
+
+          required = [project_version, ios_short, ios_build, bundle, target, viewport_w, viewport_h]
+          if any(v is None for v in required):
+              raise SystemExit('Missing release metadata')
+          if project_version.group(1) != ios_short.group(1):
+              raise SystemExit(f'Version mismatch: project={project_version.group(1)} iOS={ios_short.group(1)}')
+          if bundle.group(1) != 'de.kamilunavo.onemorefloor':
+              raise SystemExit('Unexpected iOS bundle identifier')
+          if target.group(1) != '2':
+              raise SystemExit('iOS target must include iPhone + iPad')
+          if viewport_w.group(1) != '720' or viewport_h.group(1) != '1280':
+              raise SystemExit('Reference viewport changed')
+          if 'renderer/rendering_method="gl_compatibility"' not in project:
+              raise SystemExit('GL Compatibility release renderer missing')
+          if 'build=30' not in trigger:
+              raise SystemExit('Expected preserved Build 30 TestFlight trigger state')
+          print(f'Release metadata OK: {project_version.group(1)} / checked-in iOS build {ios_build.group(1)}')
+          PY
+
+      - name: Validate current v1.66 r1.1 actor candidate
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v91_character_form_r1_smoke_test.gd --quit-after 320 2>&1 | tee v166-character.log
+
+      - name: Validate complete gameplay through production systems
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 360 2>&1 | tee gameplay.log
+          grep -q "ONE MORE FLOOR smoke test passed" gameplay.log
+
+      - name: Validate release save settings privacy pause and tutorial
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/release_smoke_test.gd --quit-after 320 2>&1 | tee release-smoke.log
+          grep -q "ONE MORE FLOOR v1.0 release smoke test passed" release-smoke.log
+
+      - name: Validate release candidate lifecycle backup touch and frame cap
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v50_release_candidate_smoke_test.gd --quit-after 320 2>&1 | tee rc-smoke.log
+          grep -q "ONE MORE FLOOR v1.37 release-candidate smoke test passed" rc-smoke.log
+
+      - name: Validate endless ascension progression
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v27_endless_smoke_test.gd --quit-after 300 2>&1 | tee endless.log
+          grep -q "ONE MORE FLOOR v1.14 endless ascension smoke test passed" endless.log
+
+      - name: Validate endgame realms bosses and loot
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v28_endgame_smoke_test.gd --quit-after 320 2>&1 | tee endgame.log
+          grep -q "ONE MORE FLOOR v1.15 endgame smoke test passed" endgame.log
+
+      - name: Preserve v1.65 environment contract
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://scripts/v90_environment_depth_r1_smoke_test.gd --quit-after 320 2>&1 | tee environment.log
+
+      - name: Preserve v1.64 runtime material ordering
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://scripts/v89_character_lighting_r1_smoke_test.gd --quit-after 320 2>&1 | tee lighting.log
+          grep -q "v1.64 character lighting r1 smoke test passed" lighting.log
+
+      - name: Preserve boss dominance and projectile identity
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://scripts/v86_boss_dominance_smoke_test.gd --quit-after 340 2>&1 | tee boss.log
+          grep -q "v1.63 boss dominance r2.1 smoke test passed" boss.log
+          ./godot --headless --path . --script res://scripts/v83_projectile_identity_smoke_test.gd --quit-after 300 2>&1 | tee projectile.log
+          grep -q "v1.63 projectile identity r1 smoke test passed" projectile.log
+
+      - name: Preserve directional danger language
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://scripts/v75_combat_presentation_r32_smoke_test.gd --quit-after 300 2>&1 | tee danger.log
+          grep -q "v1.61 combat presentation r3.2 smoke test passed" danger.log
+
+      - name: Preserve production UI and input flow
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://scripts/v80_ui_runtime_cta_smoke_test.gd --quit-after 300 2>&1 | tee ui.log
+          grep -q "v1.62 UI foundation r3 runtime CTA smoke test passed" ui.log
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 300 2>&1 | tee input.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" input.log
+
+      - name: Final release gate verdict
+        run: |
+          echo "ONE MORE FLOOR FINAL RELEASE COMPLETION GATE PASSED"
+
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v92-final-release-gate-failure
+          path: |
+            release-import.log
+            v166-character.log
+            gameplay.log
+            release-smoke.log
+            rc-smoke.log
+            endless.log
+            endgame.log
+            environment.log
+            lighting.log
+            boss.log
+            projectile.log
+            danger.log
+            ui.log
+            input.log
+          if-no-files-found: ignore
+          retention-days: 14
