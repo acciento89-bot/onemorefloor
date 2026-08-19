@@ -9,9 +9,11 @@ on:
       - 'scripts/main_v76.gd'
       - 'scripts/main_v77.gd'
       - 'scripts/main_v78.gd'
+      - 'scripts/main_v79.gd'
       - 'scripts/v76_ui_foundation_smoke_test.gd'
       - 'scripts/v77_ui_foundation_balance_smoke_test.gd'
       - 'scripts/v78_ui_secondary_polish_smoke_test.gd'
+      - 'scripts/v79_ui_store_action_smoke_test.gd'
       - 'scripts/v76_ui_foundation_capture.gd'
       - 'scripts/v78_ui_secondary_capture.gd'
       - 'scenes/main.tscn'
@@ -22,9 +24,11 @@ on:
       - 'scripts/main_v76.gd'
       - 'scripts/main_v77.gd'
       - 'scripts/main_v78.gd'
+      - 'scripts/main_v79.gd'
       - 'scripts/v76_ui_foundation_smoke_test.gd'
       - 'scripts/v77_ui_foundation_balance_smoke_test.gd'
       - 'scripts/v78_ui_secondary_polish_smoke_test.gd'
+      - 'scripts/v79_ui_store_action_smoke_test.gd'
       - 'scripts/v76_ui_foundation_capture.gd'
       - 'scripts/v78_ui_secondary_capture.gd'
       - 'scenes/main.tscn'
@@ -78,6 +82,12 @@ jobs:
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v78_ui_secondary_polish_smoke_test.gd --quit-after 260 2>&1 | tee v162-r2-smoke.log
           grep -q "v1.62 UI foundation r2 smoke test passed" v162-r2-smoke.log
+
+      - name: Validate v1.62 r2.1 active Store action path
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v79_ui_store_action_smoke_test.gd --quit-after 260 2>&1 | tee v162-r21-smoke.log
+          grep -q "v1.62 UI foundation r2.1 smoke test passed" v162-r21-smoke.log
 
       - name: Render primary 720x1280 menu captures
         run: |
@@ -147,6 +157,7 @@ jobs:
             v162-ui-smoke.log
             v162-r11-smoke.log
             v162-r2-smoke.log
+            v162-r21-smoke.log
             v162-ui-capture.log
             v162-secondary-capture.log
             v161-r32.log
