@@ -31,22 +31,16 @@ The accepted v1.63 combined gameplay-distance captures exposed the next largest 
 9. Preserve rejected/superseded visual passes as history; never silently promote them.
 
 ## Verified active presentation path
-The traced path before implementation was:
 - `project.godot`: 720x1280, `gl_compatibility`.
 - v1.63 parent: `scenes/main.tscn` -> `scripts/main_v84.gd` -> `world3d_chamber_v163_boss_dominance.gd`.
 - v1.64 active top layer: `scenes/main.tscn` -> `scripts/main_v85.gd` -> `world3d_chamber_v164_character_lighting.gd`.
 - Final realm grade still comes from inherited `world3d_chamber_v160_atmosphere.gd`.
-- No new light family was added. Existing `MoonKey`, `WarmTorchLight`, `ArcaneLight`, Wanderer rim/fill and transient combat light remain the only intended shared structure.
+- No new light family was added. Existing `MoonKey`, `WarmTorchLight`, `ArcaneLight`, Wanderer rim/fill and transient combat light remain the intended shared structure.
 - Wanderer authored pieces use `wanderer_materials`; original dark bases included cloth `#1b243a` and dark steel `#242d3b`.
 - Authored enemy body cores use the r5.1 character shader; accepted Necromancer setup re-applies `#181222` during `configure_enemy()`.
-- Both lightweight character surface paths begin around a 0.88 shape-light baseline and darken undersides, which is safe for mobile but can crush already-dark base colors at gameplay distance.
+- Both lightweight character surface paths begin around a 0.88 shape-light baseline and darken undersides, which is mobile-safe but can crush already-dark base colors at gameplay distance.
 
 ## v88 frozen baseline — accepted diagnostic
-Files:
-- `scripts/v88_character_lighting_baseline_smoke_test.gd`
-- `scripts/v88_character_lighting_baseline_capture.gd`
-- `.github/workflows/v88-character-lighting-baseline.yml`
-
 Workflow: **`32284526822` — fully green.**
 Artifact: `v88-character-lighting-baseline`.
 
@@ -62,7 +56,6 @@ Baseline verdict:
 - This confirmed a character material/light integration issue rather than a geometry or VFX issue.
 
 ## r1 — technically green, visually incomplete intermediate
-Implementation before runtime-order correction culminated at `1e0a445dc9a670021ddb6ec64404936efceb65ce` (production integration itself already present before that test-only head).
 Primary matched review workflow: **`32285242478` — fully green.**
 Artifact: `v89-character-lighting-r1-before-after`.
 
@@ -80,7 +73,7 @@ Why r1 was not locked:
 ## r1.1 — accepted character-lighting lock
 Production implementation: **`b4a63b0be50caa5ed08c9984c2101c059347dfe9`.**
 Matched review workflow: **`32286008428` — fully green.**
-Artifact ID: `9377696819` (`v89-character-lighting-r1-before-after`, r1.1 head).
+Artifact ID: **`9377696819`** (`v89-character-lighting-r1-before-after`, r1.1 head).
 
 Implementation:
 - keeps the r1 Wanderer midtone palette and restrained existing rim/fill range/energy adjustment;
@@ -108,14 +101,14 @@ Regression status in `32286008428`:
 - v1.52.1 input flow: PASS.
 
 ## Post-acceptance hardening
-`v89_character_lighting_r1_smoke_test.gd` was hardened after acceptance to create an actual Necromancer during `sync_runtime()` and assert that r1.1 remains the final material write after inherited enemy configuration. It also re-checks the Skeleton lock.
+`v89_character_lighting_r1_smoke_test.gd` is hardened to create an actual runtime Necromancer + Skeleton and assert that r1.1 remains the final material write after inherited enemy configuration while Skeleton remains unchanged.
 
 `main_v85.gd` and `scenes/main.tscn` identify the active top layer as **v1.64 r1.1**. These naming/checkpoint edits do not change the accepted production material/light values from `b4a63b0...`.
 
-At the last pre-documentation check, the newest hardened v89 Actions job was still **queued** behind the repository's broad historical workflow fanout. This additional regression job must not be reported as passed until it actually runs. The accepted production r1.1 review above is independently fully green.
+At the final pre-documentation observation, the newest hardened v89 Actions job was still **queued** behind the repository's broad historical workflow fanout. This extra regression job is intentionally recorded as pending, not falsely marked green. The accepted production r1.1 review is independently fully green.
 
 ## Current unsigned iOS device gate — accepted
-Latest verified device workflow before the final documentation-only checkpoint:
+Latest verified device workflow before the documentation-only checkpoint:
 - `ONE MORE FLOOR iOS Playtest` run **`32286619525` — fully green**.
 - Release metadata: PASS.
 - Godot headless import: PASS.
@@ -129,7 +122,7 @@ Latest verified device workflow before the final documentation-only checkpoint:
 - Release archive/TestFlight export: SKIPPED.
 - TestFlight upload: **SKIPPED**.
 
-This validates the current r1.1 integration on the real iOS device-compile path without creating or uploading a TestFlight build.
+This validates the r1.1 integration on the real iOS device-compile path without creating or uploading a TestFlight build.
 
 ## Milestone verdict
 **v1.64 r1.1 is visually accepted and unsigned-device-build validated.**
