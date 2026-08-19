@@ -48,8 +48,9 @@
 ; v1.62 r2 Vault hierarchy baseline retained: res://scripts/main_v78.gd
 ; v1.62 r2.1 active Store action-chip baseline retained: res://scripts/main_v79.gd
 ; v1.62 r3 runtime Decision/Game Over CTA baseline retained: res://scripts/main_v80.gd
-; v1.63 r1 projectile/trail identity top layer.
-[ext_resource type="Script" path="res://scripts/main_v82.gd" id="1_main"]
+; v1.63 r1 projectile/trail identity baseline retained: res://scripts/main_v82.gd
+; v1.63 r2 boss presentation identity top layer.
+[ext_resource type="Script" path="res://scripts/main_v83.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
