@@ -1,11 +1,11 @@
 extends "res://scripts/main_v86.gd"
 
-# ONE MORE FLOOR v1.66 r1 — Character Form & Readability top layer.
+# ONE MORE FLOOR v1.66 r1.1 — Character Form & Readability top layer.
 # Keeps the accepted v1.65 environment stack and swaps only the 3D combat-world
 # implementation to the v1.66 actor-form candidate.
 
 const CharacterFormWorldV166 = preload("res://scripts/world3d_chamber_v166_character_form.gd")
-const V87_FEATURE := "1.66-character-form-r1"
+const V87_FEATURE := "1.66-character-form-r1.1"
 
 func _ready() -> void:
 	super._ready()
