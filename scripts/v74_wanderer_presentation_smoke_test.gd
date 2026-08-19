@@ -1,6 +1,7 @@
 extends SceneTree
 
 const WorldV160Actors = preload("res://scripts/world3d_chamber_v160_actors.gd")
+const REQUIRED_R11_HOOD := "res://assets/models/actors/v160/wanderer_hood_r11.obj"
 const REQUIRED_AUTHORED_ASSETS := [
 	"res://assets/models/actors/v160/wanderer_torso.obj",
 	"res://assets/models/actors/v160/wanderer_chestplate.obj",
@@ -27,6 +28,14 @@ func _run() -> void:
 		if mesh == null or mesh.get_surface_count() <= 0:
 			_fail("authored Wanderer asset did not import as Mesh: %s" % path)
 			return
+
+	if not ResourceLoader.exists(REQUIRED_R11_HOOD):
+		_fail("missing accepted r11 hood asset: %s" % REQUIRED_R11_HOOD)
+		return
+	var r11_mesh := load(REQUIRED_R11_HOOD) as Mesh
+	if r11_mesh == null or r11_mesh.get_surface_count() <= 0:
+		_fail("accepted r11 hood did not import as Mesh")
+		return
 
 	var world = WorldV160Actors.new()
 	root.add_child(world)
@@ -61,6 +70,12 @@ func _run() -> void:
 		return
 	if not bool(quality.get("ready", false)) or not bool(quality.get("wanderer_ready", false)):
 		_fail("final character-quality snapshot incomplete: %s" % JSON.stringify(quality))
+		return
+	if not bool(quality.get("wanderer_hood_r11", false)):
+		_fail("accepted Wanderer hood r11 marker missing: %s" % JSON.stringify(quality))
+		return
+	if String(quality.get("wanderer_hood_r11_version", "")) != "1.60-wanderer-hood-r11":
+		_fail("accepted Wanderer hood r11 version regressed")
 		return
 
 	var imported := world.player_root.get_node_or_null("Motion/RigMount/ImportedModel") as Node3D
@@ -103,6 +118,9 @@ func _run() -> void:
 		if not String(mesh_instance.mesh.resource_path).ends_with(".obj"):
 			_fail("authored Wanderer landmark is not backed by imported OBJ geometry")
 			return
+	if String(authored_hood.mesh.resource_path) != REQUIRED_R11_HOOD:
+		_fail("visible Wanderer hood is not the accepted r11 mesh: %s" % String(authored_hood.mesh.resource_path))
+		return
 	if eye_l == null or eye_r == null or not eye_l.visible or not eye_r.visible:
 		_fail("authored mask eye slits are missing")
 		return
