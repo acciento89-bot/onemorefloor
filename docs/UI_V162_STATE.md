@@ -65,8 +65,36 @@ r1.1 is a narrow subclass (`main_v77.gd`) over r1. It does not rewrite the compo
 
 Therefore **r1.1 / `83412d21...` is the current accepted v1.62 UI implementation baseline.**
 
+## Secondary menu audit — checkpoint before r2
+Diagnostic implementation: `68ce35cd2b16093a7a10dcaa3bd02f376110d157`.
+Dedicated workflow: **`32267829522` — fully green.**
+
+The diagnostic pass added `v78_ui_secondary_capture.gd` and real 720x1280 captures for Vault, Missions, Tower Pass and Store without changing accepted r1.1 visuals.
+
+### Manual audit
+`vault.png` — **foundation accepted, screen-specific r2 polish required**:
+- shared dark frames and faceted badges work;
+- inventory header and selected-item panel fit r1.1;
+- the dense Filter/Sort/Lock + Workshop + Item Progression controls still read as too many equal-weight rectangular switches, especially in the empty/disabled state;
+- r2 should visually compact these controls inside the existing hit rectangles and improve enabled/disabled hierarchy. Do not change interaction rectangles or crafting/progression logic.
+
+`missions.png` — **accepted; no r2 rewrite planned**:
+- Daily/Weekly cards already sit well in the dark material language;
+- status text remains readable and secondary to mission names;
+- completion chests read as intentional locked secondary actions.
+
+`pass.png` — **accepted; no r2 rewrite planned**:
+- reward rail and free/premium hierarchy are coherent with r1.1;
+- footer claim/unlock actions read correctly;
+- retain current composition unless later state captures expose a selected/claimable-state issue.
+
+`store.png` — **screen-specific r2 polish required**:
+- product cards and icons fit the shared foundation;
+- the right-side `TRY`/`BUY`/`OWNED` action is still naked text inherited from the older Store renderer and does not read as a production action affordance;
+- r2 should replace only this visual action treatment with a compact forged action chip inside the existing product-card hit rectangle. Product catalog, purchase simulation/monetization action and hitbox stay unchanged.
+
 ## Current validation
-Dedicated `v1.62 UI Foundation Check` run **`32267108361`** on `83412d21...` is fully green:
+Primary accepted run `32267108361` on `83412d21...`:
 - Godot 4.7.1 compile/import: PASS
 - r1 shared UI contract: PASS
 - r1.1 dark-panel balance contract: PASS
@@ -74,6 +102,14 @@ Dedicated `v1.62 UI Foundation Check` run **`32267108361`** on `83412d21...` is 
 - v1.61 r3.2 directional Combat lock: PASS
 - v1.38 MenuShell/router regression: PASS
 - v1.52.1 tutorial/game-over input-flow regression: PASS
+
+Secondary diagnostic run `32267829522` on `68ce35cd...`:
+- r1/r1.1 contracts: PASS
+- primary four-screen regression captures: PASS
+- Vault/Missions/Pass/Store secondary captures: PASS
+- v1.61 r3.2 Combat lock: PASS
+- MenuShell/router: PASS
+- v1.52.1 input: PASS
 
 ## Non-negotiable UI rules
 1. Preserve `83412d21...` as the accepted r1.1 rollback point.
@@ -86,9 +122,8 @@ Dedicated `v1.62 UI Foundation Check` run **`32267108361`** on `83412d21...` is 
 8. Save this file after every meaningful accepted/rejected UI pass so a new chat can resume without reconstruction.
 
 ## Current next priorities
-1. Capture and audit the second menu set on top of r1.1: **Vault, Missions, Tower Pass, Store**.
-2. Apply screen-specific polish only where those screens still bypass or visually fight the shared foundation.
+1. **v1.62 r2: polish Vault control hierarchy and Store action chips only.** Missions and Tower Pass are protected from unnecessary r2 changes.
+2. Re-render all eight menu screens after r2; visually accept/reject Vault and Store while treating Home/Hero/Forge/Talents/Missions/Pass as regressions.
 3. Then review **Settings/modal, Upgrade/Decision, Game Over/result** states for the same button/panel language.
 4. Add/verify selected, disabled and pressed-state hierarchy where the existing runtime exposes those states; do not invent new input authority just for visuals.
-5. Keep Home/Hero/Forge/Talents r1.1 as regression captures while expanding coverage.
-6. No TestFlight build for individual UI passes. A TestFlight decision comes only after the menu set is coherently upgraded and the v1.62 iOS/device gate is deliberately run.
+5. No TestFlight build for individual UI passes. A TestFlight decision comes only after the menu set is coherently upgraded and the v1.62 iOS/device gate is deliberately run.
