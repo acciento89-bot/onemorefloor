@@ -58,6 +58,7 @@ jobs:
       EFFECTIVE_BUILD: '2'
     steps:
       - name: Report Family Life build 2 start
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
@@ -206,6 +207,7 @@ jobs:
 
       - name: Report Family Life build 2 result
         if: always()
+        continue-on-error: true
         uses: actions/github-script@v7
         env:
           TESTFLIGHT_STATUS: ${{ steps.testflight.outputs.status }}
