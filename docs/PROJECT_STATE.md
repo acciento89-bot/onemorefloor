@@ -2,24 +2,60 @@
 
 Canonical handoff. **Repository truth wins over chat memory.**
 
-## Active — v1.64 Character Lighting
-- PR #95 / `agent/v1.64-character-lighting`, stacked on v1.63 / PR #93.
-- **Accepted production implementation: `b4a63b0be50caa5ed08c9984c2101c059347dfe9` — r1.1.**
-- Active: `main.tscn` -> `main_v85.gd` -> `world3d_chamber_v164_character_lighting.gd`.
-- No TestFlight build/version jump or upload.
+## Active / accepted — v1.65 Environment Surface & Depth
+- PR #100 / `agent/v1.65-environment-depth`, stacked on accepted v1.64 / PR #95.
+- **Accepted production implementation: `a5951b244166bf824e403eda037a4568194348c6` — v1.65 r1.3.**
+- Final visual/test checkpoint: `c1078573877a4e204405a41f781e92201ac20b85`.
+- Active path: `main.tscn` -> `main_v86.gd` -> `world3d_chamber_v165_environment_depth_r13.gd`.
+- Detailed history: `docs/V165_ENVIRONMENT_DEPTH_STATE.md`.
 
-r1.1 restores gameplay-distance midtone separation for dark Wanderer/enemy materials while preserving geometry, rig, animation and gameplay authority. Existing rim/fill lights are reused. Enemy material response is applied after inherited runtime `configure_enemy()`; Skeleton stays locked.
+v1.65 r1.3 improves the five combat realms through mobile-safe procedural material breakup plus restrained presentation-only surface/depth dressing. Camera, collision/navigation, combat authority, character geometry/animation, UI, input, saves and progression remain unchanged.
 
-Evidence: v88 `32284526822` green; r1 `32285242478` technically green but visually superseded; **r1.1 `32286008428` fully green and visually accepted**; artifact `9377696819`; approximate luminance delta vs v1.63: Wanderer +25.4% / +27.5% / +48.6%, Necromancer +8.5% / +14.4%, Warden +10.7%.
+Accepted visual direction:
+- Lower Halls: restrained soot/wear and compact chips instead of regular bright strips.
+- Ossuary: darker dust/patina plus small bone fragments; no large pale applied polygons.
+- Iron Bastion: restrained rust/patina/debris while Warden dominance stays intact.
+- Rift Descent: stronger dark-purple material depth with compact accents; no neon/debug fracture bars.
+- Starless Spire: cold-blue material breakup with compact inlay chips; no long blue bars.
 
-Latest verified code-equivalent iOS run before documentation-only commits: **`32286619525` — fully green**. Metadata, Godot import, Xcode export/inspection, **unsigned iPhone/iPad compile**, **unsigned package** and artifacts PASS; TestFlight override/API key/release export/**upload SKIPPED**.
+### v1.65 decision history
+- r1: technically green, visually rejected for long brass/purple/blue debug-bar language.
+- r1.1: technically green, visually too subtle.
+- r1.2: materially stronger, but visually rejected for large low-poly-looking wear patches in Ossuary/Iron.
+- **r1.3: visually accepted.**
 
-Extra hardening: v89 validates runtime Necromancer + Skeleton final-write ordering without changing production values. Latest observed current-head v89 run **`32288004312` is queued** behind broad historical workflow fanout. Do not report it green until it actually executes.
+Final r1.3 visual gate:
+- workflow **`32292817771` — fully green**;
+- artifact **`9380157967`**;
+- all ten matched before/after captures asserted at 720x1280;
+- v1.65 readiness/camera/no-collision contract PASS;
+- hardened v1.64 runtime material-order regression PASS.
 
-Locked parents: v1.63 `7262f42002aeeba338559190e8a87a616329ec54`; v1.62 UI `71c8ecec5387400af7ef1c4bd29a3f87f9323d17`; v1.61 `bb367aad35338dd6d32fbdf7d4de4208efef2ad0`; v1.60 `3e567bf409a8492a55f672b226ce9ce81c16780f` with Wanderer safe point `00a78086d47b06093c1c7554c2713067f3def132` and Hood r11 `4f82a5aeb717a088747eb31849b2d2d97340ba27`.
+Final r1.3 unsigned iOS gate:
+- workflow **`32292817944` — fully green**;
+- metadata/import/Xcode export/project inspection PASS;
+- **unsigned iPhone/iPad compile + package PASS**;
+- artifacts PASS;
+- TestFlight override/API key/release archive/export/**upload SKIPPED**.
 
-Preserve imported animation/pivots, gameplay authority, danger semantics, accepted geometry/VFX/UI/lighting and rollback points. Gameplay/device images decide visual acceptance; visually rejected passes remain rejected. No TestFlight/version jumps for micro-passes.
+## Locked parents
+- v1.64 Character Lighting r1.1: `b4a63b0be50caa5ed08c9984c2101c059347dfe9`; accepted matched run `32286008428`.
+- v1.63 Combat Identity: `7262f42002aeeba338559190e8a87a616329ec54`; combined review `32280114378` accepted.
+- v1.62 UI: `71c8ecec5387400af7ef1c4bd29a3f87f9323d17`.
+- v1.61 Combat Presentation: `bb367aad35338dd6d32fbdf7d4de4208efef2ad0`.
+- v1.60 Authored 3D: `3e567bf409a8492a55f672b226ce9ce81c16780f`; Wanderer safe point `00a78086d47b06093c1c7554c2713067f3def132`; Hood r11 `4f82a5aeb717a088747eb31849b2d2d97340ba27`.
 
-**v1.64 r1.1 is complete from visual + unsigned-device-build perspective.** Record hardened v89 when it finishes, then select the next largest quality gap from fresh runtime/device captures and create the next stacked milestone. Keep TestFlight off until a deliberate bundled upload decision.
+## Continuity rules
+Preserve accepted animation/pivots, gameplay authority, danger semantics, geometry/VFX/UI/lighting/environment locks and rollback points. Gameplay/device images decide visual acceptance; technically green but visually rejected passes stay rejected. Presentation details must not acquire collision/navigation authority. No accidental repeated TestFlight uploads.
 
-See `docs/V164_CHARACTER_LIGHTING_STATE.md`, `docs/V163_COMBAT_IDENTITY_STATE.md`, `docs/UI_V162_STATE.md`.
+## Current release action
+**v1.65 r1.3 is complete from visual + unsigned-device-build perspective.** The user explicitly requested exactly one TestFlight upload after this development block.
+
+Release sequence:
+1. create a fresh release bundle from accepted `agent/v1.65-environment-depth` to stale `main`;
+2. merge only the accepted bundle;
+3. verify current stored TestFlight build trigger/build number immediately before dispatch;
+4. trigger **exactly one** TestFlight upload;
+5. track the actual workflow through App Store Connect upload success; if the attempt fails, report it before any retry.
+
+See `docs/V165_ENVIRONMENT_DEPTH_STATE.md`, `docs/V164_CHARACTER_LIGHTING_STATE.md`, `docs/V163_COMBAT_IDENTITY_STATE.md`, `docs/UI_V162_STATE.md`.
