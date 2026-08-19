@@ -21,7 +21,7 @@ func _run() -> void:
 	}
 	world.sync_runtime(Vector2(360.0, 690.0), [warden], [], [], [], Vector2.ZERO, 22.0, 0.0, 0.0, 10)
 	if world.boss_root == null or not world.boss_root.visible:
-		_fail("inherited v1.46 boss frame is not active on floor 10")
+		_fail("inherited boss frame is not active on floor 10")
 		return
 	if world.boss_halo == null or world.boss_halo.mesh == null:
 		_fail("boss baseline halo mesh is missing")
@@ -33,12 +33,14 @@ func _run() -> void:
 		_fail("boss baseline crown is missing")
 		return
 
-	print("V163_BOSS_BASELINE_HALO_CLASS:%s" % world.boss_halo.mesh.get_class())
-	print("V163_BOSS_BASELINE_BEAM_CLASS:%s" % world.boss_beam.mesh.get_class())
-	print("V163_BOSS_BASELINE_HALO_AABB:%s" % str(world.boss_halo.mesh.get_aabb()))
-	print("V163_BOSS_BASELINE_BEAM_AABB:%s" % str(world.boss_beam.mesh.get_aabb()))
-	print("V163_BOSS_BASELINE_HALO_IS_CYLINDER:%s" % str(world.boss_halo.mesh is CylinderMesh))
-	print("V163_BOSS_BASELINE_BEAM_IS_CYLINDER:%s" % str(world.boss_beam.mesh is CylinderMesh))
+	var halo_class := String(world.boss_halo.mesh.get_class())
+	var beam_class := String(world.boss_beam.mesh.get_class())
+	var halo_aabb: AABB = world.boss_halo.mesh.get_aabb()
+	var beam_aabb: AABB = world.boss_beam.mesh.get_aabb()
+	print("V163_BOSS_BASELINE_HALO_CLASS:%s" % halo_class)
+	print("V163_BOSS_BASELINE_BEAM_CLASS:%s" % beam_class)
+	print("V163_BOSS_BASELINE_HALO_AABB:%s" % str(halo_aabb))
+	print("V163_BOSS_BASELINE_BEAM_AABB:%s" % str(beam_aabb))
 
 	var crown_mesh_classes: Array[String] = []
 	var box_count := 0
@@ -52,14 +54,21 @@ func _run() -> void:
 	print("V163_BOSS_BASELINE_CROWN_CLASSES:%s" % ",".join(crown_mesh_classes))
 	print("V163_BOSS_BASELINE_CROWN_BOX_COUNT:%d" % box_count)
 
-	# Runtime class/AABB evidence is the source of truth for this baseline gate.
-	# The prior `is CylinderMesh` assertion proved unreliable for these imported
-	# PrimitiveMesh resources even though the creation helper uses CylinderMesh.
-	if world.boss_halo.mesh.get_class() != "CylinderMesh":
-		_fail("boss baseline halo runtime class is %s, expected CylinderMesh" % world.boss_halo.mesh.get_class())
+	# Runtime evidence wins over the historical construction helper. The active
+	# stacked world presents a large Torus halo, the inherited tall Cylinder beam
+	# and four Box crown rods. Lock their footprint so r2 compares against the
+	# actual release-facing baseline rather than the older source assumption.
+	if halo_class != "TorusMesh":
+		_fail("boss baseline halo runtime class is %s, expected TorusMesh" % halo_class)
 		return
-	if world.boss_beam.mesh.get_class() != "CylinderMesh":
-		_fail("boss baseline beam runtime class is %s, expected CylinderMesh" % world.boss_beam.mesh.get_class())
+	if absf(halo_aabb.size.x - 2.16) > 0.03 or absf(halo_aabb.size.z - 2.16) > 0.03:
+		_fail("boss baseline halo footprint changed: %s" % str(halo_aabb.size))
+		return
+	if beam_class != "CylinderMesh":
+		_fail("boss baseline beam runtime class is %s, expected CylinderMesh" % beam_class)
+		return
+	if absf(beam_aabb.size.y - 2.75) > 0.03:
+		_fail("boss baseline beam height changed: %s" % str(beam_aabb.size))
 		return
 	if box_count != 4:
 		_fail("boss baseline crown no longer contains four BoxMesh rods")
