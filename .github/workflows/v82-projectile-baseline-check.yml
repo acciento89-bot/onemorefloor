@@ -1,0 +1,93 @@
+name: v1.63 Projectile Baseline Check
+
+on:
+  push:
+    branches:
+      - agent/v1.63-combat-identity
+    paths:
+      - 'scripts/v82_projectile_baseline_smoke_test.gd'
+      - 'scripts/v82_projectile_baseline_capture.gd'
+      - '.github/workflows/v82-projectile-baseline-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/v82_projectile_baseline_smoke_test.gd'
+      - 'scripts/v82_projectile_baseline_capture.gd'
+      - '.github/workflows/v82-projectile-baseline-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-projectile-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile current stack
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v163-baseline-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v163-baseline-import.log; then
+            echo "Godot reported v1.63 baseline compile errors"
+            exit 1
+          fi
+
+      - name: Confirm inherited projectile visual baseline
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v82_projectile_baseline_smoke_test.gd --quit-after 260 2>&1 | tee v163-baseline-smoke.log
+          grep -q "v1.63 projectile visual baseline smoke test passed" v163-baseline-smoke.log
+
+      - name: Preserve v1.61 r3.2 combat presentation
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v75_combat_presentation_r32_smoke_test.gd --quit-after 260 2>&1 | tee v161-r32.log
+          grep -q "v1.61 combat presentation r3.2 smoke test passed" v161-r32.log
+
+      - name: Render 720x1280 projectile baseline
+        run: |
+          set -o pipefail
+          rm -rf artifacts/v163_projectile_baseline
+          mkdir -p artifacts/v163_projectile_baseline
+          xvfb-run -a ./godot --path . --script res://scripts/v82_projectile_baseline_capture.gd --quit-after 300 2>&1 | tee v163-baseline-capture.log
+          grep -q "v1.63 projectile gameplay baseline capture passed" v163-baseline-capture.log
+          test -s artifacts/v163_projectile_baseline/baseline_player_projectiles.png
+          test -s artifacts/v163_projectile_baseline/baseline_enemy_projectiles.png
+          test -s artifacts/v163_projectile_baseline/baseline_mixed_projectiles.png
+
+      - name: Upload v1.63 projectile baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: v82-projectile-baseline-visuals
+          path: artifacts/v163_projectile_baseline/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve v1.62 r3 UI contract
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v80_ui_runtime_cta_smoke_test.gd --quit-after 260 2>&1 | tee v162-r3-ui.log
+          grep -q "v1.62 UI foundation r3 runtime CTA smoke test passed" v162-r3-ui.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v82-projectile-baseline-failure-logs
+          path: |
+            v163-baseline-import.log
+            v163-baseline-smoke.log
+            v161-r32.log
+            v163-baseline-capture.log
+            v162-r3-ui.log
+          if-no-files-found: ignore
