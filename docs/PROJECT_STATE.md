@@ -3,37 +3,82 @@
 Canonical handoff for continued development. **Read this file before changing art direction, gameplay authority, release policy or regression gates. Repository truth wins over chat memory.**
 
 For detailed milestone history also read:
-- `docs/UI_V162_STATE.md` for the accepted v1.62 menu/UI milestone.
+- `docs/V164_CHARACTER_LIGHTING_STATE.md` for the active/accepted v1.64 character-lighting milestone.
 - `docs/V163_COMBAT_IDENTITY_STATE.md` for projectile/boss baselines, rejected boss r2 and accepted v1.63 r2.1.
+- `docs/UI_V162_STATE.md` for the accepted v1.62 menu/UI milestone.
 
-# Active development line — v1.63 Combat Identity
+# Active development line — v1.64 Character Lighting
 
-- Pull request: **#93 — `v1.63 combat identity milestone`**.
+- Pull request: **#95 — `v1.64 character lighting milestone`**.
+- Branch: `agent/v1.64-character-lighting`.
+- Base: `agent/v1.63-combat-identity` / PR #93.
+- **Current accepted production implementation lock: `b4a63b0be50caa5ed08c9984c2101c059347dfe9` (v1.64 r1.1).**
+- Active integration remains `scenes/main.tscn` -> `scripts/main_v85.gd` -> `scripts/world3d_chamber_v164_character_lighting.gd`.
+- PR #95 remains **Draft**, open, unmerged and mergeable at the last checked checkpoint.
+- No TestFlight upload, App Store build-number bump or version jump has been performed for v1.64.
+
+## v1.64 status
+**Visually accepted at r1.1 and unsigned iPhone/iPad device-build validated.** Do not add another generic brightness pass without new runtime/device evidence.
+
+Accepted r1.1 behavior:
+1. Wanderer dark cloth/cape/steel/leather/void midtones are recovered at gameplay distance while keeping the established dark-fantasy palette.
+2. Existing Wanderer rim/fill lights are reused with restrained range/energy changes; no new decorative light family or expensive screen-space dependency was added.
+3. Goblin/Bat/Ghoul/Necromancer/Warden authored body materials receive controlled midtone recovery; Skeleton remains an explicit visual lock.
+4. Enemy Quality `configure_enemy()` is allowed to finish first; v1.64 then reapplies the accepted enemy material response as the final presentation-only runtime write.
+5. Geometry, rig pivots, imported animation, combat timing, damage, targeting, hitboxes, projectile collision, input, saves and progression remain inherited and unchanged.
+
+## v1.64 visual/CI evidence
+- Frozen v88 baseline workflow: **`32284526822` — fully green**.
+- Initial r1 matched workflow: **`32285242478` — fully green but visually incomplete for enemies** because inherited runtime enemy configuration overwrote the one-time r1 material write.
+- Accepted r1.1 matched workflow: **`32286008428` — fully green**.
+- Accepted r1.1 artifact: **`9377696819`**, matched v1.63-before/v1.64-after frames for Lower Halls, Ossuary and Iron Bastion/Warden.
+- Approximate matched-crop luminance improvement vs accepted v1.63 parent: Wanderer +25.4% Lower Halls, +27.5% Ossuary, +48.6% Iron Bastion; Necromancer +8.5% Lower Halls / +14.4% Ossuary; Warden +10.7% Iron Bastion.
+- Accepted visual verdict: characters are materially more readable while realm mood, Warden dominance and dark-fantasy contrast remain intact.
+
+## Current device/release gate
+Latest verified current-head device workflow before this documentation-only update:
+- `ONE MORE FLOOR iOS Playtest` run **`32286619525` — fully green**.
+- Release metadata: PASS.
+- Godot headless import: PASS.
+- Godot -> Xcode export: PASS.
+- Generated Xcode project inspection: PASS.
+- **Unsigned iPhone/iPad device compile: PASS.**
+- **Unsigned device package: PASS.**
+- Xcode/unsigned iOS artifacts: PASS.
+- TestFlight build override: SKIPPED.
+- App Store Connect API-key preparation: SKIPPED.
+- Release archive/TestFlight export: SKIPPED.
+- TestFlight upload: **SKIPPED**.
+
+Therefore v1.64 r1.1 is device-build validated without performing a TestFlight upload.
+
+## Post-acceptance hardening
+- `scripts/v89_character_lighting_r1_smoke_test.gd` now explicitly creates a runtime Necromancer + Skeleton and checks that the r1.1 enemy material response survives inherited `configure_enemy()` while Skeleton remains unchanged.
+- This is an additional regression lock on top of the already-green accepted r1.1 production review; it does not alter accepted production values.
+- At the last pre-documentation check, the latest GitHub runner for this hardened v89 test was still queued behind the repository's broad historical workflow fanout. Do not falsely report it as passed until Actions completes it.
+
+# Parent milestone locks
+
+## v1.63 Combat Identity — accepted
+- PR #93 — `v1.63 combat identity milestone`.
 - Branch: `agent/v1.63-combat-identity`.
-- Base: `agent/v1.62-ui-foundation` / PR #92.
-- **Current accepted production implementation lock: `7262f42002aeeba338559190e8a87a616329ec54`.**
-- Combined-review diagnostic commit: `1e1591b28f859e4ccdff6d5034f4d768931d7cd4` — no production visual change.
-- v1.63 completion-state documentation commit: `19bd74fea2292aa9f887b05e99f99c826378d6b8`.
-- PR #93 remains **Draft**, open, unmerged and mergeable at the last checked checkpoint.
-- No TestFlight upload, App Store build-number bump or version jump has been performed for v1.63.
+- Accepted production implementation: **`7262f42002aeeba338559190e8a87a616329ec54`**.
+- Visually complete; do not add more combat VFX merely for decoration quantity.
 
-## v1.63 status
-**Visually complete.** Do not add more combat VFX merely for decoration quantity.
-
-Accepted production stack:
+Accepted stack:
 1. v1.61 r3.2 directional danger language.
 2. v1.62 r3 production UI.
 3. v1.63 r1 projectile/trail identity.
 4. v1.63 r2 technical v1.46 boss-frame cleanup underneath.
 5. v1.63 r2.1 active v1.49 BossDominance correction.
 
-# Parent milestone locks
+Accepted combined review workflow: **`32280114378` — green.**
+Accepted captures: `combined_fan_exchange.png`, `combined_slam_loot.png`, `combined_mob_pressure.png`.
 
 ## v1.62 UI — accepted
 - PR #92 — `v1.62 UI foundation milestone`.
 - Branch: `agent/v1.62-ui-foundation`.
 - Accepted production code lock: **`71c8ecec5387400af7ef1c4bd29a3f87f9323d17`**.
-- PR #92 remains Draft/open/unmerged/mergeable at last check.
 - Home, Hero, Forge, Talents, Vault, Missions, Tower Pass, Store, Settings, Pause, Upgrade, Decision and Game Over accepted.
 - Store TRY/OWNED/UNAVAILABLE state matrix accepted.
 - Exact state and validation history: `docs/UI_V162_STATE.md`.
@@ -42,7 +87,6 @@ Accepted production stack:
 - PR #90 — `v1.61 combat presentation milestone`.
 - Branch: `agent/v1.61-combat-presentation`.
 - Accepted production implementation: **`bb367aad35338dd6d32fbdf7d4de4208efef2ad0`**.
-- PR #90 remains Draft/open/unmerged/mergeable at last check.
 
 Accepted visual language:
 - narrow blade-ribbon attack instead of filled yellow fan;
@@ -63,7 +107,6 @@ All gameplay-significant trigger/window/position/radius semantics remain inherit
 - PR #82 — `v1.60 authored environment milestone`.
 - Branch: `agent/v1.60-meta-environments`.
 - Validated v1.60 implementation lock: **`3e567bf409a8492a55f672b226ce9ce81c16780f`**.
-- PR #82 remains Draft/open/unmerged; GitHub reported it not currently mergeable at the last check, so do not assume merge readiness.
 - Wanderer animation/core safe point: `00a78086d47b06093c1c7554c2713067f3def132`.
 - Wanderer Hood r11 correction: `4f82a5aeb717a088747eb31849b2d2d97340ba27`.
 
@@ -90,81 +133,22 @@ All gameplay-significant trigger/window/position/radius semantics remain inherit
 - Orthographic combat camera remains lower/stable for stronger isometric depth.
 
 ## Wanderer
-- Accepted stack: Wanderer r8.1 + Hood r11.
+- Accepted geometry stack remains Wanderer r8.1 + Hood r11.
 - Narrow human central mass, asymmetric shoulders, slim human limbs, overlapping shoulder armor and layered footwear.
 - Restrained ArcaneCore/belt/eyes.
 - Dark cloth / cool steel / restrained brass / arcane accents.
-- Preserve cape, blade, imported animation and pivots.
+- v1.64 r1.1 improves material/light integration only; preserve cape, blade, imported animation and pivots.
 
 ## Enemies
 - Preserve accepted authored Goblin, Bat, Skeleton, Ghoul, Necromancer and Warden silhouettes.
 - Keep retained weapons/eyes/runes and archetype readability.
 - Do not restore old blockout cores or rejected excessive surface/camouflage breakup.
-
-# v1.63 accepted implementation
-
-## Projectile / trail identity r1
-Implementation: **`4877c228d11319ad1db18e6bf12b5d2442b37ac9`**.
-Workflow: `32276028440` — green.
-
-- Player sphere -> faceted blade shard.
-- Enemy sphere -> faceted thorn/crystal dart.
-- Straight Box trails -> tapered wakes.
-- Enemy wake inherits projectile color.
-- v1.51 collision authority remains separate and unchanged.
-- Explicitly preserved design radii: player shot 10, enemy shot 9, player hit 28.
-
-## Boss r2 — rejected visual intermediate
-Implementation: **`9f4ea8d51f32ec712385db6d5d7263502f9998d0`**.
-Workflow: `32278164808` — technically green.
-
-- Cleaned v1.46 boss halo/beam/crown frame.
-- **Visually rejected** because the dominant ring came from the separate v1.49 BossDominance layer.
-- Keep only as technical intermediate history; never promote over r2.1.
-
-## Boss dominance r2.1 — accepted
-Implementation: **`7262f42002aeeba338559190e8a87a616329ec54`**.
-Workflow: **`32279185350` — green and visually accepted.**
-
-- v1.49 outer/inner persistent boss rings replaced by open bracket/chevron geometry.
-- Eight old Box dominance markers replaced with faceted shards; only four visually active.
-- Separate dominance light reduced.
-- r2's quieter v1.46 frame remains underneath.
-- Focus/Charge/Phase/Slam/Ritual tell AABBs remain exactly identical to accepted reference geometry.
-
-Accepted boss images:
-- `r21_boss_intro.png`
-- `r21_boss_fan.png`
-- `r21_boss_crown_slam.png`
-
-## Combined review — accepted
-Diagnostic commit: `1e1591b28f859e4ccdff6d5034f4d768931d7cd4`.
-Workflow: **`32280114378` — green.**
-
-Accepted captures:
-- `combined_fan_exchange.png`
-- `combined_slam_loot.png`
-- `combined_mob_pressure.png`
-
-Verdict: projectiles, boss identity, r3.2 danger tells, impacts, spawn/death signatures and loot feedback remain readable together. **Do not add another v1.63 VFX layer.**
-
-# Device / release status
-
-Latest milestone device gate:
-- `ONE MORE FLOOR iOS Playtest` run **`32280114299`**: fully green.
-- Release metadata: PASS.
-- Godot import + Xcode export: PASS.
-- Unsigned iPhone/iPad device compile/package: PASS.
-- TestFlight build override: SKIPPED.
-- App Store Connect key preparation: SKIPPED.
-- Release archive/TestFlight export: SKIPPED.
-- TestFlight upload: **SKIPPED**.
-
-Therefore v1.63 is **TestFlight-ready from visual + unsigned-device-build perspective**, but no upload has been authorized or performed.
+- Preserve the v1.64 r1.1 runtime material-order fix; do not move the enemy readability write back before inherited `configure_enemy()`.
 
 # Required regression gates for future work
 
 Preserve at minimum:
+- v1.64 r1.1 character-lighting/material contract and matched gameplay-distance readability.
 - v1.63 r2.1 boss-dominance contract.
 - v1.63 r1 projectile-identity / v1.51-authority contract.
 - v1.63 combined gameplay-distance review when changing combat presentation.
@@ -172,15 +156,14 @@ Preserve at minimum:
 - v1.62 r3 UI regression.
 - v1.52.1 input-flow regression.
 - Wanderer/enemy authored-model regressions when character presentation is touched.
-- iPhone/iPad unsigned device build before any release/upload decision.
+- unsigned iPhone/iPad device build before any release/upload decision.
 
 # Current next step
 
-**v1.63 is complete. Do not keep polishing it by adding more effects.**
+**v1.64 r1.1 is visually accepted and unsigned-device-build validated. Do not keep brightening it by habit.**
 
-For the next milestone:
-1. Read this file first, then the relevant v1.62/v1.63 milestone state doc.
-2. Identify the next largest game-wide quality gap from actual runtime/device captures rather than reopening accepted work by habit.
-3. Create a new stacked branch/PR for that milestone before implementation.
+1. Let the queued post-acceptance runtime-order smoke hardening complete and record its result when available.
+2. Use new gameplay/device captures to identify the next largest game-wide quality gap rather than reopening accepted character geometry, combat VFX, UI or lighting.
+3. Create the next stacked milestone branch/PR before production implementation.
 4. Save a new milestone-specific state file immediately.
 5. Keep TestFlight off until a deliberate bundled upload decision is made.
