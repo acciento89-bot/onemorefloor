@@ -7,24 +7,17 @@ Canonical checkpoint for the active v1.64 character-lighting/material-integratio
 - Parent branch: `agent/v1.63-combat-identity` / PR #93.
 - Starting parent head: `bb4167d9a829c2d3fab006c552ac3b9fc4606670`.
 - Accepted v1.63 production rollback: `7262f42002aeeba338559190e8a87a616329ec54`.
+- **Accepted v1.64 r1.1 production implementation lock: `b4a63b0be50caa5ed08c9984c2101c059347dfe9`.**
 - Accepted v1.62 UI rollback: `71c8ecec5387400af7ef1c4bd29a3f87f9323d17`.
 - Accepted v1.61 danger-language rollback: `bb367aad35338dd6d32fbdf7d4de4208efef2ad0`.
 - No TestFlight/build/version jump is authorized from individual v1.64 passes.
 
 ## Why v1.64 exists
 The accepted v1.63 combined gameplay-distance captures exposed the next largest game-wide presentation weakness:
-- Wanderer midtones collapse toward near-black silhouette in normal combat framing;
-- dark cloth/steel details lose separation from one another and from the floor;
-- some enemy/Warden surfaces hit much brighter values, creating inconsistent actor readability;
-- the issue is lighting/material integration, **not accepted anatomy, proportions, pivots or combat VFX**.
-
-## v1.64 goal
-Improve character readability and material separation at gameplay distance while preserving the established dark-fantasy palette:
-- recover controlled Wanderer midtones without flattening the silhouette;
-- separate cloth / steel / brass / arcane materials through restrained key/fill/rim response;
-- keep enemies readable without bleaching bone/metal or turning the scene into bright studio lighting;
-- preserve realm mood and mobile GL Compatibility constraints;
-- prefer shared actor-light/material integration over per-screenshot hacks.
+- Wanderer midtones collapsed toward near-black silhouette in normal combat framing;
+- dark cloth/steel details lost separation from one another and from the floor;
+- dark authored enemies, especially Necromancer, could collapse similarly while Skeleton/Warden highlights sat much brighter;
+- the issue was lighting/material integration, **not accepted anatomy, proportions, pivots or combat VFX**.
 
 ## Protected systems
 1. Do not reopen Wanderer/enemy anatomy, mesh proportions, authored OBJ geometry or rig pivots during the lighting milestone unless a separately proven geometry regression is found.
@@ -35,55 +28,93 @@ Improve character readability and material separation at gameplay distance while
 6. Do not change combat damage/timing/targeting/hitboxes/projectile collision/input/saves/progression.
 7. Stay mobile-friendly: no expensive screen-space lighting dependency merely to fix actor readability.
 8. CI green is necessary but gameplay-distance images decide visual acceptance.
-9. Update this file immediately after every meaningful accepted/rejected pass.
-
-## Starting image diagnosis
-Current accepted v1.63 combined captures are the initial evidence:
-- `combined_mob_pressure.png`: Wanderer reads almost as a black silhouette while enemy bones/props occupy much brighter values.
-- `combined_fan_exchange.png`: Warden receives strong highlights while Wanderer cloth/armor separation is weak at the same gameplay camera.
-- `combined_slam_loot.png`: use as regression reference for boss tell/VFX density while adjusting actor readability.
-
-These captures are accepted v1.63 composition/VFX references; v1.64 must not change their combat semantics.
+9. Preserve rejected/superseded visual passes as history; never silently promote them.
 
 ## Verified active presentation path
-The v1.64 trace is complete before production edits:
-- `project.godot` remains 720x1280 on `gl_compatibility`.
-- `scenes/main.tscn` runs `scripts/main_v84.gd`.
-- `main_v84.gd` instantiates `world3d_chamber_v163_boss_dominance.gd`; the accepted v1.63 r2.1 world is therefore the active combat presentation owner.
-- Final realm grade comes from `world3d_chamber_v160_atmosphere.gd`, which intentionally writes after inherited v1.49 lookdev.
-- Existing shared scene lights are `MoonKey`, `WarmTorchLight`, `ArcaneLight`, plus Wanderer `player_rim_light`, `player_fill_light` and transient `player_combat_light`.
-- The Wanderer uses the authored v1.60 OBJ layer on the preserved v1.55 articulated glTF pivots.
-- Authored Wanderer pieces resolve to `wanderer_materials` from `world3d_actor_factory_v160.gd`; notably cloth base `#1b243a` and dark steel base `#242d3b` are already very dark.
-- `v160_surface_depth.gdshader` is the active lightweight GL-compatible material shader. It starts base shading at 0.88 and subtracts up to 0.10 on undersides, so dark base materials can lose gameplay-distance midtone separation even though the scene already has key/fill/rim lighting.
+The traced path before implementation was:
+- `project.godot`: 720x1280, `gl_compatibility`.
+- v1.63 parent: `scenes/main.tscn` -> `scripts/main_v84.gd` -> `world3d_chamber_v163_boss_dominance.gd`.
+- v1.64 active top layer: `scenes/main.tscn` -> `scripts/main_v85.gd` -> `world3d_chamber_v164_character_lighting.gd`.
+- Final realm grade still comes from inherited `world3d_chamber_v160_atmosphere.gd`.
+- No new light family was added. Existing `MoonKey`, `WarmTorchLight`, `ArcaneLight`, Wanderer rim/fill and transient combat light remain the only intended shared structure.
+- Wanderer authored pieces use `wanderer_materials`; original dark bases included cloth `#1b243a` and dark steel `#242d3b`.
+- Authored enemy body cores use the r5.1 character shader; accepted Necromancer setup re-applies `#181222` during `configure_enemy()`.
+- Both lightweight character surface paths begin around a 0.88 shape-light baseline and darken undersides, which is safe for mobile but can crush already-dark base colors at gameplay distance.
 
-### Working diagnosis
-Do **not** solve v1.64 by stacking extra decorative lights. The verified path already has the required shared lighting structure. First compare frozen images; then prefer a restrained shared material/lighting response correction on this active path.
-
-## v88 dedicated lighting baseline gate
-Baseline-only files were added before any production lighting/material change:
+## v88 frozen baseline — accepted diagnostic
+Files:
 - `scripts/v88_character_lighting_baseline_smoke_test.gd`
 - `scripts/v88_character_lighting_baseline_capture.gd`
 - `.github/workflows/v88-character-lighting-baseline.yml`
 
-The gate fixes three 720x1280 gameplay-distance references:
-1. `baseline_lower_halls_mobs.png` — neutral Lower Halls mixed mobs.
-2. `baseline_ossuary_mobs.png` — cool Ossuary mixed mobs.
-3. `baseline_iron_warden.png` — warm Iron Bastion Warden context with accepted r2.1 boss dominance retained.
+Workflow: **`32284526822` — fully green.**
+Artifact: `v88-character-lighting-baseline`.
 
-Required regressions inside v88:
-- accepted v1.63 combined stack;
-- v1.63 r2.1 boss dominance;
-- v1.63 r1 projectile identity;
-- v1.61 r3.2 danger language;
-- v1.62 r3 UI;
-- v1.52.1 input flow;
-- authored Wanderer readiness and GL Compatibility ownership.
+Frozen 720x1280 references:
+1. `baseline_lower_halls_mobs.png`
+2. `baseline_ossuary_mobs.png`
+3. `baseline_iron_warden.png`
 
-First v88 workflow run: `32284526822` (started from branch head `d93e6ad613fedff687ed39c6c5329a02a96aeb28`; result/image review still pending at this checkpoint).
+Baseline verdict:
+- Wanderer was nearly black in all three normal gameplay frames.
+- Necromancer also lost useful midtones in cool/dark realms.
+- Skeleton and Warden remained much easier to parse.
+- This confirmed a character material/light integration issue rather than a geometry or VFX issue.
 
-## Immediate next steps
-1. Finish v88 workflow and inspect all three baseline PNGs at native gameplay framing.
-2. Record exact image verdict before touching production lighting/material code.
-3. Implement the smallest shared v1.64 integration pass on the verified active path.
-4. Produce matched before/after captures for Lower Halls, Ossuary and Iron Bastion/Warden.
-5. Preserve v1.63/v1.62/v1.61/input regressions and keep TestFlight/build/version jumps off.
+## r1 — technically green, visually incomplete intermediate
+Implementation before runtime-order correction culminated at `1e0a445dc9a670021ddb6ec64404936efceb65ce` (production integration itself already present before that test-only head).
+Primary matched review workflow: **`32285242478` — fully green.**
+Artifact: `v89-character-lighting-r1-before-after`.
+
+What worked:
+- Wanderer cloth/steel/cape midtones recovered clearly.
+- Existing local rim/fill lights were only nudged; no new lights or expensive rendering path were introduced.
+- In matched player crops, mean luminance improved approximately +25% Lower Halls, +27% Ossuary and +49% Iron Bastion.
+
+Why r1 was not locked:
+- Enemy material changes were written once during `_ready()`.
+- Inherited Enemy Quality r2/r3 later re-applied archetype `base_color` from `configure_enemy()` during runtime.
+- Matched enemy crops were therefore effectively unchanged despite green tests.
+- r1 is a useful intermediate but **must not be promoted over r1.1**.
+
+## r1.1 — accepted character-lighting lock
+Production implementation: **`b4a63b0be50caa5ed08c9984c2101c059347dfe9`.**
+Matched review workflow: **`32286008428` — fully green.**
+Artifact ID: `9377696819` (`v89-character-lighting-r1-before-after`, r1.1 head).
+
+Implementation:
+- keeps the r1 Wanderer midtone palette and restrained existing rim/fill range/energy adjustment;
+- keeps Skeleton as an explicit visual lock;
+- lets inherited `configure_enemy()` finish first, then re-applies the five v1.64 enemy body material responses as the **final presentation-only runtime write**;
+- changes no enemy root, mesh, scale, pivot, animation, hitbox, timing or combat state;
+- keeps v1.63 boss/projectile/danger presentation underneath untouched.
+
+Matched image verdict:
+- Lower Halls Wanderer remains substantially more readable without losing dark silhouette; Necromancer gains controlled violet separation.
+- Ossuary Wanderer cloth/cape becomes readable against teal floor; Necromancer no longer collapses into an almost black mass.
+- Iron Bastion Wanderer becomes readable against the warm floor while Warden remains dominant and boss presentation is not washed out.
+- Approximate matched-crop mean-luminance deltas vs accepted v1.63 parent: Wanderer +25.4% Lower Halls, +27.5% Ossuary, +48.6% Iron Bastion; Necromancer +8.5% Lower Halls / +14.4% Ossuary; Warden +10.7% Iron Bastion.
+- Visual direction is **accepted**: more readable characters, still dark-fantasy, no studio-light flattening.
+
+Regression status in `32286008428`:
+- active v1.64 compile/import: PASS;
+- v1.64 character-lighting smoke: PASS;
+- v1.63 combined combat stack: PASS;
+- v1.63 r2.1 boss dominance: PASS;
+- v1.63 r1 projectile identity: PASS;
+- v1.61 r3.2 danger language: PASS;
+- matched 720x1280 before/after render: PASS;
+- v1.62 r3 UI: PASS;
+- v1.52.1 input flow: PASS.
+
+## Post-acceptance hardening
+`v89_character_lighting_r1_smoke_test.gd` is hardened after acceptance to create an actual Necromancer during `sync_runtime()` and assert that r1.1 remains the final material write after inherited enemy configuration. It also re-checks the Skeleton lock.
+
+`main_v85.gd` and `scenes/main.tscn` identify the active top layer as **v1.64 r1.1**. These naming/checkpoint edits do not change the accepted production material/light values from `b4a63b0...`.
+
+## Immediate next step
+1. Let the post-acceptance r1.1 hardening workflow finish green on the latest checkpoint head.
+2. Verify the latest unsigned iPhone/iPad device compile before any milestone-complete/release decision.
+3. Do **not** add another brightness pass unless device/runtime evidence shows a remaining gameplay-distance failure.
+4. If the device gate is green, treat character lighting/material integration as visually complete and select the next largest quality gap from new runtime captures.
+5. Keep TestFlight/build/version jumps off until a deliberate bundled upload decision is made.
