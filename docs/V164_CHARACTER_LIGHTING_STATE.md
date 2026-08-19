@@ -1,64 +1,47 @@
 # One More Floor — v1.64 Character Lighting State
 
-Canonical checkpoint for v1.64 character-lighting/material integration. **Repository truth wins over chat memory.** Read together with `docs/PROJECT_STATE.md`, `docs/V163_COMBAT_IDENTITY_STATE.md` and `docs/UI_V162_STATE.md`.
+Canonical v1.64 character-lighting/material-integration checkpoint. **Repository truth wins over chat memory.**
 
 ## Milestone
 - PR #95 / `agent/v1.64-character-lighting`, stacked on v1.63 / PR #93.
 - **Accepted production implementation: `b4a63b0be50caa5ed08c9984c2101c059347dfe9` — r1.1.**
 - Active path: `main.tscn` -> `main_v85.gd` -> `world3d_chamber_v164_character_lighting.gd`.
-- No TestFlight build/version jump or upload for this milestone.
+- No TestFlight build/version jump or upload.
 
-## Problem and solution
-Accepted v1.63 gameplay frames showed Wanderer and some dark enemy materials losing midtone separation. Geometry, rigging and VFX were not the cause.
+## Accepted solution
+v1.63 gameplay captures showed dark Wanderer and enemy materials losing midtone separation. v1.64 r1.1 fixes material/light integration without changing geometry, rigging, animation, combat authority, input, saves or progression.
 
-v1.64 r1.1:
-- recovers dark Wanderer cloth/cape/steel/leather/void midtones;
-- reuses existing rim/fill lights with restrained changes;
-- recovers Goblin/Bat/Ghoul/Necromancer/Warden material readability while locking Skeleton;
-- lets inherited runtime `configure_enemy()` finish before the v1.64 enemy material response is reapplied as the final presentation-only write;
-- changes no geometry, animation, gameplay, timing, hitbox, collision, input, save or progression authority.
+- Wanderer dark materials gain controlled midtones.
+- Existing rim/fill lights are reused; no new decorative light family.
+- Goblin/Bat/Ghoul/Necromancer/Warden gain controlled readability; Skeleton remains locked.
+- Crucial r1.1 fix: inherited `configure_enemy()` completes first, then v1.64 reapplies the accepted enemy material response as the final presentation-only write.
 
 ## Evidence
-- v88 frozen baseline `32284526822`: green.
-- r1 `32285242478`: technically green but visually superseded; enemy material response was overwritten at runtime.
-- **r1.1 `32286008428`: fully green and visually accepted.**
-- matched artifact: **`9377696819`**.
+- v88 baseline **`32284526822` — green**.
+- r1 **`32285242478` — technically green but visually superseded** because runtime enemy configuration overwrote enemy material response.
+- **r1.1 `32286008428` — fully green and visually accepted.**
+- matched artifact **`9377696819`**.
 
-Approximate matched-crop mean-luminance delta vs v1.63 parent:
-- Wanderer: +25.4% Lower Halls, +27.5% Ossuary, +48.6% Iron Bastion;
-- Necromancer: +8.5% Lower Halls, +14.4% Ossuary;
-- Warden: +10.7% Iron Bastion.
+Approximate crop luminance delta vs v1.63 parent:
+- Wanderer +25.4% Lower Halls, +27.5% Ossuary, +48.6% Iron Bastion;
+- Necromancer +8.5% / +14.4%;
+- Warden +10.7%.
 
-Visual verdict: substantially clearer characters without flattening realm mood or boss dominance.
+Accepted r1.1 regressions: compile/import, v1.63 combined combat, boss r2.1, projectile r1, v1.61 danger language, matched renders, v1.62 UI and v1.52.1 input all PASS.
 
-Regression coverage in accepted r1.1 review:
-- v1.64 compile/import: PASS;
-- character-lighting smoke: PASS;
-- v1.63 combined combat: PASS;
-- v1.63 boss r2.1: PASS;
-- v1.63 projectile r1: PASS;
-- v1.61 danger language: PASS;
-- matched before/after render: PASS;
-- v1.62 UI: PASS;
-- v1.52.1 input: PASS.
+## Extra hardening
+`v89_character_lighting_r1_smoke_test.gd` now instantiates runtime Necromancer + Skeleton and checks that r1.1 survives inherited configuration while Skeleton stays unchanged. This is an extra future-regression lock, not a production-value change.
 
-## Extra runtime-order hardening
-`v89_character_lighting_r1_smoke_test.gd` was strengthened after acceptance to instantiate runtime Necromancer + Skeleton and assert that the r1.1 final-write ordering remains intact. This changes no accepted production values.
-
-At the final pre-documentation observation, the newest hardened v89 job remained **queued** behind the broad historical Actions fanout. Keep it recorded as pending until it actually runs.
+At the final pre-documentation observation, its newest Actions job remained **queued** behind the repository's broad historical workflow fanout. Record it pending until it actually executes.
 
 ## iOS device gate
-Latest verified device workflow before documentation-only commits: **`32286619525` — fully green**.
+Latest verified device run before documentation-only commits: **`32286619525` — fully green**.
 
-PASS: release metadata, Godot import, Xcode export, generated-project inspection, **unsigned iPhone/iPad device compile**, **unsigned package**, unsigned/Xcode artifacts.
+PASS: release metadata, Godot import, Xcode export/inspection, **unsigned iPhone/iPad compile**, **unsigned package**, unsigned/Xcode artifacts.
 
 SKIPPED: TestFlight build override, App Store Connect API key, release archive/TestFlight export, **TestFlight upload**.
 
 ## Verdict / next
-**v1.64 r1.1 is visually accepted and unsigned-device-build validated. Character lighting is complete unless new device/runtime evidence proves a concrete regression.**
+**v1.64 r1.1 is visually accepted and unsigned-device-build validated. Character lighting is complete unless new runtime/device evidence proves a concrete regression.**
 
-Next:
-1. Record the queued hardened v89 result when it finishes.
-2. Select the next largest game-wide quality gap from fresh runtime/device captures.
-3. Create the next stacked milestone branch/PR and state file before production work.
-4. Keep TestFlight off until a deliberate bundled upload decision.
+Next: record hardened v89 when it finishes, then select the next largest game-wide quality gap from fresh captures and create a new stacked milestone branch/PR. Keep TestFlight off until a deliberate bundled upload decision.
