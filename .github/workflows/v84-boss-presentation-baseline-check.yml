@@ -1,0 +1,100 @@
+name: v1.63 Boss Presentation Baseline Check
+
+on:
+  push:
+    branches:
+      - agent/v1.63-combat-identity
+    paths:
+      - 'scripts/v84_boss_presentation_baseline_smoke_test.gd'
+      - 'scripts/v84_boss_presentation_baseline_capture.gd'
+      - '.github/workflows/v84-boss-presentation-baseline-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/v84_boss_presentation_baseline_smoke_test.gd'
+      - 'scripts/v84_boss_presentation_baseline_capture.gd'
+      - '.github/workflows/v84-boss-presentation-baseline-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-boss-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile accepted r1 plus boss baseline
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v163-boss-baseline-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v163-boss-baseline-import.log; then
+            echo "Godot reported v1.63 boss baseline compile/import errors"
+            exit 1
+          fi
+
+      - name: Confirm inherited v1.46 boss frame baseline
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v84_boss_presentation_baseline_smoke_test.gd --quit-after 260 2>&1 | tee v163-boss-baseline-smoke.log
+          grep -q "v1.63 boss presentation baseline smoke test passed" v163-boss-baseline-smoke.log
+
+      - name: Preserve accepted v1.63 r1 projectile identity
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v83_projectile_identity_smoke_test.gd --quit-after 300 2>&1 | tee v163-r1.log
+          grep -q "v1.63 projectile identity r1 smoke test passed" v163-r1.log
+
+      - name: Preserve v1.61 r3.2 danger language
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v75_combat_presentation_r32_smoke_test.gd --quit-after 260 2>&1 | tee v161-r32.log
+          grep -q "v1.61 combat presentation r3.2 smoke test passed" v161-r32.log
+
+      - name: Render 720x1280 boss baseline
+        run: |
+          set -o pipefail
+          rm -rf artifacts/v163_boss_baseline
+          mkdir -p artifacts/v163_boss_baseline
+          xvfb-run -a ./godot --path . --script res://scripts/v84_boss_presentation_baseline_capture.gd --quit-after 300 2>&1 | tee v163-boss-baseline-capture.log
+          grep -q "v1.63 boss presentation baseline visual capture passed" v163-boss-baseline-capture.log
+          test -s artifacts/v163_boss_baseline/baseline_boss_intro.png
+          test -s artifacts/v163_boss_baseline/baseline_boss_fan.png
+          test -s artifacts/v163_boss_baseline/baseline_boss_crown_slam.png
+
+      - name: Upload v1.63 boss baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: v84-boss-presentation-baseline
+          path: artifacts/v163_boss_baseline/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve v1.62 r3 UI contract
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v80_ui_runtime_cta_smoke_test.gd --quit-after 260 2>&1 | tee v162-r3-ui.log
+          grep -q "v1.62 UI foundation r3 runtime CTA smoke test passed" v162-r3-ui.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v84-boss-baseline-failure-logs
+          path: |
+            v163-boss-baseline-import.log
+            v163-boss-baseline-smoke.log
+            v163-r1.log
+            v161-r32.log
+            v163-boss-baseline-capture.log
+            v162-r3-ui.log
+          if-no-files-found: ignore
