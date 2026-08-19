@@ -1,6 +1,12 @@
 extends SceneTree
 
 const CAPTURE_DIR := "res://artifacts/v162_runtime"
+# Current enum is defined in main_v03.gd:
+# HOME, HERO, FORGE, TALENTS, VAULT, RUNNING, UPGRADE, DECISION, GAME_OVER.
+const STATE_RUNNING := 5
+const STATE_UPGRADE := 6
+const STATE_DECISION := 7
+const STATE_GAME_OVER := 8
 
 func _init() -> void:
 	call_deferred("_run")
@@ -34,29 +40,41 @@ func _run() -> void:
 		await process_frame
 
 	# PAUSE — actual run pause overlay.
-	game.state = 1 # State.RUNNING
+	game.state = STATE_RUNNING
+	if String(game.call("_v51_screen_from_legacy")) != "run":
+		_fail("runtime-state mapping mismatch for RUNNING")
+		return
 	game.release_paused = true
 	await _capture(game, "pause")
 	game.release_paused = false
 
 	# UPGRADE — real rolled choices through the current run-upgrade renderer.
 	game.call("roll_upgrade_options")
-	game.state = 2 # State.UPGRADE
+	game.state = STATE_UPGRADE
+	if String(game.call("_v51_screen_from_legacy")) != "upgrade":
+		_fail("runtime-state mapping mismatch for UPGRADE")
+		return
 	await _capture(game, "upgrade")
 
 	# DECISION — post-upgrade risk/cash-out screen with the current run model.
 	game.room_event_active = false
-	game.state = 3 # State.DECISION
+	game.state = STATE_DECISION
+	if String(game.call("_v51_screen_from_legacy")) != "decision":
+		_fail("runtime-state mapping mismatch for DECISION")
+		return
 	await _capture(game, "decision")
 
-	# GAME OVER — current result screen. Keep a deterministic deep-enough run
-	# context so checkpoint/setback presentation is visible when that layer exists.
+	# GAME OVER — current result screen. Keep deterministic run context so
+	# checkpoint/setback presentation is visible where that inherited layer exists.
 	if game.run != null:
 		game.run.floor_no = maxi(12, int(game.run.floor_no))
 		game.run.run_coins = maxi(145, int(game.run.run_coins))
 	game.set("v27_last_setback", 5)
 	game.set("v27_resume_floor", 7)
-	game.state = 4 # State.GAME_OVER
+	game.state = STATE_GAME_OVER
+	if String(game.call("_v51_screen_from_legacy")) != "game_over":
+		_fail("runtime-state mapping mismatch for GAME_OVER")
+		return
 	await _capture(game, "game_over")
 
 	print("v1.62 runtime-state UI diagnostic capture passed")
