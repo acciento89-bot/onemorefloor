@@ -44,8 +44,9 @@
 ; v1.60 authored OBJ expansion covers Talents/Vault/Missions/Tower Pass/Store.
 ; v1.61 combat presentation baseline retained: res://scripts/main_v75.gd
 ; v1.62 r1 shared UI foundation retained: res://scripts/main_v76.gd
-; v1.62 r1.1 dark panel-balance top layer.
-[ext_resource type="Script" path="res://scripts/main_v77.gd" id="1_main"]
+; v1.62 r1.1 dark panel-balance baseline retained: res://scripts/main_v77.gd
+; v1.62 r2 Vault control hierarchy + Store action-chip top layer.
+[ext_resource type="Script" path="res://scripts/main_v78.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
