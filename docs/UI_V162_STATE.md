@@ -30,89 +30,92 @@ Workflow: `32268685992` — fully green.
 - Vault visual accepted.
 - Store attempt targeted obsolete `_v42_store_card`; current runtime uses `_v50_store_card`, so Store image did not change.
 
-### r2.1 — accepted current UI lock
-Implementation: **`e6cd4b8d8d997557118aebbdf97662c5df7a1d03`**.
-Workflow: **`32269453589` — fully green.**
+### r2.1 — accepted Store correction
+Implementation: `e6cd4b8d8d997557118aebbdf97662c5df7a1d03`.
+Workflow: `32269453589` — fully green.
 - `main_v79.gd` overrides actual release-facing `_v50_store_card`.
 - Product catalog, ownership checks, debug `TRY`, release `UNAVAILABLE`, `OWNED`, monetization fail-closed behavior and full card hitboxes remain inherited.
-- Naked Store action text replaced by compact forged **122×46 action chip** inside existing product card.
+- Naked Store action text replaced by compact forged 122×46 action chip inside existing product card.
 - Accepted r2 Vault compaction remains unchanged.
+- Home/Hero/Forge/Talents/Vault/Missions/Tower Pass/Store accepted under this baseline.
 
-### r2.1 accepted visual set
-- Home: accepted.
-- Hero: accepted.
-- Forge: accepted.
-- Talents: accepted.
-- Vault: accepted.
-- Missions: accepted.
-- Tower Pass: accepted.
-- Store: accepted after active-path r2.1 correction.
-
-Therefore **v1.62 r2.1 / `e6cd4b8d...` is the current fully validated and visually accepted UI implementation baseline.**
-
-## Runtime-state UI audit — checkpoint before r3
+## Runtime-state diagnostic history
 Initial diagnostic implementation: `39b8bdff8a5a06abcf4258d172cf71d0a722517f`.
-Corrected state-mapping diagnostic: **`8274e6615deff19bd4266738877446495841ca83`**.
-Workflow: **`32271016269` — fully green.**
+Corrected state-mapping diagnostic: `8274e6615deff19bd4266738877446495841ca83`.
+Workflow: `32271016269` — fully green.
 
-Important diagnostic correction:
-- first capture used the old pre-meta numeric state values, so `pause.png` incorrectly rendered HERO;
-- current State enum is defined in `main_v03.gd` as `HOME, HERO, FORGE, TALENTS, VAULT, RUNNING, UPGRADE, DECISION, GAME_OVER`;
-- `8274e661...` corrected RUNNING/UPGRADE/DECISION/GAME_OVER values and hard-checks `_v51_screen_from_legacy()` before each runtime capture;
-- do not reuse the old numeric mapping.
+Important correction that must not be forgotten:
+- first diagnostic used obsolete numeric state values and rendered HERO for the intended Pause capture;
+- current State enum from `main_v03.gd` is `HOME, HERO, FORGE, TALENTS, VAULT, RUNNING, UPGRADE, DECISION, GAME_OVER`;
+- current runtime numeric values therefore are RUNNING=5, UPGRADE=6, DECISION=7, GAME_OVER=8;
+- corrected diagnostic hard-checks `_v51_screen_from_legacy()` before each capture.
 
-### Manual runtime-state audit
-`settings.png` — **accepted foundation; no r3 rewrite planned**:
-- settings controls already inherit the dark shared material language;
-- enabled/disabled states are visually readable;
-- Back is a clear secondary action;
-- minor title/subtitle spacing is not a large enough quality problem to justify reopening the screen in r3.
+Corrected manual audit:
+- Settings: accepted; no rewrite needed.
+- Pause: accepted; Resume dominant, Settings secondary, Return Home subordinate.
+- Upgrade: accepted; authored upgrade cards already have suitable hierarchy.
+- Decision: old CASH OUT / ONE MORE FLOOR full saturated slabs required polish.
+- Game Over: old RETRY / HOME full saturated slabs required polish.
 
-`pause.png` — **accepted; no r3 rewrite planned**:
-- Resume is dominant, Settings secondary, Return Home subordinate;
-- dark modal plate reads coherently over the 3D combat scene;
-- combat HUD remains visibly de-emphasized behind the pause overlay.
+## r3 — accepted current UI lock: runtime Decision / Game Over CTA language
+Implementation: **`71c8ecec5387400af7ef1c4bd29a3f87f9323d17`**.
+Dedicated workflow: **`32272029788` — fully green.**
 
-`upgrade.png` — **accepted; no r3 rewrite planned**:
-- upgrade rarity cards already use strong hierarchy and authored icon language;
-- three choices are readable without becoming flat bright full-card slabs;
-- no need to force the general menu button treatment onto upgrade cards.
+r3 adds `main_v80.gd` as a narrow presentation-only top layer over r2.1.
 
-`decision.png` — **r3 polish required**:
-- central loot/risk composition and hierarchy are good;
-- the large `CASH OUT` and `ONE MORE FLOOR` buttons are still strong full green/gold slabs and read like older mobile CTA tiles;
-- r3 should preserve exact `CASH` and `NEXT` hit rectangles and all cash-out/continue logic, but redraw only their visible action surfaces using the accepted forged dark CTA language;
-- `ONE MORE FLOOR` should remain the visually dominant primary choice; `CASH OUT` remains clear but secondary.
+### Exact r3 scope
+- `draw_decision()` still calls the inherited renderer first, then redraws only the visible surfaces inside exact inherited `CASH` and `NEXT` rectangles.
+- `draw_game_over()` still calls the inherited renderer first, then redraws only the visible surfaces inside exact inherited `RETRY` and `HOME_BTN` rectangles.
+- **No `pointer()` override exists in r3.** Input ownership remains inherited.
+- Cash-out, continue, retry, home, run state, economy and progression logic are unchanged.
+- `ONE MORE FLOOR` remains the stronger primary CTA; `CASH OUT` is clear but quieter.
+- `RETRY` remains the stronger primary CTA; `HOME` is a quieter secondary exit.
+- Primary runtime CTAs use the shared forged `_v76_primary_plate` language rather than saturated full-color slabs.
+- Secondary runtime CTAs use the shared dark `_v76_surface` language.
 
-`game_over.png` — **r3 polish required**:
-- title, death card, run summary and setback information are readable;
-- large `RETRY` and `HOME` buttons remain saturated full gold/purple slabs and visually break the newer menu language;
-- r3 should preserve exact `RETRY` and `HOME_BTN` hit rectangles and input flow while replacing only visible action surfaces;
-- `RETRY` should be the primary CTA; `HOME` quieter secondary.
+### r3 manual image acceptance
+`decision.png` — **accepted**:
+- old solid green/gold mobile slabs are gone;
+- CASH OUT is a dark green-accented secondary plate;
+- ONE MORE FLOOR is a dark gold/brass primary plate with stronger hierarchy and restrained directional cue;
+- central loot/risk composition remains unchanged and readable.
+
+`game_over.png` — **accepted**:
+- old solid gold RETRY and purple HOME slabs are gone;
+- RETRY is the clear forged primary action;
+- HOME stays visibly available but subordinate;
+- death card, run summary and setback information remain untouched.
+
+`settings.png` — **accepted regression**: unchanged in the established production language.
+
+`pause.png` — **accepted regression**: unchanged; Resume/Settings/Return Home hierarchy remains correct.
+
+`upgrade.png` — **accepted regression**: unchanged authored choice-card hierarchy.
+
+Primary and secondary eight-screen capture sets were regenerated successfully under r3 with no accepted menu regressions.
+
+Therefore **v1.62 r3 / `71c8ecec...` is the current fully validated and visually accepted UI implementation baseline.**
 
 ## Current validation
-Accepted r2.1 run `32269453589`:
-- compile/import: PASS
-- r1/r1.1/r2/r2.1 contracts: PASS
-- all eight accepted menu captures: PASS
-- v1.61 r3.2 Combat: PASS
-- MenuShell/router: PASS
-- v1.52.1 input: PASS
-
-Corrected runtime diagnostic run **`32271016269`** on `8274e661...`:
-- compile/import: PASS
-- r1/r1.1/r2/r2.1 contracts: PASS
-- all eight accepted menu regressions: PASS
-- Settings/Pause/Upgrade/Decision/Game Over diagnostic captures: PASS
-- v1.61 r3.2 Combat: PASS
-- MenuShell/router: PASS
-- v1.52.1 input: PASS
+Dedicated `v1.62 UI Foundation Check` run **`32272029788`** on `71c8ecec...` is fully green:
+- Godot 4.7.1 compile/import: PASS
+- r1 shared UI contract: PASS
+- r1.1 dark-panel balance contract: PASS
+- r2 Vault hierarchy contract: PASS
+- r2.1 active Store action-path contract: PASS
+- r3 runtime CTA / no-input-override contract: PASS
+- Home/Hero/Forge/Talents captures: PASS
+- Vault/Missions/Tower Pass/Store captures: PASS
+- Settings/Pause/Upgrade/Decision/Game Over captures: PASS
+- v1.61 r3.2 directional Combat lock: PASS
+- v1.38 MenuShell/router regression: PASS
+- v1.52.1 tutorial/game-over input-flow regression: PASS
 
 ## Non-negotiable UI rules
-1. Preserve **`e6cd4b8d...`** as the accepted implementation rollback until r3 is visually accepted.
-2. Preserve r2 Vault compaction and r2.1 Store action chips.
-3. Preserve Settings, Pause and Upgrade from unnecessary r3 rewrites.
-4. Do not move/resize established pointer hit rectangles during presentation-only UI work.
+1. Preserve **`71c8ecec...`** as the current accepted UI rollback point.
+2. Preserve r2 Vault compaction, r2.1 Store action chips and r3 Decision/Game Over CTA hierarchy unless a real visual regression is demonstrated.
+3. Preserve Settings, Pause and Upgrade from unnecessary rewrites.
+4. Do not move or resize established pointer hit rectangles during presentation-only UI work.
 5. Do not regress to flat generic rectangles, bright full-card slabs, cheap neon/full-ring icon language, naked text actions, or inconsistent per-screen component families.
 6. Primary actions stay dominant; secondary navigation/utilities stay quieter.
 7. CI green is necessary but runtime captures decide visual acceptance.
@@ -121,8 +124,7 @@ Corrected runtime diagnostic run **`32271016269`** on `8274e661...`:
 10. No TestFlight/build/version jump for individual UI micro-passes.
 
 ## Current next priorities
-1. **v1.62 r3: polish Decision `CASH OUT` / `ONE MORE FLOOR` and Game Over `RETRY` / `HOME` visible CTA surfaces only.**
-2. Preserve exact `CASH`, `NEXT`, `RETRY`, `HOME_BTN` hitboxes and existing pointer/input behavior.
-3. Re-render runtime-state set plus all eight accepted menu regressions; visually accept/reject Decision and Game Over.
-4. After r3, audit actual selected/pressed/disabled states where runtime exposes them rather than inventing new input authority.
-5. Before any v1.62 TestFlight-ready decision, run the v1.62 iOS/device build gate deliberately and make a milestone-level upload decision.
+1. Preserve `71c8ecec...` and audit the actual **selected / pressed / disabled** component states exposed by the current runtime; do not invent new input authority.
+2. Focus only on state feedback that still looks flat/inconsistent after r3; keep all 13 accepted menu/runtime captures as regressions.
+3. After state-feedback polish, perform a coherent full UI review at 720×1280 before declaring v1.62 menu presentation complete.
+4. Before any v1.62 TestFlight-ready decision, deliberately run the v1.62 iOS/device-build gate and make a milestone-level upload decision.
