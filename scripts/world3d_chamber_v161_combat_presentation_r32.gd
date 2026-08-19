@@ -196,12 +196,12 @@ func _build_v161_ritual_tell() -> ArrayMesh:
 		var outer := radial * 0.66
 		var tip := radial * 0.43
 		_v161_add_triangle(tool, tip, outer + tangent * 0.075, outer - tangent * 0.075)
-		var tick_center := radial * 0.68
+		var tick_center := radial * 0.64
 		_v161_add_quad(tool,
-			tick_center - tangent * 0.095 - radial * 0.020,
-			tick_center + tangent * 0.095 - radial * 0.020,
-			tick_center + tangent * 0.095 + radial * 0.020,
-			tick_center - tangent * 0.095 + radial * 0.020
+			tick_center - tangent * 0.070 - radial * 0.020,
+			tick_center + tangent * 0.070 - radial * 0.020,
+			tick_center + tangent * 0.070 + radial * 0.020,
+			tick_center - tangent * 0.070 + radial * 0.020
 		)
 	return tool.commit()
 
