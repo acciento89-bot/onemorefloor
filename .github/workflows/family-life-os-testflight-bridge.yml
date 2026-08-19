@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: acciento89-bot/appideenchatgpt
-          ref: main
+          ref: agent/family-life-os-app-icons
           path: family-source
 
       - name: Select effective build number
@@ -131,6 +131,36 @@ jobs:
             archive
           test -f "$RUNNER_TEMP/FamilyLifePrototype.xcarchive/Info.plist"
           test -d "$RUNNER_TEMP/FamilyLifePrototype.xcarchive/Products/Applications/FamilyLifePrototype.app"
+
+      - name: Compile AppIcon into archive and verify Apple metadata
+        working-directory: ${{ env.PROJECT_DIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/FamilyLifePrototype.xcarchive/Products/Applications/FamilyLifePrototype.app"
+          CATALOG="FamilyLifePrototype/Assets.xcassets"
+          PARTIAL="$RUNNER_TEMP/FamilyLife-AppIcon-Info.plist"
+          test -f "$CATALOG/AppIcon.appiconset/AppIcon-1024.png"
+          xcrun actool "$CATALOG" \
+            --compile "$APP" \
+            --platform iphoneos \
+            --minimum-deployment-target 18.0 \
+            --target-device iphone \
+            --target-device ipad \
+            --app-icon AppIcon \
+            --output-partial-info-plist "$PARTIAL" \
+            --compress-pngs \
+            --enable-on-demand-resources NO
+          test -f "$PARTIAL"
+          /usr/libexec/PlistBuddy -c "Merge $PARTIAL" "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Set :CFBundleIconName AppIcon' "$APP/Info.plist" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c 'Add :CFBundleIconName string AppIcon' "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIconName' "$APP/Info.plist" | grep -qx 'AppIcon'
+          /usr/libexec/PlistBuddy -c 'Print :UISupportedInterfaceOrientations' "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :UISupportedInterfaceOrientations~ipad' "$APP/Info.plist"
+          test -f "$APP/Assets.car"
+          find "$APP" -maxdepth 1 -type f \( -name 'AppIcon*.png' -o -name '*60x60*.png' -o -name '*76x76*.png' \) -print
+          echo 'AppIcon asset catalog compiled and Info.plist metadata verified before Apple cloud signing.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create TestFlight export options
         shell: bash
