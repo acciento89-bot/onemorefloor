@@ -1,7 +1,7 @@
 extends SceneTree
 
 const AcceptedWorld = preload("res://scripts/world3d_chamber_v164_character_lighting.gd")
-const CandidateWorld = preload("res://scripts/world3d_chamber_v165_environment_depth_r12.gd")
+const CandidateWorld = preload("res://scripts/world3d_chamber_v165_environment_depth_r13.gd")
 const MainV86 = preload("res://scripts/main_v86.gd")
 
 func _init() -> void:
@@ -33,11 +33,11 @@ func _run() -> void:
 		await process_frame
 
 	if not bool(world.call("production_environment_depth_ready")):
-		_fail("v1.65 environment depth r1.2 world is not ready")
+		_fail("v1.65 environment depth r1.3 world is not ready")
 		return
 	var snapshot: Dictionary = world.call("debug_snapshot")
-	if String(snapshot.get("production_environment_depth_version", "")) != "1.65-environment-depth-r1.2":
-		_fail("active v1.65 review is not using r1.2")
+	if String(snapshot.get("production_environment_depth_version", "")) != "1.65-environment-depth-r1.3":
+		_fail("active v1.65 review is not using r1.3")
 		return
 	if not bool(world.call("production_character_lighting_ready")):
 		_fail("accepted v1.64 character lighting was not preserved")
@@ -84,8 +84,7 @@ func _run() -> void:
 			_fail("v1.65 readiness failed after realm switch %d" % floor_no)
 			return
 
-	# Keep the historical workflow grep token while explicitly recording r1.2.
-	print("v1.65 environment surface and depth r1 smoke test passed (r1.2 active)")
+	print("v1.65 environment surface and depth r1 smoke test passed (r1.3 active)")
 	world.queue_free()
 	await process_frame
 	quit(0)
