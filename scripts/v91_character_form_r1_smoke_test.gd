@@ -33,7 +33,10 @@ func _run() -> void:
 		await process_frame
 
 	if not bool(world.call("production_character_form_ready")):
-		_fail("v1.66 character form world is not ready")
+		_fail("v1.66 character form r1.1 world is not ready")
+		return
+	if String(world.CHARACTER_FORM_WORLD_VERSION) != "1.66-character-form-r1.1":
+		_fail("active world is not v1.66 r1.1")
 		return
 	if not bool(world.call("production_environment_depth_ready")):
 		_fail("accepted v1.65 environment was not preserved")
@@ -72,7 +75,7 @@ func _run() -> void:
 	for index in range(enemies.size()):
 		var enemy_root := world.enemy_pool[index] as Node3D
 		if enemy_root == null or not bool(world.actor_factory.call("v166_character_form_enemy_ready", enemy_root)):
-			_fail("v1.66 enemy form readiness failed at index %d" % index)
+			_fail("v1.66 r1.1 enemy form readiness failed at index %d" % index)
 			return
 		var kind := String(enemies[index].get("type", ""))
 		var form := enemy_root.get_node_or_null("Motion/Visual/EnemyPresentationV160/CharacterFormV166") as Node3D
@@ -81,14 +84,18 @@ func _run() -> void:
 				_fail("skeleton geometry lock was violated")
 				return
 		elif form == null or form.get_child_count() < 3:
-			_fail("missing v1.66 secondary form volume for %s" % kind)
+			_fail("missing v1.66 r1.1 secondary form layer for %s" % kind)
 			return
-		if form != null and _contains_authority_node(form):
-			_fail("v1.66 form introduced collision/navigation authority for %s" % kind)
-			return
+		if form != null:
+			if _contains_authority_node(form):
+				_fail("v1.66 form introduced collision/navigation authority for %s" % kind)
+				return
+			if _contains_sphere_mesh(form):
+				_fail("v1.66 r1.1 reintroduced rejected SphereMesh/blob geometry for %s" % kind)
+				return
 
 	if not bool(world.actor_factory.call("v166_character_form_player_ready", world.player_root)):
-		_fail("Wanderer v1.66 form readiness failed")
+		_fail("Wanderer v1.66 r1.1 form readiness failed")
 		return
 	var imported := world.player_root.get_node_or_null("Motion/RigMount/ImportedModel") as Node3D
 	var blade := world.actor_factory.call("_find_named_mesh", imported, "V160AuthoredBlade") as MeshInstance3D
@@ -96,7 +103,7 @@ func _run() -> void:
 		_fail("Wanderer blade readability pass missing")
 		return
 
-	print("v1.66 character form r1 smoke test passed")
+	print("v1.66 character form r1.1 smoke test passed")
 	world.queue_free()
 	await process_frame
 	quit(0)
@@ -109,9 +116,19 @@ func _contains_authority_node(node: Node) -> bool:
 			return true
 	return false
 
+func _contains_sphere_mesh(node: Node) -> bool:
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance.mesh is SphereMesh:
+			return true
+	for child_value in node.get_children():
+		if _contains_sphere_mesh(child_value as Node):
+			return true
+	return false
+
 func _vec3_close(a: Vector3, b: Vector3) -> bool:
 	return a.distance_to(b) < 0.001
 
 func _fail(message: String) -> void:
-	push_error("V166_CHARACTER_FORM_R1_FAIL:%s" % message)
+	push_error("V166_CHARACTER_FORM_R11_FAIL:%s" % message)
 	quit(1)
