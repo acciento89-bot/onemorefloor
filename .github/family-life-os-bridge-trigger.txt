@@ -1,3 +1,4 @@
 Family Life OS internal TestFlight build 2
 Source: acciento89-bot/appideenchatgpt main
 Expected source checkpoint: PR #13 merged
+Observable bridge retry: 1
