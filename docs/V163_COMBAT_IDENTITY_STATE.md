@@ -84,7 +84,7 @@ Dedicated smoke verifies:
 - projectile hierarchy is clearer without adding ring clutter or large particle volume;
 - actors and the authored room remain visually dominant.
 
-Therefore **v1.63 r1 / `4877c228...` is the current accepted production implementation baseline.**
+Therefore **v1.63 r1 / `4877c228...` remains the current accepted production implementation baseline until a boss pass is visually accepted.**
 
 ## Boss presentation baseline — verified active legacy/decorative frame
 Initial diagnostic commit: `606fd07a401858a4ff5223b95536791d607c8fbb`.
@@ -106,57 +106,77 @@ Important diagnostic history:
 - the test was corrected to the actual runtime class **and** locked the 2.16 halo footprint / 2.75 beam height rather than weakening the gate.
 
 ### Frozen boss baseline captures
-`baseline_boss_intro.png` — **rejected as production target / retained as comparison**:
-- oversized persistent red floor ring dominates the Warden footprint;
-- tall central light-column/crown treatment reads like old prototype spectacle rather than authored boss identity.
-
-`baseline_boss_fan.png` — **rejected as production target / retained as comparison**:
-- accepted r3.2 directional fan/focus warning is readable, but the persistent full boss ring competes directly with gameplay intent;
-- r1 hostile projectile shards are already cleaner, exposing the boss-frame mismatch more clearly.
-
-`baseline_boss_crown_slam.png` — **rejected as production target / retained as comparison**:
-- accepted radial slam teeth overlap visually with the persistent decorative full ring;
-- decorative frame and gameplay-significant tell collapse into one circular red mass.
+`baseline_boss_intro.png`, `baseline_boss_fan.png`, `baseline_boss_crown_slam.png` remain the frozen comparison set.
+Visual verdict: **rejected as production target / retained as comparison** because the boss is surrounded by a dominant segmented/full circular floor language that competes with r3.2 gameplay tells.
 
 ### Boss authority that must remain untouched
 - `main_v65.gd` owns Warden cast planning/execution and chooses fan/ring/crown behavior through the tested 3D authority path;
 - v1.61 r3.2 owns modern focus/slam/etc. warning geometry and preserves its 0.34-s warning window, inherited position and scale;
-- boss r2 may replace only the persistent decorative frame (`boss_halo`, `boss_beam`, crown visual pieces/light tuning), not cast semantics, projectile behavior, tell timing, damage or radii.
+- boss presentation work may replace decorative layers only, not cast semantics, projectile behavior, tell timing, damage or radii.
+
+## r2 — technically green, visually rejected: wrong dominant boss layer
+Implementation: **`9f4ea8d51f32ec712385db6d5d7263502f9998d0`**.
+Dedicated workflow: **`32278164808` — fully green.**
+
+r2 correctly replaced the v1.46 `boss_halo` / `boss_beam` / four crown rods with:
+- broken floor-anchor ArrayMesh;
+- shorter fractured-spire ArrayMesh;
+- four faceted crown shards;
+- reduced boss-frame light range/energy.
+
+The strict r2 smoke also proved:
+- boss-frame halo footprint reduced below the old 2.16 ring;
+- spire reduced below the old 2.75 beam;
+- no BoxMesh crown pieces remain in the v1.46 frame;
+- all five v1.61 r3.2 Focus/Charge/Phase/Slam/Ritual tell AABBs remain exactly identical to the r1 reference world;
+- r1 projectile identity, v1.62 UI and v1.52.1 input remain intact.
+
+### r2 manual image verdict — **REJECTED**
+The six-image before/after artifact proved `r2_boss_intro.png`, `r2_boss_fan.png` and `r2_boss_crown_slam.png` remained visually almost identical to the frozen baseline. The dominant segmented circle around the Warden was still present in Intro/Fan/Slam.
+
+**Do not call `9f4ea8d5...` an accepted production lock merely because CI is green.** r2 remains a useful intermediate/fallback for the v1.46 frame replacement, but it did not solve the visible boss-ring problem.
+
+### Corrected root cause recovered after r2
+The dominant release-facing ring is primarily owned by **v1.49 `BossDominanceLookdev`**, not the v1.46 `boss_halo`:
+- `boss_dominance_ring_outer`: persistent ring radius ~1.28;
+- `boss_dominance_ring_inner`: persistent ring radius ~0.82;
+- eight `DominanceMark` BoxMesh markers arranged around the boss;
+- separate `boss_dominance_light` with inherited range 4.4;
+- `_sync_boss_dominance()` keeps this root visible on Warden boss floors;
+- `_animate_boss_dominance()` continuously pulses/rotates both rings and keeps the light active.
+
+This layer survived all later presentation passes because no later repository override targets `boss_dominance_ring_outer` / `boss_dominance_ring_inner`. It is the correct visual target for r2.1.
 
 ## Current validation
-Dedicated `v1.63 Projectile Identity Check` run `32276028440` on `4877c228...` is fully green:
-- Godot 4.7.1 compile/import: PASS
-- v1.63 projectile identity / preserved-authority smoke: PASS
-- frozen legacy projectile baseline contract: PASS
-- v1.61 r3.2 combat presentation regression: PASS
-- frozen baseline three-image render: PASS
-- r1 three-image render: PASS
-- six-image before/after artifact upload: PASS
-- v1.62 r3 UI regression: PASS
-- v1.52.1 input-flow regression: PASS
-
-Dedicated `v1.63 Boss Presentation Baseline Check` run **`32277193240`** on `b8b68f1d...` is fully green:
+Dedicated `v1.63 Projectile Identity Check` run `32276028440` on `4877c228...` is fully green.
+Dedicated `v1.63 Boss Presentation Baseline Check` run `32277193240` on `b8b68f1d...` is fully green.
+Dedicated `v1.63 Boss Identity Check` run **`32278164808`** on `9f4ea8d5...` is fully green:
 - compile/import: PASS
-- active Torus/Cylinder/4×Box boss-frame baseline contract: PASS
-- accepted v1.63 r1 projectile identity: PASS
+- strict boss r2 geometry/tell-preservation contract: PASS
+- accepted r1 projectile identity: PASS
+- frozen boss baseline contract: PASS
 - v1.61 r3.2 danger-language regression: PASS
-- Intro/Fan/Crown-Slam 720x1280 baseline captures: PASS
+- frozen boss baseline render: PASS
+- r2 boss render: PASS
+- before/after artifact: PASS
 - v1.62 r3 UI regression: PASS
+- v1.52.1 input regression: PASS
+- **visual acceptance: FAIL / rejected after manual comparison**
 
 ## Non-negotiable v1.63 rules
-1. Preserve **`4877c228...`** as the current accepted v1.63 production rollback point until boss r2 is visually accepted.
-2. Preserve the frozen projectile and boss baseline scripts/captures; do not rewrite history to make later passes look better.
-3. Do not change v1.51 projectile collision/radii, damage, timing, targeting or lifetime while polishing visuals.
-4. Do not change Warden cast semantics, warning windows, danger-tell position/scale or damage in the boss presentation pass.
-5. Do not regress to generic glowing balls, straight debug bars, full decorative rings, tall generic light columns, box-rod crowns or excessive particle clutter.
-6. Keep projectile/boss identity compact enough that actors, danger tells and arena geometry remain dominant.
+1. Preserve **`4877c228...`** as the current accepted v1.63 production rollback point until a boss pass is visually accepted.
+2. Preserve `9f4ea8d5...` only as a technically valid intermediate boss-frame fallback; do not confuse it with accepted visual completion.
+3. Preserve the frozen projectile and boss baseline scripts/captures; do not rewrite history to make later passes look better.
+4. Do not change v1.51 projectile collision/radii, damage, timing, targeting or lifetime while polishing visuals.
+5. Do not change Warden cast semantics, warning windows, danger-tell position/scale or damage in the boss presentation pass.
+6. Do not regress to generic glowing balls, straight debug bars, full decorative rings, tall generic light columns, box-rod crowns or excessive particle clutter.
 7. Preserve v1.61 r3.2 danger language and v1.62 r3 UI.
 8. No TestFlight/build/version jump from individual v1.63 micro-passes.
 9. Update this file immediately after each meaningful boss/projectile pass.
 
 ## Current next priorities
-1. **Implement boss presentation r2 as a narrow presentation subclass over accepted r1.**
-2. Replace only the persistent decorative boss frame: full Torus halo -> broken floor anchors/brackets; tall cylinder beam -> restrained faceted shard/spire; four Box crown rods -> faceted crown shards.
-3. Preserve the exact r3.2 fan/focus and crown/slam tells beneath/around the new frame and compare against all three frozen boss baseline captures.
-4. Preserve r1 projectile identity, v1.61 r3.2, v1.62 UI and v1.52.1 input regressions.
+1. **Implement boss presentation r2.1 over r2 by targeting the actual v1.49 `BossDominanceLookdev` layer.**
+2. Replace both persistent dominance rings with clearly separated non-circular anchor/shard geometry; reduce the eight box markers so they no longer reconstruct a dashed circle; reduce the separate dominance-light footprint.
+3. Preserve r2's quieter v1.46 frame underneath and preserve the exact r3.2 danger-tell geometry/timing.
+4. Re-render the exact same Intro/Fan/Crown-Slam before/after gate. If the visible ring remains, trace again rather than weakening tests or accepting a cosmetic no-op.
 5. Make any TestFlight decision only after a bundled v1.63 milestone is visually complete and deliberately approved.
