@@ -1,5 +1,9 @@
 extends SceneTree
 
+# v1.66 r1.1 final release visual trigger. Capture geometry is intentionally
+# unchanged from the fixed 720x1280 harness; only the candidate implementation
+# underneath moved from rejected rounded r1 to faceted r1.1.
+
 const AcceptedWorld = preload("res://scripts/world3d_chamber_v165_environment_depth_r13.gd")
 const CandidateWorld = preload("res://scripts/world3d_chamber_v166_character_form.gd")
 const CAPTURE_DIR := "res://artifacts/v166_character_form_r1"
