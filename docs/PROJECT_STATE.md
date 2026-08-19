@@ -8,13 +8,13 @@ Canonical handoff for continued development. Read this file before changing art 
 - Pull request: #82 — `v1.60 authored environment milestone`
 - Branch: `agent/v1.60-meta-environments`
 - Base: `main`
-- Accepted implementation head before this documentation-only update: `3e567bf409a8492a55f672b226ce9ce81c16780f`.
+- Fully validated and visually accepted implementation head: `3e567bf409a8492a55f672b226ce9ce81c16780f`.
 - r11 OBJ topology correction: `4f82a5aeb717a088747eb31849b2d2d97340ba27`.
 - Wanderer animation/core safe point: `00a78086d47b06093c1c7554c2713067f3def132` (r8.1).
 - Current actor stack: Wanderer r8.1 + accepted Hood r11 + Enemy r2 Goblin/Ghoul/Warden + Enemy r3 Bat/Necromancer + Enemy Detail r4 + accepted Character Surface r5.1.
 - Skeleton remains intentionally unchanged by r4 detail and receives zero additional r5.1 procedural breakup.
 - PR stays DRAFT.
-- TestFlight readiness is NOT automatically implied by this file. r11 is accepted and its dedicated production gate is green; the broader final CI wave must still be clean before an upload decision.
+- Release status: **TestFlight-ready candidate** on implementation head `3e567bf4...`. This means the milestone passed the required code/visual/iOS validation and is ready for a deliberate upload decision; it does NOT authorize an automatic upload.
 - No TestFlight trigger, App Store build-number bump or version jump from micro-passes.
 
 ## Non-negotiable continuity rules
@@ -97,7 +97,7 @@ Topology correction: `4f82a5aeb717a088747eb31849b2d2d97340ba27`.
 - The corrected OBJ at `4f82a5ae...` restored successful Godot headless project parsing.
 - The production Wanderer gate was hardened at `3e567bf4...`: r11 asset must import, the r11 snapshot marker/version must exist, and the visible `V160AuthoredHood.mesh.resource_path` must exactly equal the r11 OBJ path.
 - Final valid runtime idle/attack captures were manually reviewed and accepted: the hood reads as one continuous cowl, avoids the r9 boxiness/r10 horns, and retains mask/eye readability.
-- Production Wanderer run on `3e567bf4...` passed compile, explicit r11 validation, main integration, runtime/close-up renders, v1.55 regression and v1.52.1 input-flow regression.
+- Production Wanderer on `3e567bf4...` passed compile, explicit r11 validation, main integration, runtime/close-up renders, v1.55 regression and v1.52.1 input-flow regression.
 
 ## Enemies
 
@@ -152,9 +152,21 @@ Implementation: `cb47de3d52e29b8b8a4250e8b5f64b15e8e387b9`.
 - Skeleton receives zero extra r5.1 breakup.
 - Side-by-side image review against r4 accepted r5.1: no camouflage read, Necromancer remains dark/cloth-like, Bat stays clean/readable, Skeleton effectively unchanged.
 
-## Required regression gates
+## Validated milestone gates on `3e567bf4...`
 
-Before any release/upload decision preserve and rerun the relevant checks, especially:
+The release-relevant v1.60 code head is clean:
+- Godot project parse/import + main scene + gameplay + Deep Tower + progression/release smoke chain: PASS
+- Production Wanderer including hard r11 asset/marker/path contract, runtime captures, v1.55 and v1.52.1: PASS
+- Production Enemy including all six silhouettes, gallery, v1.53, v1.55 and v1.52.1: PASS
+- v1.54 real-model/glTF intake and animation aliases: PASS
+- v1.60 Material Depth including visual captures and focal/input regressions: PASS
+- v1.60 Authored Environment including meta/tower captures, v1.59 and input regressions: PASS
+- iOS playtest: Godot import, Xcode export and unsigned iPhone/iPad device build/package: PASS
+- TestFlight upload step in the iOS workflow: intentionally SKIPPED; no build was uploaded by this milestone validation.
+
+## Required regression gates for future changes
+
+Before later release/upload decisions preserve and rerun the relevant checks, especially:
 - v1.60 Production Wanderer including explicit r11 asset/marker/path contract and runtime close-ups
 - v1.60 Production Enemy Silhouette including gallery/close-ups
 - r4 enemy detail contract: five detailed archetypes, Skeleton unchanged
@@ -168,14 +180,14 @@ Before any release/upload decision preserve and rerun the relevant checks, espec
 - Godot project parse/import and main gameplay smoke
 - iOS playtest before a TestFlight decision
 
-## Current status / next priorities
+## Current next priorities
 
 1. Preserve r8.1 + accepted Hood r11. Do not return to r9/r10 unless intentionally rolling back a proven regression.
 2. Preserve Enemy r2/r3 anatomy + r4 details + r5.1 subtle surface baseline. Do not reset enemy silhouettes again.
 3. The invalid-r11 import incident is fixed; do not confuse the old cascade of red runs from `b36dd73e...` with current gameplay quality.
-4. Current full CI wave for `3e567bf4...` must finish clean before declaring the whole v1.60 bundle TestFlight-ready. The dedicated Wanderer gate is already green and r11 is visually accepted.
-5. Once the final gate set is clean, perform one milestone-level release decision. Do not create a TestFlight build for a hood micro-pass alone.
+4. v1.60 is now a TestFlight-ready candidate at the validated implementation head. Decide the upload deliberately as a milestone action, not as an automatic side effect.
+5. If continuing art before TestFlight, only start a new clearly scoped milestone; do not reopen already accepted r11/enemy anatomy without evidence from gameplay captures.
 
 ## Release policy
 
-No TestFlight upload merely because commits were added. Bundle enough visible improvement to justify a build, validate the final gate set, then decide the next TestFlight build/version deliberately.
+No TestFlight upload merely because commits were added. The current v1.60 implementation has passed the milestone gates and may be uploaded when deliberately chosen. Any later code/art changes require their own relevant regression pass before replacing `3e567bf4...` as the validated implementation head.
