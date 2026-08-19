@@ -1,9 +1,11 @@
 name: Family Life OS TestFlight Bridge
 
 on:
-  pull_request:
+  push:
+    branches:
+      - main
     paths:
-      - '.github/family-life-os-bridge-trigger.txt'
+      - '.github/workflows/family-life-os-testflight-bridge.yml'
 
 permissions:
   contents: read
