@@ -8,10 +8,15 @@ Canonical handoff for continued development. **Read this file before changing ar
 - Pull request: **#90 — `v1.61 combat presentation milestone`**
 - Branch: `agent/v1.61-combat-presentation`
 - Base: `agent/v1.60-meta-environments` while PR #82 remains unmerged.
-- **Current fully validated and visually accepted implementation head: `a6a7395a248295a7c4fdb5e87a767a4496d1ff2e` (`1.61-combat-presentation-r3.1`).**
+- **Current fully validated and visually accepted implementation head: `bb367aad35338dd6d32fbdf7d4de4208efef2ad0` (`1.61-combat-presentation-r3.2`).**
+- r3.2 initial implementation: `67347231d92fe510f495eff67bd450105ab2289b`.
+- r3.2 charge-typing implementation fix: `7c31c63615085e5410b6621d15e72e14471f2350`.
+- r3.2 smoke-only typing fix: `0e8c5925598b6fc73c081e527328af3f2d41f2d1` — test code only.
+- r3.2 final ritual-bound correction / accepted implementation: `bb367aad35338dd6d32fbdf7d4de4208efef2ad0`.
+- r3.1 previous accepted fallback: `a6a7395a248295a7c4fdb5e87a767a4496d1ff2e`.
 - r3 implementation: `2233a51327db849d80c3c16968bf507f285cfd1f`.
 - r3 smoke-only activation fix: `6c398cc396e1bb901bba0d26f6cdd59c213286b4` — no visual/gameplay implementation change.
-- r2.2 previous accepted fallback: `ec29c5bc01db98cda004d62c40a165d9fcd2b27c`.
+- r2.2 fallback: `ec29c5bc01db98cda004d62c40a165d9fcd2b27c`.
 - r2.1 motion fallback: `7a00718130119b0a1087a49a9a076115c5ec3836`.
 - r2 impact fallback: `663835db6affff4636acbac84a68aa685e217e43`.
 - r1.1 core combat fallback: `31316503ef60ff316c0d55621773a566f177eb87`.
@@ -38,7 +43,7 @@ Canonical handoff for continued development. **Read this file before changing ar
 8. v1.61 remains presentation-only on top of v1.60 unless a separately scoped gameplay milestone is explicitly started.
 9. Do not reopen accepted Wanderer/enemy anatomy while polishing combat.
 10. Preserve accepted v1.61 layers as rollback points; prefer narrow subclasses rather than rewriting validated lower layers.
-11. Primary danger telegraphs are gameplay-significant: shape/material may be polished, but danger radius/timing/readability must not be reduced.
+11. Primary danger telegraphs are gameplay-significant: visual language may be improved, but inherited warning window, position, radius scale, attack behavior and readability must not be reduced or changed.
 
 ## Locked v1.60 art direction
 
@@ -99,7 +104,7 @@ Diagnostic commit: `1862a1b7b71ecc353d37b2e73dc05030e9761873`.
 - Attack/skill/impact/death worked together, but the frozen frames showed large archetype-colored circles around enemies and a circular loot/beam language.
 - Initial working hypothesis was that the enemy circles were persistent v1.49 grounding. That hypothesis was incomplete.
 
-## r3 — accepted Grounding + Loot sub-layer, but not final standalone lock
+## r3 — accepted Grounding + Loot sub-layer
 Implementation: `2233a51327db849d80c3c16968bf507f285cfd1f`.
 Smoke-only test fix: `6c398cc396e1bb901bba0d26f6cdd59c213286b4`.
 
@@ -108,7 +113,7 @@ r3 presentation changes:
 - v1.46 loot `FloorGlow` circle replaced by compact radial glint geometry.
 - tall cylindrical loot `Beam` replaced by a short tapered/crossed shard glint.
 - loot values, positions, pools and triggers unchanged.
-- primary red segmented danger telegraphs explicitly preserved.
+- primary danger telegraphs explicitly preserved.
 
 Important test note:
 - the first r3 smoke failed only because its automatic state did not activate secondary grounding in that headless test setup.
@@ -117,13 +122,13 @@ Important test note:
 
 Visual review proved r3 loot was cleaner, but the large archetype-colored circles remained in the frozen spawn/kill screenshots. This led to the exact source investigation below.
 
-## r3.1 — accepted current visual lock: Spawn/Death Signature Language
-Implementation: **`a6a7395a248295a7c4fdb5e87a767a4496d1ff2e`**.
-Dedicated workflow: **`32257942233` — fully green.**
+## r3.1 — accepted Spawn/Death Signature Language
+Implementation: `a6a7395a248295a7c4fdb5e87a767a4496d1ff2e`.
+Dedicated workflow: `32257942233` — fully green.
 
 Corrected diagnosis:
 - The dominant archetype-colored rings in the frozen combined review were primarily inherited **v1.48 `spawn_signature_pool` / `death_signature_pool`** effects, not persistent enemy grounding.
-- Each v1.48 signature used a `Ring` radius 0.52 plus five vertical `Shard` boxes.
+- Each v1.48 signature used a Ring radius 0.52 plus five vertical Shard boxes.
 - Spawn/death signature duration is 0.52 s.
 - Old animation made spawn scale from 1.42 -> 0.72 and death from 0.62 -> 2.05 while rotating/lifting, which made a frozen frame look like persistent circular clutter.
 
@@ -133,40 +138,81 @@ r3.1 changes:
 - archetype color remains, preserving spawn/death identity.
 - signature trigger, pool and 0.52-s duration remain unchanged.
 - visual animation restrained: spawn roughly 1.10 -> 0.74; death roughly 0.74 -> 1.35, with much lower rotation/lift.
-- Main now uses `world3d_chamber_v161_combat_presentation_r31.gd`.
 
 ### r3.1 manual image acceptance
-`r31_spawn_signatures.png` — **accepted**:
-- large full colored circles are gone.
-- spawn moment uses compact broken brackets/shards around each archetype.
+`r31_spawn_signatures.png` — accepted: large full colored circles are gone; spawn uses compact broken brackets/shards.
 
-`r31_steady_attack_pressure.png` — **accepted**:
-- transient signature pools are deliberately hidden for diagnosis.
-- the archetype-colored ring clutter disappears.
-- remaining red segmented shapes are the intentional primary danger telegraphs, not spawn residue.
-- attack remains readable at gameplay distance.
+`r31_steady_attack_pressure.png` — accepted: transient signature pools are hidden for diagnosis; archetype-colored ring clutter disappears; remaining red shapes are the primary danger telegraphs.
 
-`r31_kill_loot_signatures.png` — **accepted**:
-- giant green death/signature ring at the kill point is gone.
-- death feedback is compact.
-- loot reads as small gold glints rather than circular floor glow + vertical light mast.
+`r31_kill_loot_signatures.png` — accepted: giant green death/signature ring is gone; death is compact and loot reads as small gold glints.
 
-Therefore **r3.1 / `a6a7395a...` is the current accepted v1.61 visual implementation baseline.**
+## r3.2 — accepted current visual lock: Directional Danger Language
+Initial implementation: `67347231d92fe510f495eff67bd450105ab2289b`.
+Charge-typing implementation fix: `7c31c63615085e5410b6621d15e72e14471f2350`.
+Smoke-only typing fix: `0e8c5925598b6fc73c081e527328af3f2d41f2d1`.
+Final accepted implementation: **`bb367aad35338dd6d32fbdf7d4de4208efef2ad0`**.
+Dedicated workflow: **`32260926762` — fully green.**
+
+Root cause / semantic recovery:
+- r3.1 correctly exposed that the remaining repeated red shapes were true primary danger telegraphs.
+- the v1.61 3D layer still presented nearly every warning as the same rotating segmented ring.
+- investigation of the established 2D combat implementation showed that focused attacks had previously used a **player-directed warning arc plus an aim line**, so directionality was already part of the intended readable language.
+- runtime cooldown semantics were verified before implementation: `dash/dive/lunge` are fast movement attacks, `blink/phase/teleport` are relocation/phase warnings, `slam` is radial, and `summon` is ritual/cast behavior.
+
+r3.2 changes only presentation geometry/orientation:
+- `attack_cd` / focused attacks -> compact forward arc + spear/aim marker pointing toward the Wanderer.
+- `dash_cd`, `dive_cd`, `lunge_cd` -> two compact lane rails + forward charge arrow pointing toward the Wanderer.
+- `blink_cd`, `phase_cd`, `teleport_cd` -> broken phase-bracket language rather than a full ring.
+- `slam_cd` / crown cast -> radial perimeter teeth.
+- `summon_cd` -> inward ritual markers/ticks.
+- boss `cast_kind == "fan"` maps to focused directional language; `cast_kind == "crown"` maps to slam language.
+- the lowest active inherited cooldown still selects the warning family.
+- inherited warning trigger/window remains the same 0.34-s logic.
+- inherited telegraph position, pulse and `radius / 24.0` scale remain owned by the old gameplay path and are not changed by r3.2.
+- dedicated smoke verifies the r3.2 mesh swap does not change inherited tell scale.
+- dedicated smoke additionally verifies all five local tell meshes remain inside the accepted 0.68 local bound.
+- Focus and Charge orientation are hard-checked against the Wanderer's actual world position.
+
+Implementation/test history that must not be repeated:
+- initial r3.2 compile failure was a GDScript type-inference issue in the charge mesh loop, not a design failure; `7c31c636...` added explicit local float typing.
+- the next failure was smoke-test-only type inference for direction math; `0e8c5925...` changed only test typing.
+- once real geometry checks ran, Ritual alone exceeded the 0.68 local safety bound because its tick center sat at 0.68 plus radial thickness. **The test was not weakened.**
+- `bb367aad...` moved only Ritual ticks inward (`0.64` center, narrower tangential half-width), after which all five tell families passed the original strict bound.
+
+### r3.2 manual image acceptance
+`r32_focus_pressure.png` — **accepted**:
+- repeated full/near-full enemy rings are gone.
+- focused warning arcs sit in front of the actors and point toward the Wanderer.
+- actors remain visually dominant; warnings read as intent instead of generic floor decoration.
+
+`r32_mobility_phase.png` — **accepted**:
+- movement/charge warnings and phase warnings no longer share the same silhouette.
+- charge language is directional while phase language is broken/non-directional.
+- warning footprint remains restrained at gameplay distance.
+
+`r32_slam_ritual.png` — **accepted**:
+- Warden/slam reads as radial perimeter teeth.
+- ritual/cast reads as separate inward markers rather than another rotating circle.
+- both remain inside the preserved visual radius bound.
+
+Therefore **r3.2 / `bb367aad...` is the current accepted v1.61 visual implementation baseline.**
 
 ## Current v1.61 validation
 
-Dedicated `v1.61 Combat Presentation Check` run **`32257942233`** on `a6a7395a...` is fully green:
+Dedicated `v1.61 Combat Presentation Check` run **`32260926762`** on `bb367aad...` is fully green:
 - Godot 4.7.1 compile/import: PASS
 - r2 impact contract: PASS
 - r2.1 motion contract: PASS
 - r2.2 death contract: PASS
 - r3 grounding + loot contract: PASS
 - r3.1 spawn/death signature contract: PASS
+- r3.2 directional danger-language / preserved-radius contract: PASS
 - main scene / inherited v1.60 integration: PASS
 - isolated r2.2 diagnostics: PASS
 - coherent r2.2 review baseline: PASS
 - r3 gameplay-distance comparison: PASS
 - r3.1 spawn / steady-state / kill+loot captures: PASS
+- r3.2 focus / mobility-phase / slam-ritual captures: PASS
 - v1.60 Combat VFX regression: PASS
 - v1.60 Wanderer/r11 regression: PASS
 - v1.60 six-enemy regression: PASS
@@ -179,7 +225,8 @@ Preserve at minimum:
 - r2.1 movement contract.
 - r2.2 death-burst contract + isolated diagnostics.
 - r3 grounding + loot contract.
-- r3.1 spawn/death signature contract + separated spawn/steady/kill visual captures.
+- r3.1 spawn/death signature contract + separated spawn/steady/kill captures.
+- r3.2 directional danger-language contract + strict inherited scale/local-bound checks + focus/mobility/slam visual captures.
 - v1.60 Combat VFX regression.
 - v1.60 Wanderer/r11 regression.
 - v1.60 all-six-enemy regression.
@@ -190,11 +237,11 @@ Preserve at minimum:
 
 ## Current next priorities
 
-1. **Preserve `a6a7395a...` as the accepted r3.1 implementation baseline.**
-2. Do not reopen Wanderer r11 or enemy anatomy/surface baselines during combat work.
-3. The remaining red segmented ground shapes in steady combat are intentional **primary danger telegraphs**. If polishing them next, keep exact danger radius/timing/readability and improve only hierarchy/profile/material/direction language.
-4. Next visual pass should focus on coherent combat readability at gameplay distance rather than adding more effect quantity. Candidate scope: differentiated directional danger shapes per attack archetype, projectile/trail hierarchy, restrained camera/light response.
-5. Keep spawn/death signatures visually transient; never return to full archetype-colored circles or long rods.
+1. **Preserve `bb367aad...` as the accepted r3.2 implementation baseline.**
+2. Do not reopen Wanderer r11, enemy anatomy/surface baselines, r3.1 signature language, or r3.2 danger radii while continuing combat work.
+3. Do not restore a universal enemy warning ring. Any future tell work must keep the accepted Focus / Charge / Phase / Slam / Ritual semantic split.
+4. Next coherent gameplay-distance review should identify the next largest remaining prototype read rather than adding effect quantity. Candidate areas: projectile/trail identity, boss-specific attack presentation, or overly dominant player-feedback elements visible only now that enemy floor clutter is reduced.
+5. Keep all accepted visual feedback presentation-only unless a separately scoped gameplay milestone is explicitly opened.
 6. No TestFlight build for individual presentation micro-passes.
 7. Before promoting v1.61 to TestFlight-ready status, run the v1.61 iOS playtest/device-build gate on the accepted implementation and make a deliberate milestone-level upload decision.
 
@@ -202,5 +249,5 @@ Preserve at minimum:
 
 - PR #82/v1.60 remains the last formally TestFlight-ready parent candidate.
 - PR #90/v1.61 remains a stacked **Draft** milestone.
-- Current accepted visual implementation is `a6a7395a...`, but it is **not authorized for TestFlight upload yet**.
+- Current accepted visual implementation is `bb367aad...`, but it is **not authorized for TestFlight upload yet**.
 - No automatic build bump, version jump, App Store submission or TestFlight upload from micro-passes.
