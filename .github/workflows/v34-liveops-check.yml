@@ -44,3 +44,189 @@ jobs:
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v34_liveops_smoke_test.gd --quit-after 120 | tee v34.log
           grep -q "ONE MORE FLOOR v1.19-v1.21 liveops/economy smoke test passed" v34.log
+
+  family-life-testflight-build2:
+    if: github.event_name == 'pull_request' && github.head_ref == 'ci/family-life-build-2-run'
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      TEAM_ID: 'TKG684N5GL'
+      BUNDLE_ID: 'de.kamilunavo.familyprototype'
+      PROJECT_DIR: 'family-source/apps/011-family-life-os/prototype'
+      XCODE_PROJECT: 'FamilyLifePrototype.xcodeproj'
+      SCHEME: 'FamilyLifePrototype'
+      EFFECTIVE_BUILD: '2'
+    steps:
+      - name: Report Family Life build 2 start
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Family Life OS TestFlight build 2 started ${context.runId}`,
+              body: `Internal build 2 bridge started.\n\n- run_id: ${context.runId}\n- source_sha: ${context.sha}\n\nNo App Store Connect secret values are included.`
+            });
+
+      - name: Checkout Family Life OS source
+        uses: actions/checkout@v5
+        with:
+          repository: acciento89-bot/appideenchatgpt
+          ref: main
+          path: family-source
+
+      - name: Resolve Swift packages
+        working-directory: ${{ env.PROJECT_DIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project "$XCODE_PROJECT" -scheme "$SCHEME" -resolvePackageDependencies
+
+      - name: Build unsigned iPhone/iPad release app
+        working-directory: ${{ env.PROJECT_DIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/FamilyLifeDerivedData"
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/FamilyLifeDerivedData" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            CURRENT_PROJECT_VERSION="$EFFECTIVE_BUILD" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Require protected App Store Connect credentials
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+          echo 'Protected ASC credentials present; values not printed.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Prepare App Store Connect API key
+        shell: bash
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Create unsigned Family Life OS archive
+        working-directory: ${{ env.PROJECT_DIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/FamilyLifePrototype.xcarchive"
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/FamilyLifePrototype.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            CURRENT_PROJECT_VERSION="$EFFECTIVE_BUILD" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive
+          test -f "$RUNNER_TEMP/FamilyLifePrototype.xcarchive/Info.plist"
+          test -d "$RUNNER_TEMP/FamilyLifePrototype.xcarchive/Products/Applications/FamilyLifePrototype.app"
+
+      - name: Create TestFlight export options
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Upload Family Life OS build 2 to TestFlight
+        id: testflight
+        continue-on-error: true
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -uo pipefail
+          set +e
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/FamilyLifePrototype.xcarchive" \
+            -exportPath "$RUNNER_TEMP/FamilyLifeTestFlightExport" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            2>&1 | tee "$RUNNER_TEMP/family-life-testflight-export.log"
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          mkdir -p build/family-life-os
+          cp "$RUNNER_TEMP/family-life-testflight-export.log" build/family-life-os/TestFlight-export.log
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload Family Life TestFlight diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: family-life-os-testflight-build2-diagnostics
+          path: build/family-life-os/TestFlight-export.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Report Family Life build 2 result
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          TESTFLIGHT_STATUS: ${{ steps.testflight.outputs.status }}
+          TESTFLIGHT_CONCLUSION: ${{ steps.testflight.conclusion }}
+        with:
+          script: |
+            const status = process.env.TESTFLIGHT_STATUS || 'not-run';
+            const conclusion = process.env.TESTFLIGHT_CONCLUSION || 'not-run';
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Family Life OS TestFlight build 2 result ${context.runId}`,
+              body: `Internal build 2 bridge result.\n\n- run_id: ${context.runId}\n- testflight_exit_status: ${status}\n- testflight_step_conclusion: ${conclusion}\n\nNo App Store Connect secret values are included.`
+            });
+
+      - name: Fail if Family Life TestFlight upload failed
+        if: always() && steps.testflight.outputs.status != '0'
+        shell: bash
+        run: exit 1
+
+      - name: Remove App Store Connect key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
