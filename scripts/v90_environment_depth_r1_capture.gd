@@ -3,13 +3,25 @@ extends SceneTree
 const AcceptedWorld = preload("res://scripts/world3d_chamber_v164_character_lighting.gd")
 const CandidateWorld = preload("res://scripts/world3d_chamber_v165_environment_depth.gd")
 const CAPTURE_DIR := "res://artifacts/v165_environment_depth_r1"
+const CAPTURE_SIZE := Vector2i(720, 1280)
+
+var capture_viewport: SubViewport
 
 func _init() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
-	root.size = Vector2i(720, 1280)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(CAPTURE_DIR))
+	capture_viewport = SubViewport.new()
+	capture_viewport.name = "V165FixedCaptureViewport"
+	capture_viewport.size = CAPTURE_SIZE
+	capture_viewport.own_world_3d = true
+	capture_viewport.transparent_bg = false
+	capture_viewport.disable_3d = false
+	capture_viewport.msaa_3d = Viewport.MSAA_2X
+	capture_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	root.add_child(capture_viewport)
+	await process_frame
 
 	if not await _capture_world(AcceptedWorld, "before"):
 		return
@@ -17,11 +29,13 @@ func _run() -> void:
 		return
 
 	print("v1.65 environment surface and depth r1 matched visual capture passed")
+	capture_viewport.queue_free()
+	await process_frame
 	quit(0)
 
 func _capture_world(world_script: Script, prefix: String) -> bool:
 	var world = world_script.new()
-	root.add_child(world)
+	capture_viewport.add_child(world)
 	world.set_active(true)
 	for _i in range(10):
 		await process_frame
@@ -88,10 +102,12 @@ func _capture_realm(
 	player_pos: Vector2,
 	enemies: Array
 ) -> bool:
+	capture_viewport.size = CAPTURE_SIZE
 	_prepare_steady_state(world, enemies)
 	world.sync_runtime(player_pos, enemies, [], [], [], Vector2.ZERO, time_value, 0.0, 0.0, floor_no)
 	world.sync_runtime(player_pos, enemies, [], [], [], Vector2.ZERO, time_value + 0.06, 0.0, 0.0, floor_no)
 	_clear_transients(world)
+	await process_frame
 	return await _save_frame("%s_%s" % [prefix, stem])
 
 func _prepare_steady_state(world, enemies: Array) -> void:
@@ -120,10 +136,14 @@ func _hide_pool(pool: Array) -> void:
 			node.visible = false
 
 func _save_frame(stem: String) -> bool:
+	capture_viewport.size = CAPTURE_SIZE
 	await RenderingServer.frame_post_draw
-	var image := root.get_texture().get_image()
+	var image := capture_viewport.get_texture().get_image()
 	if image == null or image.is_empty():
 		_fail("empty v1.65 image: %s" % stem)
+		return false
+	if image.get_width() != CAPTURE_SIZE.x or image.get_height() != CAPTURE_SIZE.y:
+		_fail("invalid v1.65 capture size for %s: %dx%d" % [stem, image.get_width(), image.get_height()])
 		return false
 	var output := "%s/%s.png" % [CAPTURE_DIR, stem]
 	if image.save_png(ProjectSettings.globalize_path(output)) != OK:
