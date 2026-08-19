@@ -1,7 +1,7 @@
 extends SceneTree
 
 const AcceptedWorld = preload("res://scripts/world3d_chamber_v164_character_lighting.gd")
-const CandidateWorld = preload("res://scripts/world3d_chamber_v165_environment_depth_r11.gd")
+const CandidateWorld = preload("res://scripts/world3d_chamber_v165_environment_depth_r12.gd")
 const CAPTURE_DIR := "res://artifacts/v165_environment_depth_r1"
 const CAPTURE_SIZE := Vector2i(720, 1280)
 
