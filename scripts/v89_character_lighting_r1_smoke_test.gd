@@ -82,7 +82,9 @@ func _material_color(materials: Dictionary, key: String, parameter: String) -> C
 	if material == null:
 		return Color(-1.0, -1.0, -1.0, -1.0)
 	var value: Variant = material.get_shader_parameter(parameter)
-	return value as Color if value is Color else Color(-1.0, -1.0, -1.0, -1.0)
+	if value is Color:
+		return value
+	return Color(-1.0, -1.0, -1.0, -1.0)
 
 func _color_close(a: Color, b: Color) -> bool:
 	return absf(a.r - b.r) < 0.002 and absf(a.g - b.g) < 0.002 and absf(a.b - b.b) < 0.002
