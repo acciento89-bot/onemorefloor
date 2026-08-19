@@ -55,7 +55,7 @@ Therefore v1.64 r1.1 is device-build validated without performing a TestFlight u
 ## Post-acceptance hardening
 - `scripts/v89_character_lighting_r1_smoke_test.gd` now explicitly creates a runtime Necromancer + Skeleton and checks that the r1.1 enemy material response survives inherited `configure_enemy()` while Skeleton remains unchanged.
 - This is an additional regression lock on top of the already-green accepted r1.1 production review; it does not alter accepted production values.
-- At the last pre-documentation check, the newest GitHub runner for this hardened v89 test was still queued behind the repository's broad historical workflow fanout. Do not falsely report it as passed until Actions completes it.
+- At the final pre-documentation observation, the newest GitHub runner for this hardened v89 test was still queued behind the repository's broad historical workflow fanout. Do not falsely report it as passed until Actions completes it.
 
 # Parent milestone locks
 
