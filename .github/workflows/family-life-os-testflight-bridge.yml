@@ -26,6 +26,25 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 45
     steps:
+      - name: Report bridge run start
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Family Life OS TestFlight build 2 started ${context.runId}`,
+              body: [
+                'Automated internal marker for Family Life OS TestFlight build 2.',
+                '',
+                `- run_id: ${context.runId}`,
+                `- source_sha: ${context.sha}`,
+                `- run: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                '',
+                'No App Store Connect secret values are included in this issue.'
+              ].join('\n')
+            });
+
       - name: Checkout Family Life OS source
         uses: actions/checkout@v5
         with:
