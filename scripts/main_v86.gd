@@ -1,11 +1,11 @@
 extends "res://scripts/main_v85.gd"
 
-# ONE MORE FLOOR v1.65 r1 — active Environment Surface & Depth top layer.
+# ONE MORE FLOOR v1.65 r1.1 — active Environment Surface & Depth top layer.
 # Keeps the accepted v1.64 character-lighting + v1.63 combat/UI/gameplay stack
-# and swaps only the 3D presentation world to the v1.65 environment pass.
+# and swaps only the 3D presentation world to the corrected v1.65 environment pass.
 
-const EnvironmentDepthWorldV165 = preload("res://scripts/world3d_chamber_v165_environment_depth.gd")
-const V86_FEATURE := "1.65-environment-depth-r1"
+const EnvironmentDepthWorldV165 = preload("res://scripts/world3d_chamber_v165_environment_depth_r11.gd")
+const V86_FEATURE := "1.65-environment-depth-r1.1"
 
 func _ready() -> void:
 	super._ready()
