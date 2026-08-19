@@ -1,0 +1,114 @@
+name: v1.60 Authored Material Depth Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'assets/shaders/v160_surface_depth.gdshader'
+      - 'scripts/world3d_chamber_v160_materials.gd'
+      - 'scripts/world3d_chamber_v160_focals.gd'
+      - 'scripts/main_v74.gd'
+      - 'scripts/v74_material_depth_smoke_test.gd'
+      - 'scripts/v74_material_depth_visual_capture.gd'
+      - '.github/workflows/v74-material-depth-check.yml'
+  pull_request:
+    paths:
+      - 'assets/shaders/v160_surface_depth.gdshader'
+      - 'scripts/world3d_chamber_v160_materials.gd'
+      - 'scripts/world3d_chamber_v160_focals.gd'
+      - 'scripts/main_v74.gd'
+      - 'scripts/v74_material_depth_smoke_test.gd'
+      - 'scripts/v74_material_depth_visual_capture.gd'
+      - '.github/workflows/v74-material-depth-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-material-depth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Import and compile v1.60 material layer
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee material-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" material-import.log; then
+            echo "Godot reported v1.60 material import/compile errors"
+            exit 1
+          fi
+
+      - name: Validate authored material depth runtime
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_material_depth_smoke_test.gd --quit-after 200 2>&1 | tee material-smoke.log
+          grep -q "v1.60 authored material depth smoke test passed" material-smoke.log
+
+      - name: Validate main v1.60 integration
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_meta_environment_smoke_test.gd --quit-after 200 2>&1 | tee main-integration.log
+          grep -q "v1.60 authored meta environment smoke test passed" main-integration.log
+
+      - name: Render real 720x1280 material captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v160_materials
+          xvfb-run -a ./godot --path . --script res://scripts/v74_material_depth_visual_capture.gd --quit-after 240 2>&1 | tee material-capture.log
+          grep -q "v1.60 authored material depth visual capture passed" material-capture.log
+          test -s artifacts/v160_materials/floor01.png
+          test -s artifacts/v160_materials/floor15.png
+          test -s artifacts/v160_materials/floor25.png
+          test -s artifacts/v160_materials/floor35.png
+          test -s artifacts/v160_materials/floor45.png
+
+      - name: Upload material visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v74-authored-material-depth-visuals
+          path: artifacts/v160_materials/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Re-run focal regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_focal_environment_smoke_test.gd --quit-after 180 2>&1 | tee focal-regression.log
+          grep -q "v1.60 authored focal environment smoke test passed" focal-regression.log
+
+      - name: Re-run v1.52.1 input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 180 2>&1 | tee input-regression.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" input-regression.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v74-material-depth-failure-logs
+          path: |
+            material-import.log
+            material-smoke.log
+            main-integration.log
+            material-capture.log
+            focal-regression.log
+            input-regression.log
+          if-no-files-found: ignore

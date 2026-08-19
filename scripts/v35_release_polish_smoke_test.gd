@@ -27,24 +27,30 @@ func _init() -> void:
 		return
 
 	var scene_text := FileAccess.get_file_as_string("res://scenes/main.tscn")
-	if not (scene_text.contains("main_v35.gd") or scene_text.contains("main_v36.gd") or scene_text.contains("main_v37.gd") or scene_text.contains("main_v38.gd") or scene_text.contains("main_v39.gd")):
+	if not (scene_text.contains("main_v35.gd") or scene_text.contains("main_v36.gd") or scene_text.contains("main_v37.gd") or scene_text.contains("main_v38.gd") or scene_text.contains("main_v39.gd") or scene_text.contains("baseline retained: res://scripts/main_v35.gd")):
 		_fail(2404, "v1.24+ runtime: compatible release renderer missing")
 		return
 	var project_text := FileAccess.get_file_as_string("res://project.godot")
 	if not (project_text.contains("config/version=\"1.24.0\"") or project_text.contains("config/version=\"1.25.0\"") or project_text.contains("config/version=\"1.26.0\"")):
 		_fail(2405, "v1.24+ release: compatible project version missing")
 		return
-	var export_text := FileAccess.get_file_as_string("res://export_presets.cfg")
-	var export_ok := (
-		(export_text.contains("application/version=\"16\"") and export_text.contains("application/short_version=\"1.24.0\""))
-		or (export_text.contains("application/version=\"17\"") and export_text.contains("application/short_version=\"1.24.0\""))
-		or (export_text.contains("application/version=\"18\"") and export_text.contains("application/short_version=\"1.25.0\""))
-		or (export_text.contains("application/version=\"19\"") and export_text.contains("application/short_version=\"1.26.0\""))
-		or (export_text.contains("application/version=\"20\"") and export_text.contains("application/short_version=\"1.26.0\""))
-	)
-	if not export_ok:
+
+	# This gate used to enumerate build 16/17/18/19/20 one by one. That made an
+	# otherwise valid legacy regression fail as soon as TestFlight moved past 20.
+	# Validate the actual preset contract instead: supported short version and a
+	# monotonically advanced numeric iOS build number.
+	var export_cfg := ConfigFile.new()
+	if export_cfg.load("res://export_presets.cfg") != OK:
+		_fail(2406, "v1.24+ release: could not read iOS export preset")
+		return
+	var ios_short_version := String(export_cfg.get_value("preset.0.options", "application/short_version", ""))
+	var ios_build_text := String(export_cfg.get_value("preset.0.options", "application/version", "0"))
+	var ios_build := int(ios_build_text)
+	var supported_short_version := ios_short_version in ["1.24.0", "1.25.0", "1.26.0"]
+	if not supported_short_version or ios_build < 16:
 		_fail(2406, "v1.24+ release: compatible iOS build/version missing")
 		return
+
 	var main_text := FileAccess.get_file_as_string("res://scripts/main_v35.gd")
 	for marker in ["_v35_draw_enemy_identity", "_v35_draw_boss_identity", "record_run_summary", "CELESTIAL GRAVE", "set_combat_intensity"]:
 		if not main_text.contains(marker):

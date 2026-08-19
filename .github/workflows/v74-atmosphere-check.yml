@@ -1,0 +1,128 @@
+name: v1.60 Production Atmosphere Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/world3d_chamber_v160_atmosphere.gd'
+      - 'scripts/world3d_chamber_v160_combat_polish.gd'
+      - 'scripts/world3d_chamber_v160_vfx.gd'
+      - 'scripts/main_v74.gd'
+      - 'scripts/v74_atmosphere_smoke_test.gd'
+      - 'scripts/v74_atmosphere_visual_capture.gd'
+      - '.github/workflows/v74-atmosphere-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/world3d_chamber_v160_atmosphere.gd'
+      - 'scripts/world3d_chamber_v160_combat_polish.gd'
+      - 'scripts/world3d_chamber_v160_vfx.gd'
+      - 'scripts/main_v74.gd'
+      - 'scripts/v74_atmosphere_smoke_test.gd'
+      - 'scripts/v74_atmosphere_visual_capture.gd'
+      - '.github/workflows/v74-atmosphere-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-production-atmosphere:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile v1.60 atmosphere layer
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee atmosphere-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" atmosphere-import.log; then
+            echo "Godot reported v1.60 atmosphere compile errors"
+            exit 1
+          fi
+
+      - name: Validate realm lighting grade
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_atmosphere_smoke_test.gd --quit-after 260 2>&1 | tee atmosphere-smoke.log
+          grep -q "v1.60 production atmosphere smoke test passed" atmosphere-smoke.log
+
+      - name: Validate main v1.60 integration
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_meta_environment_smoke_test.gd --quit-after 260 2>&1 | tee main-integration.log
+          grep -q "v1.60 authored meta environment smoke test passed" main-integration.log
+
+      - name: Render five realm atmosphere captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v160_atmosphere
+          xvfb-run -a ./godot --path . --script res://scripts/v74_atmosphere_visual_capture.gd --quit-after 300 2>&1 | tee atmosphere-capture.log
+          grep -q "v1.60 production atmosphere visual capture passed" atmosphere-capture.log
+          test -s artifacts/v160_atmosphere/01_lower_halls.png
+          test -s artifacts/v160_atmosphere/15_ossuary.png
+          test -s artifacts/v160_atmosphere/25_iron_bastion.png
+          test -s artifacts/v160_atmosphere/35_rift_descent.png
+          test -s artifacts/v160_atmosphere/45_starless_spire.png
+
+      - name: Upload atmosphere visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v74-production-atmosphere-visuals
+          path: artifacts/v160_atmosphere/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Re-run v1.60 combat VFX regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_combat_vfx_smoke_test.gd --quit-after 260 2>&1 | tee combat-vfx-regression.log
+          grep -q "v1.60 production combat VFX smoke test passed" combat-vfx-regression.log
+
+      - name: Re-run v1.60 enemy silhouette regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_enemy_presentation_smoke_test.gd --quit-after 240 2>&1 | tee enemy-regression.log
+          grep -q "v1.60 production enemy silhouette smoke test passed" enemy-regression.log
+
+      - name: Re-run v1.55 Wanderer production regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v69_wanderer_production_smoke_test.gd --quit-after 220 2>&1 | tee wanderer-regression.log
+          grep -q "v1.55 production Wanderer model takeover smoke test passed" wanderer-regression.log
+
+      - name: Re-run v1.52.1 input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 180 2>&1 | tee input-regression.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" input-regression.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v74-atmosphere-failure-logs
+          path: |
+            atmosphere-import.log
+            atmosphere-smoke.log
+            main-integration.log
+            atmosphere-capture.log
+            combat-vfx-regression.log
+            enemy-regression.log
+            wanderer-regression.log
+            input-regression.log
+          if-no-files-found: ignore

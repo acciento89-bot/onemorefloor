@@ -1,0 +1,121 @@
+name: v1.60 Production Wanderer Presentation Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'assets/models/actors/v160/**'
+      - 'assets/shaders/v160_surface_depth.gdshader'
+      - 'scripts/world3d_actor_factory_v160.gd'
+      - 'scripts/world3d_actor_factory_v160_polish.gd'
+      - 'scripts/world3d_actor_factory_v160_authored.gd'
+      - 'scripts/world3d_chamber_v160_actors.gd'
+      - 'scripts/world3d_chamber_v160_materials.gd'
+      - 'scripts/main_v74.gd'
+      - 'scripts/v74_wanderer_presentation_smoke_test.gd'
+      - 'scripts/v74_wanderer_visual_capture.gd'
+      - '.github/workflows/v74-wanderer-presentation-check.yml'
+  pull_request:
+    paths:
+      - 'assets/models/actors/v160/**'
+      - 'assets/shaders/v160_surface_depth.gdshader'
+      - 'scripts/world3d_actor_factory_v160.gd'
+      - 'scripts/world3d_actor_factory_v160_polish.gd'
+      - 'scripts/world3d_actor_factory_v160_authored.gd'
+      - 'scripts/world3d_chamber_v160_actors.gd'
+      - 'scripts/world3d_chamber_v160_materials.gd'
+      - 'scripts/main_v74.gd'
+      - 'scripts/v74_wanderer_presentation_smoke_test.gd'
+      - 'scripts/v74_wanderer_visual_capture.gd'
+      - '.github/workflows/v74-wanderer-presentation-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-production-wanderer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile v1.60 Wanderer presentation
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee wanderer-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|OBJ:.*ERROR|Failed to load script|Failed loading resource" wanderer-import.log; then
+            echo "Godot reported v1.60 Wanderer compile/import errors"
+            exit 1
+          fi
+
+      - name: Validate production Wanderer presentation
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_wanderer_presentation_smoke_test.gd --quit-after 220 2>&1 | tee wanderer-smoke.log
+          grep -q "v1.60 production Wanderer presentation smoke test passed" wanderer-smoke.log
+
+      - name: Validate main v1.60 actor integration
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_meta_environment_smoke_test.gd --quit-after 220 2>&1 | tee main-integration.log
+          grep -q "v1.60 authored meta environment smoke test passed" main-integration.log
+
+      - name: Render runtime and close-up Wanderer captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v160_wanderer
+          xvfb-run -a ./godot --path . --script res://scripts/v74_wanderer_visual_capture.gd --quit-after 240 2>&1 | tee wanderer-capture.log
+          grep -q "v1.60 production Wanderer visual capture passed" wanderer-capture.log
+          test -s artifacts/v160_wanderer/floor01.png
+          test -s artifacts/v160_wanderer/floor25.png
+          test -s artifacts/v160_wanderer/wanderer_closeup_idle.png
+          test -s artifacts/v160_wanderer/wanderer_closeup_attack.png
+
+      - name: Upload Wanderer visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v74-production-wanderer-visuals
+          path: artifacts/v160_wanderer/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Re-run v1.55 Wanderer production regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v69_wanderer_production_smoke_test.gd --quit-after 220 2>&1 | tee v69-wanderer.log
+          grep -q "v1.55 production Wanderer model takeover smoke test passed" v69-wanderer.log
+
+      - name: Re-run v1.52.1 input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 180 2>&1 | tee input-regression.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" input-regression.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v74-wanderer-presentation-failure-logs
+          path: |
+            wanderer-import.log
+            wanderer-smoke.log
+            main-integration.log
+            wanderer-capture.log
+            v69-wanderer.log
+            input-regression.log
+          if-no-files-found: ignore

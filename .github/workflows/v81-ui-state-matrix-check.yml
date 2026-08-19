@@ -1,0 +1,79 @@
+name: v1.62 UI State Matrix Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/v81_ui_state_matrix_capture.gd'
+      - '.github/workflows/v81-ui-state-matrix-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/v81_ui_state_matrix_capture.gd'
+      - '.github/workflows/v81-ui-state-matrix-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-ui-states:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile current v1.62 UI stack
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v162-state-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v162-state-import.log; then
+            echo "Godot reported v1.62 state-matrix compile/import errors"
+            exit 1
+          fi
+
+      - name: Preserve accepted v1.62 r3 contract
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v80_ui_runtime_cta_smoke_test.gd --quit-after 260 2>&1 | tee v162-r3.log
+          grep -q "v1.62 UI foundation r3 runtime CTA smoke test passed" v162-r3.log
+
+      - name: Render real Store action-state matrix
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v162_states
+          xvfb-run -a ./godot --path . --script res://scripts/v81_ui_state_matrix_capture.gd --quit-after 260 2>&1 | tee v162-state-capture.log
+          grep -q "v1.62 UI state matrix visual capture passed" v162-state-capture.log
+          test -s artifacts/v162_states/store_try.png
+          test -s artifacts/v162_states/store_owned.png
+          test -s artifacts/v162_states/store_unavailable.png
+
+      - name: Upload v1.62 UI state matrix
+        uses: actions/upload-artifact@v4
+        with:
+          name: v81-ui-state-matrix-visuals
+          path: artifacts/v162_states/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v81-ui-state-matrix-failure-logs
+          path: |
+            v162-state-import.log
+            v162-r3.log
+            v162-state-capture.log
+          if-no-files-found: ignore

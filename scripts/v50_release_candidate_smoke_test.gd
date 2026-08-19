@@ -68,17 +68,42 @@ func _run() -> void:
 		_fail(5014, "v1.37 graphics-pack FX redraw throttle missing")
 		return
 
+	# This gate protects the v1.37 minimum release baseline. Newer TestFlight
+	# build numbers are valid and must not make a historical regression test red.
 	var preset := FileAccess.get_file_as_string("res://export_presets.cfg")
-	if not preset.contains("application/short_version=\"1.26.0\"") or not preset.contains("application/version=\"20\""):
-		_fail(5015, "v1.37 checked-in export baseline changed unexpectedly")
+	var short_version := _config_value(preset, "application/short_version")
+	var build_value := _config_value(preset, "application/version")
+	if not _version_at_least(short_version, 1, 26, 0) or not build_value.is_valid_int() or int(build_value) < 20:
+		_fail(5015, "v1.37 checked-in iOS export fell below the release baseline")
 		return
 	var workflow := FileAccess.get_file_as_string("res://.github/workflows/ios-testflight.yml")
 	if not workflow.contains("Apply TestFlight build override") or not workflow.contains("Requested build"):
 		_fail(5016, "v1.37 TestFlight build override / metadata guard is not armed")
 		return
 
-	print("ONE MORE FLOOR v1.37 rc3 Build 24 smoke test passed")
+	print("ONE MORE FLOOR v1.37 release-candidate smoke test passed")
 	quit(0)
+
+func _config_value(text: String, key: String) -> String:
+	var prefix := key + "=\""
+	for raw_line in text.split("\n"):
+		var line := String(raw_line).strip_edges()
+		if line.begins_with(prefix) and line.ends_with("\""):
+			return line.substr(prefix.length(), line.length() - prefix.length() - 1)
+	return ""
+
+func _version_at_least(value: String, major_min: int, minor_min: int, patch_min: int) -> bool:
+	var parts := value.split(".")
+	if parts.size() < 3:
+		return false
+	var major := int(parts[0])
+	var minor := int(parts[1])
+	var patch := int(parts[2])
+	if major != major_min:
+		return major > major_min
+	if minor != minor_min:
+		return minor > minor_min
+	return patch >= patch_min
 
 func _fail(code: int, message: String) -> void:
 	push_error(message)

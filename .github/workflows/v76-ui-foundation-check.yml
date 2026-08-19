@@ -1,0 +1,200 @@
+name: v1.62 UI Foundation Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/main_v76.gd'
+      - 'scripts/main_v77.gd'
+      - 'scripts/main_v78.gd'
+      - 'scripts/main_v79.gd'
+      - 'scripts/main_v80.gd'
+      - 'scripts/v76_ui_foundation_smoke_test.gd'
+      - 'scripts/v77_ui_foundation_balance_smoke_test.gd'
+      - 'scripts/v78_ui_secondary_polish_smoke_test.gd'
+      - 'scripts/v79_ui_store_action_smoke_test.gd'
+      - 'scripts/v80_ui_runtime_cta_smoke_test.gd'
+      - 'scripts/v76_ui_foundation_capture.gd'
+      - 'scripts/v78_ui_secondary_capture.gd'
+      - 'scripts/v80_ui_runtime_state_capture.gd'
+      - 'scenes/main.tscn'
+      - 'docs/UI_V162_STATE.md'
+      - '.github/workflows/v76-ui-foundation-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/main_v76.gd'
+      - 'scripts/main_v77.gd'
+      - 'scripts/main_v78.gd'
+      - 'scripts/main_v79.gd'
+      - 'scripts/main_v80.gd'
+      - 'scripts/v76_ui_foundation_smoke_test.gd'
+      - 'scripts/v77_ui_foundation_balance_smoke_test.gd'
+      - 'scripts/v78_ui_secondary_polish_smoke_test.gd'
+      - 'scripts/v79_ui_store_action_smoke_test.gd'
+      - 'scripts/v80_ui_runtime_cta_smoke_test.gd'
+      - 'scripts/v76_ui_foundation_capture.gd'
+      - 'scripts/v78_ui_secondary_capture.gd'
+      - 'scripts/v80_ui_runtime_state_capture.gd'
+      - 'scenes/main.tscn'
+      - 'docs/UI_V162_STATE.md'
+      - '.github/workflows/v76-ui-foundation-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-ui-foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile v1.62 UI foundation
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v162-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v162-import.log; then
+            echo "Godot reported v1.62 UI compile/import errors"
+            exit 1
+          fi
+
+      - name: Validate shared v1.62 r1 UI contract
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v76_ui_foundation_smoke_test.gd --quit-after 260 2>&1 | tee v162-ui-smoke.log
+          grep -q "v1.62 UI foundation smoke test passed" v162-ui-smoke.log
+
+      - name: Validate v1.62 r1.1 panel balance
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v77_ui_foundation_balance_smoke_test.gd --quit-after 260 2>&1 | tee v162-r11-smoke.log
+          grep -q "v1.62 UI foundation r1.1 smoke test passed" v162-r11-smoke.log
+
+      - name: Validate v1.62 r2 secondary-menu hierarchy
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v78_ui_secondary_polish_smoke_test.gd --quit-after 260 2>&1 | tee v162-r2-smoke.log
+          grep -q "v1.62 UI foundation r2 smoke test passed" v162-r2-smoke.log
+
+      - name: Validate v1.62 r2.1 active Store action path
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v79_ui_store_action_smoke_test.gd --quit-after 260 2>&1 | tee v162-r21-smoke.log
+          grep -q "v1.62 UI foundation r2.1 smoke test passed" v162-r21-smoke.log
+
+      - name: Validate v1.62 r3 runtime CTAs
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v80_ui_runtime_cta_smoke_test.gd --quit-after 260 2>&1 | tee v162-r3-smoke.log
+          grep -q "v1.62 UI foundation r3 runtime CTA smoke test passed" v162-r3-smoke.log
+
+      - name: Render primary 720x1280 menu captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v162
+          xvfb-run -a ./godot --path . --script res://scripts/v76_ui_foundation_capture.gd --quit-after 260 2>&1 | tee v162-ui-capture.log
+          grep -q "v1.62 UI foundation visual capture passed" v162-ui-capture.log
+          test -s artifacts/v162/home.png
+          test -s artifacts/v162/hero.png
+          test -s artifacts/v162/forge.png
+          test -s artifacts/v162/talents.png
+
+      - name: Upload primary v1.62 UI visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v76-ui-foundation-visuals
+          path: artifacts/v162/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Render secondary 720x1280 menu captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v162_secondary
+          xvfb-run -a ./godot --path . --script res://scripts/v78_ui_secondary_capture.gd --quit-after 260 2>&1 | tee v162-secondary-capture.log
+          grep -q "v1.62 secondary menu visual capture passed" v162-secondary-capture.log
+          test -s artifacts/v162_secondary/vault.png
+          test -s artifacts/v162_secondary/missions.png
+          test -s artifacts/v162_secondary/pass.png
+          test -s artifacts/v162_secondary/store.png
+
+      - name: Upload secondary v1.62 UI visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v78-ui-secondary-visuals
+          path: artifacts/v162_secondary/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Render runtime-state UI diagnostic captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v162_runtime
+          xvfb-run -a ./godot --path . --script res://scripts/v80_ui_runtime_state_capture.gd --quit-after 320 2>&1 | tee v162-runtime-capture.log
+          grep -q "v1.62 runtime-state UI diagnostic capture passed" v162-runtime-capture.log
+          test -s artifacts/v162_runtime/settings.png
+          test -s artifacts/v162_runtime/pause.png
+          test -s artifacts/v162_runtime/upgrade.png
+          test -s artifacts/v162_runtime/decision.png
+          test -s artifacts/v162_runtime/game_over.png
+
+      - name: Upload runtime-state v1.62 UI diagnostic gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v80-ui-runtime-state-visuals
+          path: artifacts/v162_runtime/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve v1.61 directional combat lock
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v75_combat_presentation_r32_smoke_test.gd --quit-after 260 2>&1 | tee v161-r32.log
+          grep -q "v1.61 combat presentation r3.2 smoke test passed" v161-r32.log
+
+      - name: Preserve menu routing foundation
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v51_menu_foundation_smoke_test.gd --quit-after 260 2>&1 | tee v51-menu.log
+          grep -q "ONE MORE FLOOR v1.38 3D menu foundation smoke test passed" v51-menu.log
+
+      - name: Preserve v1.52.1 input flow
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 260 2>&1 | tee v66-input.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" v66-input.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v76-ui-foundation-failure-logs
+          path: |
+            v162-import.log
+            v162-ui-smoke.log
+            v162-r11-smoke.log
+            v162-r2-smoke.log
+            v162-r21-smoke.log
+            v162-r3-smoke.log
+            v162-ui-capture.log
+            v162-secondary-capture.log
+            v162-runtime-capture.log
+            v161-r32.log
+            v51-menu.log
+            v66-input.log
+          if-no-files-found: ignore

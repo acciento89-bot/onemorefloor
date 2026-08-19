@@ -1,0 +1,123 @@
+name: v1.60 Production Enemy Silhouette Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/world3d_actor_factory_v160_enemies.gd'
+      - 'scripts/world3d_actor_factory_v160_authored.gd'
+      - 'scripts/world3d_chamber_v160_actors.gd'
+      - 'scripts/main_v74.gd'
+      - 'scripts/v74_enemy_presentation_smoke_test.gd'
+      - 'scripts/v74_enemy_visual_capture.gd'
+      - '.github/workflows/v74-enemy-presentation-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/world3d_actor_factory_v160_enemies.gd'
+      - 'scripts/world3d_actor_factory_v160_authored.gd'
+      - 'scripts/world3d_chamber_v160_actors.gd'
+      - 'scripts/main_v74.gd'
+      - 'scripts/v74_enemy_presentation_smoke_test.gd'
+      - 'scripts/v74_enemy_visual_capture.gd'
+      - '.github/workflows/v74-enemy-presentation-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-production-enemies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile v1.60 enemy presentation
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee enemy-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" enemy-import.log; then
+            echo "Godot reported v1.60 enemy presentation compile errors"
+            exit 1
+          fi
+
+      - name: Validate six production enemy silhouettes
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_enemy_presentation_smoke_test.gd --quit-after 220 2>&1 | tee enemy-smoke.log
+          grep -q "v1.60 production enemy silhouette smoke test passed" enemy-smoke.log
+
+      - name: Validate main v1.60 actor integration
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_meta_environment_smoke_test.gd --quit-after 220 2>&1 | tee main-integration.log
+          grep -q "v1.60 authored meta environment smoke test passed" main-integration.log
+
+      - name: Render enemy gallery and close-ups
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v160_enemies
+          xvfb-run -a ./godot --path . --script res://scripts/v74_enemy_visual_capture.gd --quit-after 260 2>&1 | tee enemy-capture.log
+          grep -q "v1.60 production enemy silhouette visual capture passed" enemy-capture.log
+          test -s artifacts/v160_enemies/enemy_gallery.png
+          test -s artifacts/v160_enemies/goblin.png
+          test -s artifacts/v160_enemies/bat.png
+          test -s artifacts/v160_enemies/skeleton.png
+          test -s artifacts/v160_enemies/ghoul.png
+          test -s artifacts/v160_enemies/necromancer.png
+          test -s artifacts/v160_enemies/warden.png
+
+      - name: Upload enemy visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v74-production-enemy-visuals
+          path: artifacts/v160_enemies/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Re-run v1.53 visual presentation regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v67_3d_visual_presentation_smoke_test.gd --quit-after 220 2>&1 | tee v67-presentation.log
+          grep -q "v1.53 3D visual presentation smoke test passed" v67-presentation.log
+
+      - name: Re-run v1.55 Wanderer production regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v69_wanderer_production_smoke_test.gd --quit-after 220 2>&1 | tee v69-wanderer.log
+          grep -q "v1.55 production Wanderer model takeover smoke test passed" v69-wanderer.log
+
+      - name: Re-run v1.52.1 input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 180 2>&1 | tee input-regression.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" input-regression.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v74-enemy-presentation-failure-logs
+          path: |
+            enemy-import.log
+            enemy-smoke.log
+            main-integration.log
+            enemy-capture.log
+            v67-presentation.log
+            v69-wanderer.log
+            input-regression.log
+          if-no-files-found: ignore

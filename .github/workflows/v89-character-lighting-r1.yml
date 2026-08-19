@@ -1,0 +1,131 @@
+name: v1.64 Character Lighting r1 Review
+
+on:
+  push:
+    branches:
+      - agent/v1.64-character-lighting
+    paths:
+      - 'scripts/world3d_chamber_v164_character_lighting.gd'
+      - 'scripts/main_v85.gd'
+      - 'scenes/main.tscn'
+      - 'scripts/v89_character_lighting_r1_smoke_test.gd'
+      - 'scripts/v89_character_lighting_r1_capture.gd'
+      - '.github/workflows/v89-character-lighting-r1.yml'
+  pull_request:
+    paths:
+      - 'scripts/world3d_chamber_v164_character_lighting.gd'
+      - 'scripts/main_v85.gd'
+      - 'scenes/main.tscn'
+      - 'scripts/v89_character_lighting_r1_smoke_test.gd'
+      - 'scripts/v89_character_lighting_r1_capture.gd'
+      - '.github/workflows/v89-character-lighting-r1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  character-lighting-r1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile active v1.64 stack
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v164-r1-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v164-r1-import.log; then
+            echo "Godot reported v1.64 r1 compile/import errors"
+            exit 1
+          fi
+          grep -q 'path="res://scripts/main_v85.gd"' scenes/main.tscn
+
+      - name: Validate v1.64 character lighting r1
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v89_character_lighting_r1_smoke_test.gd --quit-after 320 2>&1 | tee v164-r1-smoke.log
+          grep -q "v1.64 character lighting r1 smoke test passed" v164-r1-smoke.log
+
+      - name: Preserve accepted v1.63 combined combat stack
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v87_combined_combat_review_smoke_test.gd --quit-after 300 2>&1 | tee v163-combined.log
+          grep -q "v1.63 combined combat identity review smoke test passed" v163-combined.log
+
+      - name: Preserve accepted v1.63 r2.1 boss dominance
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v86_boss_dominance_smoke_test.gd --quit-after 340 2>&1 | tee v163-r21.log
+          grep -q "v1.63 boss dominance r2.1 smoke test passed" v163-r21.log
+
+      - name: Preserve accepted v1.63 r1 projectile identity
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v83_projectile_identity_smoke_test.gd --quit-after 300 2>&1 | tee v163-r1.log
+          grep -q "v1.63 projectile identity r1 smoke test passed" v163-r1.log
+
+      - name: Preserve v1.61 r3.2 danger language
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v75_combat_presentation_r32_smoke_test.gd --quit-after 260 2>&1 | tee v161-r32.log
+          grep -q "v1.61 combat presentation r3.2 smoke test passed" v161-r32.log
+
+      - name: Render matched v1.63 before and v1.64 r1 after frames
+        run: |
+          set -o pipefail
+          rm -rf artifacts/v164_character_lighting_r1
+          mkdir -p artifacts/v164_character_lighting_r1
+          xvfb-run -a ./godot --path . --script res://scripts/v89_character_lighting_r1_capture.gd --quit-after 420 2>&1 | tee v164-r1-capture.log
+          grep -q "v1.64 character lighting r1 matched visual capture passed" v164-r1-capture.log
+          for realm in lower_halls_mobs ossuary_mobs iron_warden; do
+            test -s "artifacts/v164_character_lighting_r1/before_${realm}.png"
+            test -s "artifacts/v164_character_lighting_r1/after_${realm}.png"
+          done
+
+      - name: Upload matched v1.64 r1 review
+        uses: actions/upload-artifact@v4
+        with:
+          name: v89-character-lighting-r1-before-after
+          path: artifacts/v164_character_lighting_r1/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve v1.62 r3 UI contract
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v80_ui_runtime_cta_smoke_test.gd --quit-after 260 2>&1 | tee v162-r3-ui.log
+          grep -q "v1.62 UI foundation r3 runtime CTA smoke test passed" v162-r3-ui.log
+
+      - name: Preserve v1.52.1 input flow
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 260 2>&1 | tee v66-input.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" v66-input.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v89-character-lighting-r1-failure-logs
+          path: |
+            v164-r1-import.log
+            v164-r1-smoke.log
+            v163-combined.log
+            v163-r21.log
+            v163-r1.log
+            v161-r32.log
+            v164-r1-capture.log
+            v162-r3-ui.log
+            v66-input.log
+          if-no-files-found: ignore

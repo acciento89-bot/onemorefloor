@@ -1,0 +1,127 @@
+name: v1.60 Production Combat VFX Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/world3d_chamber_v160_vfx.gd'
+      - 'scripts/world3d_chamber_v160_combat_polish.gd'
+      - 'scripts/world3d_chamber_v160_actors.gd'
+      - 'scripts/main_v74.gd'
+      - 'scripts/v74_combat_vfx_smoke_test.gd'
+      - 'scripts/v74_combat_vfx_visual_capture.gd'
+      - '.github/workflows/v74-combat-vfx-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/world3d_chamber_v160_vfx.gd'
+      - 'scripts/world3d_chamber_v160_combat_polish.gd'
+      - 'scripts/world3d_chamber_v160_actors.gd'
+      - 'scripts/main_v74.gd'
+      - 'scripts/v74_combat_vfx_smoke_test.gd'
+      - 'scripts/v74_combat_vfx_visual_capture.gd'
+      - '.github/workflows/v74-combat-vfx-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-production-combat-vfx:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile v1.60 combat VFX
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee combat-vfx-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" combat-vfx-import.log; then
+            echo "Godot reported v1.60 combat VFX compile errors"
+            exit 1
+          fi
+
+      - name: Validate production combat VFX geometry
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_combat_vfx_smoke_test.gd --quit-after 240 2>&1 | tee combat-vfx-smoke.log
+          grep -q "v1.60 production combat VFX smoke test passed" combat-vfx-smoke.log
+
+      - name: Validate main v1.60 integration
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_meta_environment_smoke_test.gd --quit-after 240 2>&1 | tee main-integration.log
+          grep -q "v1.60 authored meta environment smoke test passed" main-integration.log
+
+      - name: Render real combat VFX captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v160_combat_vfx
+          xvfb-run -a ./godot --path . --script res://scripts/v74_combat_vfx_visual_capture.gd --quit-after 280 2>&1 | tee combat-vfx-capture.log
+          grep -q "v1.60 production combat VFX visual capture passed" combat-vfx-capture.log
+          test -s artifacts/v160_combat_vfx/attack_arc.png
+          test -s artifacts/v160_combat_vfx/skill_ring.png
+          test -s artifacts/v160_combat_vfx/enemy_tells.png
+          test -s artifacts/v160_combat_vfx/player_vfx_closeup.png
+
+      - name: Upload combat VFX visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v74-production-combat-vfx-visuals
+          path: artifacts/v160_combat_vfx/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Re-run v1.48 combat VFX regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v61_character_combat_vfx_smoke_test.gd --quit-after 240 2>&1 | tee v61-combat-vfx.log
+          grep -q "v1.48 character combat VFX smoke test passed" v61-combat-vfx.log
+
+      - name: Re-run v1.60 enemy silhouette regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_enemy_presentation_smoke_test.gd --quit-after 240 2>&1 | tee enemy-regression.log
+          grep -q "v1.60 production enemy silhouette smoke test passed" enemy-regression.log
+
+      - name: Re-run v1.55 Wanderer production regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v69_wanderer_production_smoke_test.gd --quit-after 220 2>&1 | tee v69-wanderer.log
+          grep -q "v1.55 production Wanderer model takeover smoke test passed" v69-wanderer.log
+
+      - name: Re-run v1.52.1 input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 180 2>&1 | tee input-regression.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" input-regression.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v74-combat-vfx-failure-logs
+          path: |
+            combat-vfx-import.log
+            combat-vfx-smoke.log
+            main-integration.log
+            combat-vfx-capture.log
+            v61-combat-vfx.log
+            enemy-regression.log
+            v69-wanderer.log
+            input-regression.log
+          if-no-files-found: ignore
