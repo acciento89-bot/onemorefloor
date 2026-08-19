@@ -26,6 +26,34 @@ func _ready() -> void:
 		})
 	queue_redraw()
 
+func spawn_floor() -> void:
+	super.spawn_floor()
+	_v88_ensure_realm_signature_enemy()
+
+func _v88_ensure_realm_signature_enemy() -> void:
+	# A realm introduction must actually read as that realm. Forgotten Castle
+	# intentionally keeps Skeleton in its mixed pool, but pure RNG could roll an
+	# all-Skeleton room on floor 21 and visually erase the transition. Preserve
+	# the generated room/count while guaranteeing one Castle-signature actor.
+	if current_room.is_empty() or String(current_room.get("type", "")) == "BOSS":
+		return
+	if String(current_room.get("area", "")) != "FORGOTTEN CASTLE":
+		return
+	for enemy in enemies:
+		if String(enemy.get("type", "")) in ["gargoyle", "sentinel", "hexer"]:
+			return
+
+	var replacement: Dictionary = EnemyFactory.make_enemy("gargoyle", int(run.floor_no), rng, player_pos)
+	var room_type := String(current_room.get("type", "COMBAT"))
+	if room_type == "ELITE":
+		replacement = EnemyFactory.empower_elite(replacement)
+	elif room_type == "AMBUSH":
+		replacement["speed"] = float(replacement["speed"]) * 1.12
+	if enemies.is_empty():
+		enemies.append(replacement)
+	else:
+		enemies[0] = replacement
+
 func _v88_release_surfaces_active() -> bool:
 	return OS.get_environment("OMF_FORCE_RELEASE_SURFACES") == "1" or not OS.is_debug_build()
 
