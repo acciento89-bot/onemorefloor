@@ -16,6 +16,7 @@ on:
       - 'scripts/v79_ui_store_action_smoke_test.gd'
       - 'scripts/v76_ui_foundation_capture.gd'
       - 'scripts/v78_ui_secondary_capture.gd'
+      - 'scripts/v80_ui_runtime_state_capture.gd'
       - 'scenes/main.tscn'
       - 'docs/UI_V162_STATE.md'
       - '.github/workflows/v76-ui-foundation-check.yml'
@@ -31,6 +32,7 @@ on:
       - 'scripts/v79_ui_store_action_smoke_test.gd'
       - 'scripts/v76_ui_foundation_capture.gd'
       - 'scripts/v78_ui_secondary_capture.gd'
+      - 'scripts/v80_ui_runtime_state_capture.gd'
       - 'scenes/main.tscn'
       - 'docs/UI_V162_STATE.md'
       - '.github/workflows/v76-ui-foundation-check.yml'
@@ -41,7 +43,7 @@ permissions:
 jobs:
   validate-ui-foundation:
     runs-on: ubuntu-latest
-    timeout-minutes: 24
+    timeout-minutes: 28
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -127,6 +129,26 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Render runtime-state UI diagnostic captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v162_runtime
+          xvfb-run -a ./godot --path . --script res://scripts/v80_ui_runtime_state_capture.gd --quit-after 320 2>&1 | tee v162-runtime-capture.log
+          grep -q "v1.62 runtime-state UI diagnostic capture passed" v162-runtime-capture.log
+          test -s artifacts/v162_runtime/settings.png
+          test -s artifacts/v162_runtime/pause.png
+          test -s artifacts/v162_runtime/upgrade.png
+          test -s artifacts/v162_runtime/decision.png
+          test -s artifacts/v162_runtime/game_over.png
+
+      - name: Upload runtime-state v1.62 UI diagnostic gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v80-ui-runtime-state-visuals
+          path: artifacts/v162_runtime/*.png
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Preserve v1.61 directional combat lock
         run: |
           set -o pipefail
@@ -160,6 +182,7 @@ jobs:
             v162-r21-smoke.log
             v162-ui-capture.log
             v162-secondary-capture.log
+            v162-runtime-capture.log
             v161-r32.log
             v51-menu.log
             v66-input.log
