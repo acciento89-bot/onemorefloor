@@ -1,0 +1,125 @@
+name: v1.61 Combat Presentation Check
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - 'scripts/world3d_chamber_v161_combat_presentation.gd'
+      - 'scripts/main_v75.gd'
+      - 'scenes/main.tscn'
+      - 'scripts/v75_combat_presentation_smoke_test.gd'
+      - 'scripts/v75_combat_presentation_visual_capture.gd'
+      - '.github/workflows/v75-combat-presentation-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/world3d_chamber_v161_combat_presentation.gd'
+      - 'scripts/main_v75.gd'
+      - 'scenes/main.tscn'
+      - 'scripts/v75_combat_presentation_smoke_test.gd'
+      - 'scripts/v75_combat_presentation_visual_capture.gd'
+      - '.github/workflows/v75-combat-presentation-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-combat-presentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile v1.61 combat presentation
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v161-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v161-import.log; then
+            echo "Godot reported v1.61 combat-presentation compile errors"
+            exit 1
+          fi
+
+      - name: Validate v1.61 presentation contract
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v75_combat_presentation_smoke_test.gd --quit-after 260 2>&1 | tee v161-smoke.log
+          grep -q "v1.61 combat presentation smoke test passed" v161-smoke.log
+
+      - name: Validate main scene integration
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_meta_environment_smoke_test.gd --quit-after 260 2>&1 | tee main-integration.log
+          grep -q "v1.60 authored meta environment smoke test passed" main-integration.log
+
+      - name: Render real v1.61 combat captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v161_combat_presentation
+          xvfb-run -a ./godot --path . --script res://scripts/v75_combat_presentation_visual_capture.gd --quit-after 300 2>&1 | tee v161-capture.log
+          grep -q "v1.61 combat presentation visual capture passed" v161-capture.log
+          test -s artifacts/v161_combat_presentation/attack_blade_trail.png
+          test -s artifacts/v161_combat_presentation/skill_arcane_wave.png
+          test -s artifacts/v161_combat_presentation/enemy_segmented_tells.png
+          test -s artifacts/v161_combat_presentation/player_blade_closeup.png
+
+      - name: Upload v1.61 combat visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v75-combat-presentation-visuals
+          path: artifacts/v161_combat_presentation/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Re-run v1.60 combat VFX regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_combat_vfx_smoke_test.gd --quit-after 240 2>&1 | tee v160-combat.log
+          grep -q "v1.60 production combat VFX smoke test passed" v160-combat.log
+
+      - name: Re-run v1.60 Wanderer regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_wanderer_presentation_smoke_test.gd --quit-after 240 2>&1 | tee wanderer.log
+          grep -q "v1.60 production Wanderer presentation smoke test passed" wanderer.log
+
+      - name: Re-run v1.60 enemy regression
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v74_enemy_presentation_smoke_test.gd --quit-after 240 2>&1 | tee enemies.log
+          grep -q "v1.60 production enemy silhouette smoke test passed" enemies.log
+
+      - name: Re-run v1.52.1 input-flow regression
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 180 2>&1 | tee input.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" input.log
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v75-combat-presentation-failure-logs
+          path: |
+            v161-import.log
+            v161-smoke.log
+            main-integration.log
+            v161-capture.log
+            v160-combat.log
+            wanderer.log
+            enemies.log
+            input.log
+          if-no-files-found: ignore
