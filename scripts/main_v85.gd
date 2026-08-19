@@ -1,11 +1,11 @@
 extends "res://scripts/main_v84.gd"
 
-# ONE MORE FLOOR v1.64 r1 — active character lighting/material integration.
+# ONE MORE FLOOR v1.64 r1.1 — active character lighting/material integration.
 # Keeps the accepted v1.63 r2.1 main/UI/gameplay stack and swaps only the 3D
 # combat-world presentation layer to the v1.64 readability pass.
 
 const CharacterLightingWorldV164 = preload("res://scripts/world3d_chamber_v164_character_lighting.gd")
-const V85_FEATURE := "1.64-character-lighting-r1"
+const V85_FEATURE := "1.64-character-lighting-r1.1"
 
 func _ready() -> void:
 	super._ready()
