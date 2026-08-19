@@ -42,7 +42,8 @@
 ; v1.58 composition rescue baseline retained: res://scripts/main_v72.gd
 ; v1.59 authored OBJ environment assets replace Home/Hero/Forge focal blockouts.
 ; v1.60 authored OBJ expansion covers Talents/Vault/Missions/Tower Pass/Store.
-[ext_resource type="Script" path="res://scripts/main_v74.gd" id="1_main"]
+; v1.61 combat presentation replaces visible flat-fan/neon-torus combat effects.
+[ext_resource type="Script" path="res://scripts/main_v75.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]

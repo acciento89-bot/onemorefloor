@@ -1,193 +1,253 @@
 # One More Floor — Project State
 
-Canonical handoff for continued development. Read this file before changing art direction, character proportions, gameplay authority, release policy or regression gates. Repository truth wins over chat memory.
+Canonical handoff for continued development. **Read this file before changing art direction, character proportions, gameplay authority, release policy, or regression gates. Repository truth wins over chat memory.**
 
 ## Current development line
 
-- Milestone: v1.60 authored environment + character-quality milestone
-- Pull request: #82 — `v1.60 authored environment milestone`
-- Branch: `agent/v1.60-meta-environments`
-- Base: `main`
-- Fully validated and visually accepted implementation head: `3e567bf409a8492a55f672b226ce9ce81c16780f`.
-- r11 OBJ topology correction: `4f82a5aeb717a088747eb31849b2d2d97340ba27`.
+### Active milestone — v1.61 Combat Presentation
+- Pull request: **#90 — `v1.61 combat presentation milestone`**
+- Branch: `agent/v1.61-combat-presentation`
+- Base: `agent/v1.60-meta-environments` while PR #82 remains unmerged.
+- **Current fully validated and visually accepted implementation head: `bb367aad35338dd6d32fbdf7d4de4208efef2ad0` (`1.61-combat-presentation-r3.2`).**
+- r3.2 initial implementation: `67347231d92fe510f495eff67bd450105ab2289b`.
+- r3.2 charge-typing implementation fix: `7c31c63615085e5410b6621d15e72e14471f2350`.
+- r3.2 smoke-only typing fix: `0e8c5925598b6fc73c081e527328af3f2d41f2d1` — test code only.
+- r3.2 final ritual-bound correction / accepted implementation: `bb367aad35338dd6d32fbdf7d4de4208efef2ad0`.
+- r3.1 previous accepted fallback: `a6a7395a248295a7c4fdb5e87a767a4496d1ff2e`.
+- r3 implementation: `2233a51327db849d80c3c16968bf507f285cfd1f`.
+- r3 smoke-only activation fix: `6c398cc396e1bb901bba0d26f6cdd59c213286b4` — no visual/gameplay implementation change.
+- r2.2 fallback: `ec29c5bc01db98cda004d62c40a165d9fcd2b27c`.
+- r2.1 motion fallback: `7a00718130119b0a1087a49a9a076115c5ec3836`.
+- r2 impact fallback: `663835db6affff4636acbac84a68aa685e217e43`.
+- r1.1 core combat fallback: `31316503ef60ff316c0d55621773a566f177eb87`.
+- PR stays **DRAFT**.
+- No TestFlight trigger, App Store build-number bump, or upload in v1.61 yet.
+
+### Locked v1.60 fallback / parent milestone
+- PR #82 — `v1.60 authored environment milestone`.
+- Branch: `agent/v1.60-meta-environments`.
+- Fully validated v1.60 implementation head: **`3e567bf409a8492a55f672b226ce9ce81c16780f`**.
 - Wanderer animation/core safe point: `00a78086d47b06093c1c7554c2713067f3def132` (r8.1).
-- Current actor stack: Wanderer r8.1 + accepted Hood r11 + Enemy r2 Goblin/Ghoul/Warden + Enemy r3 Bat/Necromancer + Enemy Detail r4 + accepted Character Surface r5.1.
-- Skeleton remains intentionally unchanged by r4 detail and receives zero additional r5.1 procedural breakup.
-- PR stays DRAFT.
-- Release status: **TestFlight-ready candidate** on implementation head `3e567bf4...`. This means the milestone passed the required code/visual/iOS validation and is ready for a deliberate upload decision; it does NOT authorize an automatic upload.
-- No TestFlight trigger, App Store build-number bump or version jump from micro-passes.
+- r11 OBJ correction: `4f82a5aeb717a088747eb31849b2d2d97340ba27`.
+- v1.60 remains the last formally TestFlight-ready parent candidate until v1.61 gets its own milestone-level iOS/release decision.
 
 ## Non-negotiable continuity rules
 
 1. Preserve imported v1.55 glTF animation authority and articulated pivots.
-2. Do not casually change combat authority, targeting, hitboxes, input, saves or the 2D HUD during presentation work.
-3. Do not reintroduce prototype rings, debug discs/seams, generic floor blockouts, old rounded Wanderer geometry or retired realm blockouts.
-4. Never regress to broad armor-mannequin, blockout or single-color-plastic character reads.
-5. Prefer authored geometry/silhouette work over merely scaling old primitives.
-6. CI green is necessary but not sufficient for visual acceptance. Runtime/gallery/close-up captures decide visual lock.
-7. After every meaningful accepted or rejected pass, update this file.
-8. A visually rejected pass remains rejected even if CI was green.
+2. Do not change combat authority, timing, damage, targeting, hitboxes, input, saves, progression, or the 2D HUD during presentation work.
+3. Do not reintroduce prototype neon/full rings, debug discs/seams, old blockouts, rounded Wanderer geometry, or retired realm blockouts.
+4. Never regress to armor-mannequin, blockout, single-color-plastic, or obvious debug-VFX reads.
+5. CI green is necessary but not sufficient; runtime/gallery/gameplay-distance captures decide visual acceptance.
+6. A visually rejected pass stays rejected even if technically green.
+7. Update this file after every meaningful accepted/rejected pass.
+8. v1.61 remains presentation-only on top of v1.60 unless a separately scoped gameplay milestone is explicitly started.
+9. Do not reopen accepted Wanderer/enemy anatomy while polishing combat.
+10. Preserve accepted v1.61 layers as rollback points; prefer narrow subclasses rather than rewriting validated lower layers.
+11. Primary danger telegraphs are gameplay-significant: visual language may be improved, but inherited warning window, position, radius scale, attack behavior and readability must not be reduced or changed.
 
-## Accepted environment direction
+## Locked v1.60 art direction
 
-- Authored OBJ environments cover Home, Hero, Forge, Talents, Vault, Missions, Tower Pass and Store.
-- Floors 1-50 use authored production composition rather than the legacy prototype grid.
-- Realm identities: Lower Halls, Ossuary, Iron Bastion, Rift Descent and Starless Spire.
-- Authored focals include Ossuary reliquary altar, Iron Bastion forge engine, Rift anchor gate and Starless Starwell dais.
-- GL Compatibility surface-depth shading remains part of the mobile production look.
-- Orthographic combat camera remains intentionally lower/stabler for stronger isometric depth.
+### Environment
+- Authored OBJ environments cover Home, Hero, Forge, Talents, Vault, Missions, Tower Pass, and Store.
+- Floors 1–50 use authored production composition.
+- Realms: Lower Halls, Ossuary, Iron Bastion, Rift Descent, Starless Spire.
+- GL Compatibility surface-depth shading and the lower/stabler orthographic combat camera remain part of the accepted mobile look.
 
-## Wanderer — accepted direction
+### Wanderer
+- Accepted stack: Wanderer r8.1 + Hood r11.
+- Narrow human central mass, asymmetric shoulders, slim human limbs, overlapping shoulder armor, layered footwear, restrained ArcaneCore/belt/eyes.
+- Dark cloth / cool steel / restrained brass / arcane accents.
+- Preserve cape, blade, imported animation and pivots.
+- Hood r9 is rollback only; r10 rejected; r11 canonical.
 
-Locked visual rules:
-- narrow human central mass
-- deliberate shoulder asymmetry
-- slim/human limbs rather than rods or toy armor
-- overlapping shoulder armor
-- layered footwear rather than block feet
-- restrained chest sigil / ArcaneCore / belt / eyes
-- dark cloth / cool steel / restrained brass / arcane accent separation
-- preserve cape, blade, imported animation and pivot readability
+### Enemies
+- r2: Goblin/Ghoul/Warden anatomy.
+- r3: Bat/Necromancer anatomy.
+- r4: restrained detail layer; Skeleton intentionally receives no r4.
+- r5.1: accepted subtle surface breakup; Skeleton gets no extra breakup.
+- Do not restore r1 overlays or rejected r5 camouflage/blotchy strengths.
 
-### r3-r6 foundation
+# v1.61 Combat Presentation history
 
-- r3 rebuilt Hood/Chestplate/Mask as authored OBJ geometry.
-- r4 rebuilt tailored torso and layered cape.
-- r5 replaced rod-like authored arm/leg/gauntlet geometry with stronger anatomy.
-- r6 `090b7ce8a702229b9d52600f9d540f68cb73ac9c` remains an older safe rollback point for the modular character direction.
+## r1 — technically green, visually rejected
+- Introduced the presentation-only v1.61 layer, attack ArrayMesh ribbon, segmented skill waves, segmented enemy tells and suppression of old player fan/torus/chest-sigil/skill-crown presentation.
+- Rejected because attack remained too broad/half-moon-like and segments were too chunky.
 
-### r7 — technically valid, visually rejected
+## r1.1 — accepted core combat baseline
+Implementation: `31316503ef60ff316c0d55621773a566f177eb87`.
+- Narrower attack ribbon/hot edge/ground contact.
+- Thinner skill waves/runes and enemy tells.
+- Attack reads as a quick blade streak instead of the old filled yellow fan.
+- Skill reads as segmented arcane energy instead of a full neon tube.
 
-Close-ups still showed a dominant purple chest diamond, detached-looking vertical arms and smooth cap-like hood. Do not restore this look.
+## r2 — accepted impact language
+Implementation: `663835db6affff4636acbac84a68aa685e217e43`.
+- Projectile/collision/combat-authority impact rings replaced by compact radial starbursts.
+- Critical camera response capped to a restrained `camera_kick` request of 0.24.
+- No hit radius, timing or damage changes.
 
-### r8.1 — accepted animation/core fix
+## r2.1 — accepted movement language
+Implementation: `7a00718130119b0a1087a49a9a076115c5ec3836`.
+- v1.49 Wanderer motion Ring + three Rune boxes replaced by three small directional floor streaks.
+- Trigger/distance threshold/pool/duration preserved.
 
-Commit: `00a78086d47b06093c1c7554c2713067f3def132`.
+## r2.2 — accepted v1.46 death-burst cleanup
+Implementation: `ec29c5bc01db98cda004d62c40a165d9fcd2b27c`.
+- Exact source of the earlier three violet circles was verified as inherited v1.46 `death_burst_pool`: Ring + four shards triggered when enemies disappear.
+- Replaced with compact radial dissolve/star burst; expansion/rotation/lift reduced.
+- Dedicated run `32251699332` fully green.
+- Isolated `death_bursts.png`, `movement_streaks.png`, `impact_bursts.png` accepted.
 
-- Root cause of persistent large ArcaneCore was the imported Skill animation explicitly animating its scale.
-- r8.1 constrains ArcaneCore scale animation keys while retaining animation authority.
-- Runtime captures confirmed the large chest diamond is gone.
-- Small local arm/gauntlet angles reduce the two-vertical-bars read without changing pivots.
+## Coherent gameplay review after r2.2
+Diagnostic commit: `1862a1b7b71ecc353d37b2e73dc05030e9761873`.
+- Added a combined gameplay-distance capture without changing r2.2 implementation.
+- Attack/skill/impact/death worked together, but the frozen frames showed large archetype-colored circles around enemies and a circular loot/beam language.
+- Initial working hypothesis was that the enemy circles were persistent v1.49 grounding. That hypothesis was incomplete.
 
-### Hood r9 — safe fallback, no longer canonical
+## r3 — accepted Grounding + Loot sub-layer
+Implementation: `2233a51327db849d80c3c16968bf507f285cfd1f`.
+Smoke-only test fix: `6c398cc396e1bb901bba0d26f6cdd59c213286b4`.
 
-Bundle: `6ed71e52d4c7aea2db8283d55ad0439696027de3`.
+r3 presentation changes:
+- v1.49 secondary `EnemyGround` Ring meshes replaced by small broken/tapered ground-anchor ArrayMeshes with subdued neutral/arcane/elite materials.
+- v1.46 loot `FloorGlow` circle replaced by compact radial glint geometry.
+- tall cylindrical loot `Beam` replaced by a short tapered/crossed shard glint.
+- loot values, positions, pools and triggers unchanged.
+- primary danger telegraphs explicitly preserved.
 
-- Technically clean and better than the old rounded hood.
-- Rejected as final because the crown/front still read too rectangular/boxy.
-- Keep the original r9 OBJ only as rollback insurance.
+Important test note:
+- the first r3 smoke failed only because its automatic state did not activate secondary grounding in that headless test setup.
+- implementation compiled and r2/r2.1/r2.2 remained green.
+- `6c398cc3...` changed only the smoke to exercise the inherited grounding/loot paths deterministically; it did not change the game visuals.
 
-### Hood r10 — technically valid, visually rejected
+Visual review proved r3 loot was cleaner, but the large archetype-colored circles remained in the frozen spawn/kill screenshots. This led to the exact source investigation below.
 
-Candidate bundle: `4001178b8e7069f072ebe6a255ee8856490377f6`.
+## r3.1 — accepted Spawn/Death Signature Language
+Implementation: `a6a7395a248295a7c4fdb5e87a767a4496d1ff2e`.
+Dedicated workflow: `32257942233` — fully green.
 
-- CI passed, but side drape forms read like horn-like points around the head.
-- r10 is not canonical and must not be restored.
+Corrected diagnosis:
+- The dominant archetype-colored rings in the frozen combined review were primarily inherited **v1.48 `spawn_signature_pool` / `death_signature_pool`** effects, not persistent enemy grounding.
+- Each v1.48 signature used a Ring radius 0.52 plus five vertical Shard boxes.
+- Spawn/death signature duration is 0.52 s.
+- Old animation made spawn scale from 1.42 -> 0.72 and death from 0.62 -> 2.05 while rotating/lifting, which made a frozen frame look like persistent circular clutter.
 
-### Hood r11 — accepted canonical hood
+r3.1 changes:
+- signature Ring -> five broken inward bracket segments, no continuous circle.
+- five rod-like Shards -> short tapered ArrayMesh shards.
+- archetype color remains, preserving spawn/death identity.
+- signature trigger, pool and 0.52-s duration remain unchanged.
+- visual animation restrained: spawn roughly 1.10 -> 0.74; death roughly 0.74 -> 1.35, with much lower rotation/lift.
 
-Accepted implementation head: `3e567bf409a8492a55f672b226ce9ce81c16780f`.
-Topology correction: `4f82a5aeb717a088747eb31849b2d2d97340ba27`.
+### r3.1 manual image acceptance
+`r31_spawn_signatures.png` — accepted: large full colored circles are gone; spawn uses compact broken brackets/shards.
 
-- Separate asset: `assets/models/actors/v160/wanderer_hood_r11.obj`; r9 remains intact as rollback.
-- Factory layer swaps only the visible `V160AuthoredHood` mesh and keeps the existing animated node/pivot/material contract.
-- Shape strategy is a continuous smoother cloth/cowl volume: no r9 box crown and no r10 horn-like side points.
-- Final valid OBJ uses 142 vertices and 280 faces with face indices bounded to the real vertex count.
-- An earlier r11 candidate at head `b36dd73e92b3105d8997f50bff0bf0c5fa43b56b` contained invalid phantom face indices up to 182 while only 142 vertices existed. Godot correctly rejected the OBJ and this cascaded into many red workflows. This was a data/import defect, not a gameplay or enemy regression.
-- The corrected OBJ at `4f82a5ae...` restored successful Godot headless project parsing.
-- The production Wanderer gate was hardened at `3e567bf4...`: r11 asset must import, the r11 snapshot marker/version must exist, and the visible `V160AuthoredHood.mesh.resource_path` must exactly equal the r11 OBJ path.
-- Final valid runtime idle/attack captures were manually reviewed and accepted: the hood reads as one continuous cowl, avoids the r9 boxiness/r10 horns, and retains mask/eye readability.
-- Production Wanderer on `3e567bf4...` passed compile, explicit r11 validation, main integration, runtime/close-up renders, v1.55 regression and v1.52.1 input-flow regression.
+`r31_steady_attack_pressure.png` — accepted: transient signature pools are hidden for diagnosis; archetype-colored ring clutter disappears; remaining red shapes are the primary danger telegraphs.
 
-## Enemies
+`r31_kill_loot_signatures.png` — accepted: giant green death/signature ring is gone; death is compact and loot reads as small gold glints.
 
-Authored body bases exist for Goblin, Bat, Skeleton, Ghoul, Necromancer and Warden. Authored OBJ cores own body silhouette; weapons, eyes, runes and restrained archetype accents may remain as separate detail layers.
+## r3.2 — accepted current visual lock: Directional Danger Language
+Initial implementation: `67347231d92fe510f495eff67bd450105ab2289b`.
+Charge-typing implementation fix: `7c31c63615085e5410b6621d15e72e14471f2350`.
+Smoke-only typing fix: `0e8c5925598b6fc73c081e527328af3f2d41f2d1`.
+Final accepted implementation: **`bb367aad35338dd6d32fbdf7d4de4208efef2ad0`**.
+Dedicated workflow: **`32260926762` — fully green.**
 
-### Enemy r1 — technically valid, visually rejected
+Root cause / semantic recovery:
+- r3.1 correctly exposed that the remaining repeated red shapes were true primary danger telegraphs.
+- the v1.61 3D layer still presented nearly every warning as the same rotating segmented ring.
+- investigation of the established 2D combat implementation showed that focused attacks had previously used a **player-directed warning arc plus an aim line**, so directionality was already part of the intended readable language.
+- runtime cooldown semantics were verified before implementation: `dash/dive/lunge` are fast movement attacks, `blink/phase/teleport` are relocation/phase warnings, `slam` is radial, and `summon` is ritual/cast behavior.
 
-Scaling/material tuning and restored chunky overlays did not solve anatomy. Do not restore the r1 overlay approach.
+r3.2 changes only presentation geometry/orientation:
+- `attack_cd` / focused attacks -> compact forward arc + spear/aim marker pointing toward the Wanderer.
+- `dash_cd`, `dive_cd`, `lunge_cd` -> two compact lane rails + forward charge arrow pointing toward the Wanderer.
+- `blink_cd`, `phase_cd`, `teleport_cd` -> broken phase-bracket language rather than a full ring.
+- `slam_cd` / crown cast -> radial perimeter teeth.
+- `summon_cd` -> inward ritual markers/ticks.
+- boss `cast_kind == "fan"` maps to focused directional language; `cast_kind == "crown"` maps to slam language.
+- the lowest active inherited cooldown still selects the warning family.
+- inherited warning trigger/window remains the same 0.34-s logic.
+- inherited telegraph position, pulse and `radius / 24.0` scale remain owned by the old gameplay path and are not changed by r3.2.
+- dedicated smoke verifies the r3.2 mesh swap does not change inherited tell scale.
+- dedicated smoke additionally verifies all five local tell meshes remain inside the accepted 0.68 local bound.
+- Focus and Charge orientation are hard-checked against the Wanderer's actual world position.
 
-### Enemy r2 — accepted anatomy baseline
+Implementation/test history that must not be repeated:
+- initial r3.2 compile failure was a GDScript type-inference issue in the charge mesh loop, not a design failure; `7c31c636...` added explicit local float typing.
+- the next failure was smoke-test-only type inference for direction math; `0e8c5925...` changed only test typing.
+- once real geometry checks ran, Ritual alone exceeded the 0.68 local safety bound because its tick center sat at 0.68 plus radial thickness. **The test was not weakened.**
+- `bb367aad...` moved only Ritual ticks inward (`0.64` center, narrower tangential half-width), after which all five tell families passed the original strict bound.
 
-Bundle: `6ed71e52d4c7aea2db8283d55ad0439696027de3`.
+### r3.2 manual image acceptance
+`r32_focus_pressure.png` — **accepted**:
+- repeated full/near-full enemy rings are gone.
+- focused warning arcs sit in front of the actors and point toward the Wanderer.
+- actors remain visually dominant; warnings read as intent instead of generic floor decoration.
 
-- Goblin: readable arms/hands/legs, less spherical silhouette.
-- Ghoul: coherent hunched body line with low hands/crouched legs.
-- Warden: longer human proportions and slimmer armored body mass.
+`r32_mobility_phase.png` — **accepted**:
+- movement/charge warnings and phase warnings no longer share the same silhouette.
+- charge language is directional while phase language is broken/non-directional.
+- warning footprint remains restrained at gameplay distance.
 
-### Enemy r3 — accepted Bat + Necromancer anatomy baseline
+`r32_slam_ritual.png` — **accepted**:
+- Warden/slam reads as radial perimeter teeth.
+- ritual/cast reads as separate inward markers rather than another rotating circle.
+- both remain inside the preserved visual radius bound.
 
-Validation bundle: `4001178b8e7069f072ebe6a255ee8856490377f6`.
+Therefore **r3.2 / `bb367aad...` is the current accepted v1.61 visual implementation baseline.**
 
-- Bat: smaller body, articulated-looking wing structure and angled membrane sections; removes board-wing read.
-- Necromancer: tapered multi-stage robe, split front panels, mantle/collar, faceted hood and angled sleeves; removes robe-block/arm-stick read.
+## Current v1.61 validation
 
-### Enemy Detail r4 — accepted production-detail baseline
+Dedicated `v1.61 Combat Presentation Check` run **`32260926762`** on `bb367aad...` is fully green:
+- Godot 4.7.1 compile/import: PASS
+- r2 impact contract: PASS
+- r2.1 motion contract: PASS
+- r2.2 death contract: PASS
+- r3 grounding + loot contract: PASS
+- r3.1 spawn/death signature contract: PASS
+- r3.2 directional danger-language / preserved-radius contract: PASS
+- main scene / inherited v1.60 integration: PASS
+- isolated r2.2 diagnostics: PASS
+- coherent r2.2 review baseline: PASS
+- r3 gameplay-distance comparison: PASS
+- r3.1 spawn / steady-state / kill+loot captures: PASS
+- r3.2 focus / mobility-phase / slam-ritual captures: PASS
+- v1.60 Combat VFX regression: PASS
+- v1.60 Wanderer/r11 regression: PASS
+- v1.60 six-enemy regression: PASS
+- v1.52.1 tutorial/game-over input-flow regression: PASS
 
-Implementation: `4eed3856434c71c3f3f4b430b69cce866679e121`.
+## Required gates for future v1.61 changes
 
-- Goblin: crossed leather harness, narrow belt, restrained scrap bracer.
-- Bat: thin leading/finger wing bones over r3 membranes.
-- Ghoul: shallow dark rib planes and short bone/clavicle accents.
-- Necromancer: dark mantle edge, robe seams, waist band and restrained clasp.
-- Warden: thin chest plate, waist line, knee caps and shoulder trim.
-- Skeleton intentionally receives NO r4 detail layer.
-- Smoke gate explicitly requires r4 on the five changed archetypes and rejects it on Skeleton.
-
-### Character Surface r5 — technically valid, visually rejected
-
-Implementation: `4f7d9c0a6f90ca2e43eed0f8c07f034fdbf76068`.
-
-- Character-only procedural tonal/roughness shader was technically green.
-- Manual gallery review rejected the original strength because Goblin/Ghoul/Warden showed recognizable blotchy/camouflage-like patches.
-- Do not restore initial r5 strengths merely because its CI was green.
-
-### Character Surface r5.1 — accepted body-surface baseline
-
-Implementation: `cb47de3d52e29b8b8a4250e8b5f64b15e8e387b9`.
-
-- Keeps the character-only mobile shader architecture but greatly reduces visible color modulation.
-- Remaining signal is subtle tonal/roughness variation rather than visible patterning.
-- Environment and Wanderer surface shaders remain untouched.
-- Skeleton receives zero extra r5.1 breakup.
-- Side-by-side image review against r4 accepted r5.1: no camouflage read, Necromancer remains dark/cloth-like, Bat stays clean/readable, Skeleton effectively unchanged.
-
-## Validated milestone gates on `3e567bf4...`
-
-The release-relevant v1.60 code head is clean:
-- Godot project parse/import + main scene + gameplay + Deep Tower + progression/release smoke chain: PASS
-- Production Wanderer including hard r11 asset/marker/path contract, runtime captures, v1.55 and v1.52.1: PASS
-- Production Enemy including all six silhouettes, gallery, v1.53, v1.55 and v1.52.1: PASS
-- v1.54 real-model/glTF intake and animation aliases: PASS
-- v1.60 Material Depth including visual captures and focal/input regressions: PASS
-- v1.60 Authored Environment including meta/tower captures, v1.59 and input regressions: PASS
-- iOS playtest: Godot import, Xcode export and unsigned iPhone/iPad device build/package: PASS
-- TestFlight upload step in the iOS workflow: intentionally SKIPPED; no build was uploaded by this milestone validation.
-
-## Required regression gates for future changes
-
-Before later release/upload decisions preserve and rerun the relevant checks, especially:
-- v1.60 Production Wanderer including explicit r11 asset/marker/path contract and runtime close-ups
-- v1.60 Production Enemy Silhouette including gallery/close-ups
-- r4 enemy detail contract: five detailed archetypes, Skeleton unchanged
-- r5.1 body-surface contract: character-only shader, no extra Skeleton breakup, no environment shader replacement
-- v1.55 Wanderer production regression
-- v1.54 real-model intake regression
-- v1.53 visual presentation regression
-- v1.52.1 input-flow regression
-- material-depth gate
-- authored environment/tower/meta/focal checks
-- Godot project parse/import and main gameplay smoke
-- iOS playtest before a TestFlight decision
+Preserve at minimum:
+- r2 impact contract.
+- r2.1 movement contract.
+- r2.2 death-burst contract + isolated diagnostics.
+- r3 grounding + loot contract.
+- r3.1 spawn/death signature contract + separated spawn/steady/kill captures.
+- r3.2 directional danger-language contract + strict inherited scale/local-bound checks + focus/mobility/slam visual captures.
+- v1.60 Combat VFX regression.
+- v1.60 Wanderer/r11 regression.
+- v1.60 all-six-enemy regression.
+- v1.52.1 input-flow regression.
+- main scene / v1.60 authored environment integration.
+- Godot project parse/import.
+- iOS playtest/device build before any v1.61 TestFlight decision.
 
 ## Current next priorities
 
-1. Preserve r8.1 + accepted Hood r11. Do not return to r9/r10 unless intentionally rolling back a proven regression.
-2. Preserve Enemy r2/r3 anatomy + r4 details + r5.1 subtle surface baseline. Do not reset enemy silhouettes again.
-3. The invalid-r11 import incident is fixed; do not confuse the old cascade of red runs from `b36dd73e...` with current gameplay quality.
-4. v1.60 is now a TestFlight-ready candidate at the validated implementation head. Decide the upload deliberately as a milestone action, not as an automatic side effect.
-5. If continuing art before TestFlight, only start a new clearly scoped milestone; do not reopen already accepted r11/enemy anatomy without evidence from gameplay captures.
+1. **Preserve `bb367aad...` as the accepted r3.2 implementation baseline.**
+2. Do not reopen Wanderer r11, enemy anatomy/surface baselines, r3.1 signature language, or r3.2 danger radii while continuing combat work.
+3. Do not restore a universal enemy warning ring. Any future tell work must keep the accepted Focus / Charge / Phase / Slam / Ritual semantic split.
+4. Next coherent gameplay-distance review should identify the next largest remaining prototype read rather than adding effect quantity. Candidate areas: projectile/trail identity, boss-specific attack presentation, or overly dominant player-feedback elements visible only now that enemy floor clutter is reduced.
+5. Keep all accepted visual feedback presentation-only unless a separately scoped gameplay milestone is explicitly opened.
+6. No TestFlight build for individual presentation micro-passes.
+7. Before promoting v1.61 to TestFlight-ready status, run the v1.61 iOS playtest/device-build gate on the accepted implementation and make a deliberate milestone-level upload decision.
 
 ## Release policy
 
-No TestFlight upload merely because commits were added. The current v1.60 implementation has passed the milestone gates and may be uploaded when deliberately chosen. Any later code/art changes require their own relevant regression pass before replacing `3e567bf4...` as the validated implementation head.
+- PR #82/v1.60 remains the last formally TestFlight-ready parent candidate.
+- PR #90/v1.61 remains a stacked **Draft** milestone.
+- Current accepted visual implementation is `bb367aad...`, but it is **not authorized for TestFlight upload yet**.
+- No automatic build bump, version jump, App Store submission or TestFlight upload from micro-passes.
