@@ -6,7 +6,7 @@ extends "res://scripts/world3d_chamber_v160_atmosphere.gd"
 # ribbon and segmented-wave geometry. Gameplay timing, radii, hitboxes,
 # targeting, saves, input and the v1.60 actor/environment baselines stay inherited.
 
-const COMBAT_PRESENTATION_VERSION := "1.61-combat-presentation-r1"
+const COMBAT_PRESENTATION_VERSION := "1.61-combat-presentation-r1.1"
 
 var v161_attack_trail: MeshInstance3D
 var v161_attack_hot_edge: MeshInstance3D
@@ -97,23 +97,23 @@ func debug_snapshot() -> Dictionary:
 	return data
 
 func _build_v161_combat_materials() -> void:
-	v161_attack_trail_material = _transparent_emissive(Color("e3ad55", 0.34), 0.82)
+	v161_attack_trail_material = _transparent_emissive(Color("e3ad55", 0.24), 0.68)
 	v161_attack_trail_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	v161_attack_hot_material = _transparent_emissive(Color("fff2bd", 0.86), 1.78)
+	v161_attack_hot_material = _transparent_emissive(Color("fff2bd", 0.78), 1.62)
 	v161_attack_hot_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	v161_attack_contact_material = _transparent_emissive(Color("d8893f", 0.20), 0.52)
+	v161_attack_contact_material = _transparent_emissive(Color("d8893f", 0.14), 0.42)
 	v161_attack_contact_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 
-	v161_skill_wave_material = _transparent_emissive(Color("8f63d2", 0.34), 0.86)
+	v161_skill_wave_material = _transparent_emissive(Color("8f63d2", 0.28), 0.74)
 	v161_skill_wave_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	v161_skill_inner_material = _transparent_emissive(Color("c7a5ff", 0.26), 0.72)
+	v161_skill_inner_material = _transparent_emissive(Color("c7a5ff", 0.22), 0.62)
 	v161_skill_inner_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	v161_skill_rune_material = _transparent_emissive(Color("e2d2ff", 0.62), 1.22)
+	v161_skill_rune_material = _transparent_emissive(Color("e2d2ff", 0.54), 1.06)
 	v161_skill_rune_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 
-	v161_enemy_tell_material = _transparent_emissive(Color("e96c58", 0.30), 0.62)
+	v161_enemy_tell_material = _transparent_emissive(Color("e96c58", 0.24), 0.54)
 	v161_enemy_tell_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	v161_warden_tell_material = _transparent_emissive(Color("ff4d43", 0.38), 0.82)
+	v161_warden_tell_material = _transparent_emissive(Color("ff4d43", 0.32), 0.72)
 	v161_warden_tell_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 
 func _build_v161_player_presentation() -> void:
@@ -122,34 +122,34 @@ func _build_v161_player_presentation() -> void:
 
 	v161_attack_trail = MeshInstance3D.new()
 	v161_attack_trail.name = "V161AttackBladeTrail"
-	v161_attack_trail.mesh = _build_v161_blade_ribbon(1.18, 0.54, -1.08, 1.08, 34, 0.04, 0.34)
+	v161_attack_trail.mesh = _build_v161_blade_ribbon(1.30, 0.30, -0.88, 0.88, 36, 0.08, 0.26)
 	v161_attack_trail.material_override = v161_attack_trail_material
-	v161_attack_trail.position = Vector3(0.0, 0.22, -0.34)
+	v161_attack_trail.position = Vector3(0.0, 0.22, -0.40)
 	v161_attack_trail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	v161_attack_trail.visible = false
 	player_root.add_child(v161_attack_trail)
 
 	v161_attack_hot_edge = MeshInstance3D.new()
 	v161_attack_hot_edge.name = "V161AttackHotEdge"
-	v161_attack_hot_edge.mesh = _build_v161_blade_ribbon(1.42, 0.115, -1.04, 1.04, 36, 0.14, 0.46)
+	v161_attack_hot_edge.mesh = _build_v161_blade_ribbon(1.48, 0.065, -0.86, 0.86, 38, 0.17, 0.33)
 	v161_attack_hot_edge.material_override = v161_attack_hot_material
-	v161_attack_hot_edge.position = Vector3(0.0, 0.24, -0.34)
+	v161_attack_hot_edge.position = Vector3(0.0, 0.24, -0.40)
 	v161_attack_hot_edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	v161_attack_hot_edge.visible = false
 	player_root.add_child(v161_attack_hot_edge)
 
 	v161_attack_contact = MeshInstance3D.new()
 	v161_attack_contact.name = "V161AttackGroundContact"
-	v161_attack_contact.mesh = _build_v161_arc_strip(1.06, 1.34, -1.02, 1.02, 28)
+	v161_attack_contact.mesh = _build_v161_arc_strip(1.18, 1.38, -0.84, 0.84, 28)
 	v161_attack_contact.material_override = v161_attack_contact_material
-	v161_attack_contact.position = Vector3(0.0, 0.075, -0.28)
+	v161_attack_contact.position = Vector3(0.0, 0.075, -0.36)
 	v161_attack_contact.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	v161_attack_contact.visible = false
 	player_root.add_child(v161_attack_contact)
 
 	v161_skill_wave_outer = MeshInstance3D.new()
 	v161_skill_wave_outer.name = "V161SkillWaveOuter"
-	v161_skill_wave_outer.mesh = _build_v161_segmented_ring(1.40, 1.69, 12, 0.62)
+	v161_skill_wave_outer.mesh = _build_v161_segmented_ring(1.46, 1.64, 14, 0.48)
 	v161_skill_wave_outer.material_override = v161_skill_wave_material
 	v161_skill_wave_outer.position = Vector3(0.0, 0.085, 0.0)
 	v161_skill_wave_outer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -158,7 +158,7 @@ func _build_v161_player_presentation() -> void:
 
 	v161_skill_wave_inner = MeshInstance3D.new()
 	v161_skill_wave_inner.name = "V161SkillWaveInner"
-	v161_skill_wave_inner.mesh = _build_v161_segmented_ring(0.84, 1.02, 8, 0.54)
+	v161_skill_wave_inner.mesh = _build_v161_segmented_ring(0.90, 1.02, 10, 0.42)
 	v161_skill_wave_inner.material_override = v161_skill_inner_material
 	v161_skill_wave_inner.position = Vector3(0.0, 0.105, 0.0)
 	v161_skill_wave_inner.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -167,7 +167,7 @@ func _build_v161_player_presentation() -> void:
 
 	v161_skill_runes = MeshInstance3D.new()
 	v161_skill_runes.name = "V161SkillRunes"
-	v161_skill_runes.mesh = _build_v161_radial_runes(8, 1.20, 0.11, 0.28)
+	v161_skill_runes.mesh = _build_v161_radial_runes(8, 1.20, 0.075, 0.21)
 	v161_skill_runes.material_override = v161_skill_rune_material
 	v161_skill_runes.position = Vector3(0.0, 0.135, 0.0)
 	v161_skill_runes.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -175,9 +175,9 @@ func _build_v161_player_presentation() -> void:
 	player_root.add_child(v161_skill_runes)
 
 func _upgrade_v161_enemy_presentation() -> void:
-	v161_enemy_tell_mesh = _build_v161_segmented_ring(0.51, 0.71, 10, 0.64)
-	v161_head_rune_mesh = _build_v161_segmented_ring(0.25, 0.34, 8, 0.56)
-	v161_warden_shock_mesh = _build_v161_segmented_ring(0.58, 0.78, 12, 0.48)
+	v161_enemy_tell_mesh = _build_v161_segmented_ring(0.54, 0.68, 12, 0.46)
+	v161_head_rune_mesh = _build_v161_segmented_ring(0.27, 0.33, 8, 0.44)
+	v161_warden_shock_mesh = _build_v161_segmented_ring(0.62, 0.76, 14, 0.42)
 
 	for value in telegraph_pool:
 		var tell := value as MeshInstance3D

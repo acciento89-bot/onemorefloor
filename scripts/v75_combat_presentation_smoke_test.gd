@@ -26,7 +26,7 @@ func _run() -> void:
 		return
 
 	var snapshot: Dictionary = world.debug_snapshot()
-	if String(snapshot.get("combat_presentation_v161_version", "")) != "1.61-combat-presentation-r1":
+	if String(snapshot.get("combat_presentation_v161_version", "")) != "1.61-combat-presentation-r1.1":
 		_fail("v1.61 presentation marker missing")
 		return
 	if not bool(snapshot.get("combat_presentation_v161_attack_ribbon", false)):
