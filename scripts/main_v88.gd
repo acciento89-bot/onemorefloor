@@ -1,12 +1,15 @@
 extends "res://scripts/main_v87.gd"
 
-# ONE MORE FLOOR v1.66 release hardening — production monetization surface guard.
+# ONE MORE FLOOR v1.66 release hardening — production monetization/legal guard.
 # The native StoreKit/ad provider is intentionally not wired in this release.
 # Debug builds keep the existing purchase simulator for regression coverage,
 # while production/TestFlight builds expose no dead Store route and grant the
-# Tower Pass bonus track for free. No gameplay/economy prices are fabricated.
+# Tower Pass bonus track for free. The Privacy Policy remains reachable from
+# Settings in every build.
 
 const V88_RELEASE_HARDENING := "1.66-release-surfaces-r1"
+const V88_PRIVACY_URL := "https://kamilunavo.com/privacy"
+const V88_PRIVACY := Rect2(170, 864, 380, 44)
 
 func _ready() -> void:
 	super._ready()
@@ -19,6 +22,7 @@ func _ready() -> void:
 			"release_mode": _v88_release_surfaces_active(),
 			"store_visible": not _v88_release_surfaces_active(),
 			"bonus_track_unlocked": bool(monetization.premium_pass_unlocked()) if monetization != null else false,
+			"privacy_link": _v88_privacy_link_ready(),
 		})
 	queue_redraw()
 
@@ -41,8 +45,14 @@ func _v88_apply_release_entitlements() -> void:
 	# the free release until a real native provider is deliberately introduced.
 	monetization.premium_pass_season = monetization.current_season_key()
 
+func _v88_privacy_link_ready() -> bool:
+	return V88_PRIVACY_URL.begins_with("https://") \
+		and _v50_rect_inside_canvas(V88_PRIVACY) \
+		and V88_PRIVACY.size.x >= 42.0 \
+		and V88_PRIVACY.size.y >= 42.0
+
 func _v88_release_surface_ready() -> bool:
-	if not _v87_character_form_ready():
+	if not _v87_character_form_ready() or not _v88_privacy_link_ready():
 		return false
 	if not _v88_release_surfaces_active():
 		return true
@@ -73,7 +83,19 @@ func draw_home() -> void:
 		true
 	)
 
+func _draw_settings_overlay() -> void:
+	super._draw_settings_overlay()
+	# The legacy analytics note occupies this footer band. Cover it with the
+	# release-facing legal action so Privacy is a real 44pt touch target instead
+	# of tiny footer text.
+	draw_rect(Rect2(92, 860, 536, 52), Color("10162b"))
+	button(V88_PRIVACY, "PRIVACY POLICY", C_BLUE, 14)
+
 func pointer(pos: Vector2, pressed: bool, id: int) -> void:
+	if pressed and settings_open and V88_PRIVACY.has_point(pos):
+		OS.shell_open(V88_PRIVACY_URL)
+		_audio("menu")
+		return
 	if _v88_release_surfaces_active() and pressed and state == State.HOME:
 		if home_overlay == "store":
 			home_overlay = ""
