@@ -7,7 +7,9 @@ on:
       - agent/**
     paths:
       - 'scripts/main_v76.gd'
+      - 'scripts/main_v77.gd'
       - 'scripts/v76_ui_foundation_smoke_test.gd'
+      - 'scripts/v77_ui_foundation_balance_smoke_test.gd'
       - 'scripts/v76_ui_foundation_capture.gd'
       - 'scenes/main.tscn'
       - 'docs/UI_V162_STATE.md'
@@ -15,7 +17,9 @@ on:
   pull_request:
     paths:
       - 'scripts/main_v76.gd'
+      - 'scripts/main_v77.gd'
       - 'scripts/v76_ui_foundation_smoke_test.gd'
+      - 'scripts/v77_ui_foundation_balance_smoke_test.gd'
       - 'scripts/v76_ui_foundation_capture.gd'
       - 'scenes/main.tscn'
       - 'docs/UI_V162_STATE.md'
@@ -51,11 +55,17 @@ jobs:
             exit 1
           fi
 
-      - name: Validate shared v1.62 UI contract
+      - name: Validate shared v1.62 r1 UI contract
         run: |
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v76_ui_foundation_smoke_test.gd --quit-after 260 2>&1 | tee v162-ui-smoke.log
           grep -q "v1.62 UI foundation smoke test passed" v162-ui-smoke.log
+
+      - name: Validate v1.62 r1.1 panel balance
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --script res://scripts/v77_ui_foundation_balance_smoke_test.gd --quit-after 260 2>&1 | tee v162-r11-smoke.log
+          grep -q "v1.62 UI foundation r1.1 smoke test passed" v162-r11-smoke.log
 
       - name: Render real 720x1280 menu captures
         run: |
@@ -104,6 +114,7 @@ jobs:
           path: |
             v162-import.log
             v162-ui-smoke.log
+            v162-r11-smoke.log
             v162-ui-capture.log
             v161-r32.log
             v51-menu.log
