@@ -114,7 +114,7 @@ jobs:
           set -euo pipefail
           rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
           ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 360 2>&1 | tee gameplay.log
-          grep -q "ONE MORE FLOOR smoke test passed" gameplay.log
+          grep -q "ONE MORE FLOOR gameplay smoke test passed" gameplay.log
 
       - name: Validate release save settings privacy pause and tutorial
         run: |
@@ -142,7 +142,7 @@ jobs:
           set -euo pipefail
           rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
           ./godot --headless --path . --script res://scripts/v28_endgame_smoke_test.gd --quit-after 320 2>&1 | tee endgame.log
-          grep -q "ONE MORE FLOOR v1.15 endgame smoke test passed" endgame.log
+          grep -q "ONE MORE FLOOR v1.15 endgame realms smoke test passed" endgame.log
 
       - name: Preserve v1.65 environment contract
         run: |
