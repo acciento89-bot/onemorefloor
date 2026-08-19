@@ -69,6 +69,6 @@ script = ExtResource("2_full")
 script = ExtResource("3_fx")
 z_index = 40
 
-[node name="MenuShell" type="CanvasLayer"]
+[node name="MenuShell" type="CanvasLayer" parent="."]
 layer = 20
 script = ExtResource("4_menu")
