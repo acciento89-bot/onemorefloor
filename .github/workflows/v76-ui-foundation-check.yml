@@ -11,6 +11,7 @@ on:
       - 'scripts/v76_ui_foundation_smoke_test.gd'
       - 'scripts/v77_ui_foundation_balance_smoke_test.gd'
       - 'scripts/v76_ui_foundation_capture.gd'
+      - 'scripts/v78_ui_secondary_capture.gd'
       - 'scenes/main.tscn'
       - 'docs/UI_V162_STATE.md'
       - '.github/workflows/v76-ui-foundation-check.yml'
@@ -21,6 +22,7 @@ on:
       - 'scripts/v76_ui_foundation_smoke_test.gd'
       - 'scripts/v77_ui_foundation_balance_smoke_test.gd'
       - 'scripts/v76_ui_foundation_capture.gd'
+      - 'scripts/v78_ui_secondary_capture.gd'
       - 'scenes/main.tscn'
       - 'docs/UI_V162_STATE.md'
       - '.github/workflows/v76-ui-foundation-check.yml'
@@ -31,7 +33,7 @@ permissions:
 jobs:
   validate-ui-foundation:
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 24
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -67,7 +69,7 @@ jobs:
           ./godot --headless --path . --script res://scripts/v77_ui_foundation_balance_smoke_test.gd --quit-after 260 2>&1 | tee v162-r11-smoke.log
           grep -q "v1.62 UI foundation r1.1 smoke test passed" v162-r11-smoke.log
 
-      - name: Render real 720x1280 menu captures
+      - name: Render primary 720x1280 menu captures
         run: |
           set -o pipefail
           mkdir -p artifacts/v162
@@ -78,11 +80,30 @@ jobs:
           test -s artifacts/v162/forge.png
           test -s artifacts/v162/talents.png
 
-      - name: Upload v1.62 UI visual gate
+      - name: Upload primary v1.62 UI visual gate
         uses: actions/upload-artifact@v4
         with:
           name: v76-ui-foundation-visuals
           path: artifacts/v162/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Render secondary 720x1280 menu captures
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/v162_secondary
+          xvfb-run -a ./godot --path . --script res://scripts/v78_ui_secondary_capture.gd --quit-after 260 2>&1 | tee v162-secondary-capture.log
+          grep -q "v1.62 secondary menu visual capture passed" v162-secondary-capture.log
+          test -s artifacts/v162_secondary/vault.png
+          test -s artifacts/v162_secondary/missions.png
+          test -s artifacts/v162_secondary/pass.png
+          test -s artifacts/v162_secondary/store.png
+
+      - name: Upload secondary v1.62 UI visual gate
+        uses: actions/upload-artifact@v4
+        with:
+          name: v78-ui-secondary-visuals
+          path: artifacts/v162_secondary/*.png
           if-no-files-found: error
           retention-days: 14
 
@@ -116,6 +137,7 @@ jobs:
             v162-ui-smoke.log
             v162-r11-smoke.log
             v162-ui-capture.log
+            v162-secondary-capture.log
             v161-r32.log
             v51-menu.log
             v66-input.log
