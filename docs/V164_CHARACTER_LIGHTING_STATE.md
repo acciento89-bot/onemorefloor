@@ -108,13 +108,37 @@ Regression status in `32286008428`:
 - v1.52.1 input flow: PASS.
 
 ## Post-acceptance hardening
-`v89_character_lighting_r1_smoke_test.gd` is hardened after acceptance to create an actual Necromancer during `sync_runtime()` and assert that r1.1 remains the final material write after inherited enemy configuration. It also re-checks the Skeleton lock.
+`v89_character_lighting_r1_smoke_test.gd` was hardened after acceptance to create an actual Necromancer during `sync_runtime()` and assert that r1.1 remains the final material write after inherited enemy configuration. It also re-checks the Skeleton lock.
 
 `main_v85.gd` and `scenes/main.tscn` identify the active top layer as **v1.64 r1.1**. These naming/checkpoint edits do not change the accepted production material/light values from `b4a63b0...`.
 
-## Immediate next step
-1. Let the post-acceptance r1.1 hardening workflow finish green on the latest checkpoint head.
-2. Verify the latest unsigned iPhone/iPad device compile before any milestone-complete/release decision.
-3. Do **not** add another brightness pass unless device/runtime evidence shows a remaining gameplay-distance failure.
-4. If the device gate is green, treat character lighting/material integration as visually complete and select the next largest quality gap from new runtime captures.
+At the last pre-documentation check, the newest hardened v89 Actions job was still **queued** behind the repository's broad historical workflow fanout. This additional regression job must not be reported as passed until it actually runs. The accepted production r1.1 review above is independently fully green.
+
+## Current unsigned iOS device gate — accepted
+Latest verified device workflow before the final documentation-only checkpoint:
+- `ONE MORE FLOOR iOS Playtest` run **`32286619525` — fully green**.
+- Release metadata: PASS.
+- Godot headless import: PASS.
+- Godot Xcode export: PASS.
+- Generated Xcode project inspection: PASS.
+- **Unsigned iPhone/iPad device compile: PASS.**
+- **Unsigned device package: PASS.**
+- Xcode/unsigned iOS artifact upload: PASS.
+- TestFlight build override: SKIPPED.
+- App Store Connect API-key preparation: SKIPPED.
+- Release archive/TestFlight export: SKIPPED.
+- TestFlight upload: **SKIPPED**.
+
+This validates the current r1.1 integration on the real iOS device-compile path without creating or uploading a TestFlight build.
+
+## Milestone verdict
+**v1.64 r1.1 is visually accepted and unsigned-device-build validated.**
+
+Do not add another general brightness/material lift merely because the milestone remains open as a Draft PR. Reopen character lighting only if new device/runtime evidence shows a concrete readability regression.
+
+## Immediate next steps
+1. Record the hardened v89 runtime-order regression result when its queued GitHub job eventually executes; this is an extra regression lock, not a blocker for the accepted r1.1 visual/device verdict.
+2. Treat character lighting/material integration as visually complete.
+3. Identify the next largest game-wide quality gap from fresh runtime/device captures rather than reopening accepted character geometry, combat VFX, UI or lighting.
+4. Create the next stacked milestone branch/PR before its production implementation and save its milestone-specific state immediately.
 5. Keep TestFlight/build/version jumps off until a deliberate bundled upload decision is made.
