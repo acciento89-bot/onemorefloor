@@ -8,8 +8,11 @@ Canonical handoff for continued development. **Read this file before changing ar
 - Pull request: **#90 — `v1.61 combat presentation milestone`**
 - Branch: `agent/v1.61-combat-presentation`
 - Base: `agent/v1.60-meta-environments` (stacked on the validated v1.60 milestone; do not retarget to `main` while PR #82 is still unmerged)
-- Accepted v1.61 implementation head: **`31316503ef60ff316c0d55621773a566f177eb87`** (`1.61-combat-presentation-r1.1`)
-- Initial v1.61 r1 bundle: `6c68aa93565345dc58110d3dce46409c938ffe1a`
+- **Current fully validated and visually accepted v1.61 implementation head: `ec29c5bc01db98cda004d62c40a165d9fcd2b27c` (`1.61-combat-presentation-r2.2`).**
+- Prior accepted combat baseline: `31316503ef60ff316c0d55621773a566f177eb87` (r1.1).
+- r2 impact baseline: `663835db6affff4636acbac84a68aa685e217e43`.
+- r2.1 motion baseline: `7a00718130119b0a1087a49a9a076115c5ec3836`.
+- Initial v1.61 r1 bundle: `6c68aa93565345dc58110d3dce46409c938ffe1a`.
 - PR stays **DRAFT**.
 - No TestFlight trigger, App Store build-number bump, or upload in v1.61 yet.
 
@@ -20,7 +23,7 @@ Canonical handoff for continued development. **Read this file before changing ar
 - v1.60 documentation head before v1.61 branch: `c0cea10915fb1a3838310490407e266673a293fe`
 - r11 OBJ topology correction: `4f82a5aeb717a088747eb31849b2d2d97340ba27`
 - Wanderer animation/core safe point: `00a78086d47b06093c1c7554c2713067f3def132` (r8.1)
-- v1.60 remains the last **TestFlight-ready candidate**. v1.61 has not replaced that release status yet.
+- v1.60 remains the last **TestFlight-ready candidate** until v1.61 gets its own milestone-level release/iOS decision.
 
 ## Non-negotiable continuity rules
 
@@ -32,8 +35,9 @@ Canonical handoff for continued development. **Read this file before changing ar
 6. CI green is necessary but **not sufficient** for visual acceptance. Runtime/gallery/close-up captures decide visual lock.
 7. A visually rejected pass remains rejected even if CI was green.
 8. Update this file after every meaningful accepted or rejected pass.
-9. v1.61 must remain a presentation layer on top of v1.60 unless a separate, explicitly scoped gameplay milestone is started.
-10. Do not reopen accepted Wanderer/enemy anatomy merely because combat presentation is being polished.
+9. v1.61 remains a presentation layer on top of v1.60 unless a separately scoped gameplay milestone is explicitly started.
+10. Do not reopen accepted Wanderer/enemy anatomy while working on combat polish.
+11. Preserve each accepted v1.61 layer as a rollback point; add narrow presentation subclasses instead of rewriting validated lower layers when possible.
 
 ## Locked v1.60 environment direction
 
@@ -54,7 +58,7 @@ Accepted actor stack:
 - slim/human limbs rather than rods/toy armor
 - overlapping shoulder armor
 - layered footwear rather than block feet
-- restrained chest sigil / ArcaneCore / belt / eyes
+- restrained ArcaneCore / belt / eyes
 - dark cloth / cool steel / restrained brass / arcane accent separation
 - preserve cape, blade, imported animation, and pivot readability
 
@@ -65,8 +69,8 @@ Historical guardrails:
 - Hood r9 `6ed71e52d4c7aea2db8283d55ad0439696027de3` is rollback insurance only; too boxy for final.
 - Hood r10 in `4001178b8e7069f072ebe6a255ee8856490377f6` is rejected; side cloth read like horns.
 - Hood r11 is canonical at v1.60 implementation head `3e567bf4...`.
-- Corrected r11 OBJ uses 142 vertices / 280 faces; the invalid `b36dd73e...` candidate had phantom face indices and caused a CI import cascade. Do not confuse those old failures with gameplay regressions.
-- The r11 production gate explicitly verifies asset import, marker/version, and exact visible `wanderer_hood_r11.obj` resource path.
+- Corrected r11 OBJ uses 142 vertices / 280 faces; invalid `b36dd73e...` had phantom face indices and caused the old CI import cascade.
+- r11 production gate explicitly verifies import, marker/version, and exact visible `wanderer_hood_r11.obj` resource path.
 
 ## Locked enemy direction
 
@@ -85,73 +89,130 @@ Accepted / rejected history:
 - r5 `4f7d9c0a6f90ca2e43eed0f8c07f034fdbf76068`: technically green but visually rejected due camouflage/blotchy surface breakup.
 - r5.1 `cb47de3d52e29b8b8a4250e8b5f64b15e8e387b9`: accepted subtle body-surface baseline; do not raise procedural pattern strength again.
 
-## v1.61 Combat Presentation
+# v1.61 Combat Presentation
 
-### Why this milestone exists
+## Why this milestone exists
 
-After v1.60 locked characters and authored environments, the largest remaining gameplay-quality break was the combat VFX language:
-- player attack presented as a large flat yellow fan/crescent
-- skill presented as a bright full TorusMesh/neon ring
-- enemy warnings/shockwaves read as thick tube/debug rings
-- inherited chest-sigil ring and six-box skill crown added more prototype-looking ring/stick clutter
+After v1.60 locked characters and authored environments, the largest remaining gameplay-quality break was the inherited combat presentation:
+- player attack was a large flat yellow fan/crescent
+- skill was a bright full TorusMesh/neon ring
+- enemy warnings/shockwaves were thick tube/debug rings
+- inherited chest-sigil ring and six-box skill crown added prototype-looking clutter
+- projectile/collision impacts were expanding rings with blocky ticks/shards
+- Wanderer movement echoes were violet ring + rune glyphs
+- enemy deaths still used the old v1.46 violet expanding ring + four-shard glyph
 
-The old v1.60 VFX geometry remains instantiated for its historical regression contract. **v1.61 changes only what the player sees at the new top presentation layer.** Gameplay radii/timing/authority remain inherited.
+The old lower-layer geometry remains available for historical regression contracts. **v1.61 changes what the player sees in a new top presentation layer while leaving gameplay authority inherited.**
 
-### v1.61 r1 — technically valid, visually not accepted as final
+## r1 — technically valid, visually rejected as final
 
 Bundle: `6c68aa93565345dc58110d3dce46409c938ffe1a`
 
-Implemented:
-- new `world3d_chamber_v161_combat_presentation.gd` on top of v1.60 atmosphere
-- new `main_v75.gd` and v1.61 main-scene activation
-- attack ribbon + hot edge + thin ground contact using ArrayMesh geometry
-- segmented Arcane skill waves + radial runes
-- segmented primary enemy tells / head runes / Warden shock geometry
-- visible suppression of v1.60 attack fan, v1.60 skill torus, inherited chest-sigil ring, and six-box skill crown
-- dedicated v1.61 smoke/visual workflow and four real 720×1280 captures
+Introduced:
+- `world3d_chamber_v161_combat_presentation.gd`
+- `main_v75.gd` / v1.61 main activation
+- ArrayMesh attack ribbon + hot edge + ground contact
+- segmented Arcane skill waves/runes
+- segmented enemy tells / head runes / Warden shock geometry
+- visible suppression of v1.60 flat attack fan, full skill torus, inherited chest-sigil ring, and six-box skill crown
+- dedicated v1.61 smoke/visual workflow
 
 Technical result: green.
+Manual result: **rejected as final** because attack remained too broad/half-moon-like and skill/tell segments were too chunky. Do not return to r1 dimensions/opacity.
 
-Manual image review: **not accepted as final**. Direction was correct, but the attack ribbon remained too broad/half-moon-like and the skill/tell segments were too chunky. Do not return to r1 dimensions/opacity.
+## r1.1 — accepted core combat-presentation baseline
 
-### v1.61 r1.1 — accepted combat-presentation baseline
+Implementation: **`31316503ef60ff316c0d55621773a566f177eb87`**
+Workflow: `32249368864` — green.
 
-Implementation head: **`31316503ef60ff316c0d55621773a566f177eb87`**
-Workflow run: **`32249368864`**
+Accepted changes:
+- substantially narrower attack ribbon/angular span
+- narrower hot edge; lower broad gold opacity/emission
+- narrower ground contact
+- thinner, more numerous separated skill segments
+- reduced radial runes
+- thinner/flatter enemy tells and Warden shock
 
-Changes from r1:
-- attack ribbon width and angular span reduced substantially
-- hot edge narrowed and broad gold opacity/emission reduced
-- ground-contact arc narrowed
-- skill waves made thinner with more/smaller separated segments
-- radial runes reduced
-- enemy primary tell and Warden shock geometry made thinner, more segmented, and less opaque
-- presentation marker advanced to `1.61-combat-presentation-r1.1`
+Visual lock:
+- gameplay-distance attack reads as a quick blade streak rather than a filled yellow fan
+- skill reads as a light segmented arcane/rune wave rather than a full neon tube
+- enemy warnings remain readable but no longer dominate as thick debug rings
 
-Manual runtime/capture review accepted r1.1 as the first v1.61 baseline:
-- gameplay-distance attack now reads as a **quick blade streak**, not the old filled yellow fan
-- skill has a light segmented arcane/rune language instead of a full neon tube ring
-- enemy tells remain readable but are flatter/lighter and less debug-like
-- v1.60 bright Torus player rings are suppressed in the v1.61 visible layer
-- the three purple circular elements seen in the diagnostic blade close-up already existed in the v1.60 capture sequence; they are capture-state residue, not newly introduced r1.1 geometry. Do not treat that diagnostic residue as a new gameplay regression without evidence from a fresh isolated runtime capture.
+## r2 — accepted impact-feedback direction
 
-## v1.61 validation on `31316503...`
+Implementation: **`663835db6affff4636acbac84a68aa685e217e43`**
 
-Dedicated `v1.61 Combat Presentation Check` run `32249368864` is fully green:
+Replaced inherited impact ring language while preserving the underlying hit/collision systems:
+- legacy projectile `impact_pool` ring -> compact 8-ray ArrayMesh contact burst
+- v1.50 collision-authority `Ring` -> compact 6-ray contact burst; old Tick geometry reduced
+- v1.51 combat-authority `ImpactRing` -> compact radial burst; core/shards reduced
+- critical combat impacts add only a restrained camera response (`camera_kick` floor/max request 0.24), without changing damage/timing/radius
+
+Manual isolated image review accepted the compact gold/red starburst direction. No giant impact rings remain in the r2 presentation geometry.
+
+## r2.1 — accepted movement-feedback direction
+
+Implementation: **`7a00718130119b0a1087a49a9a076115c5ec3836`**
+
+Root cause addressed:
+- v1.49 Wanderer `move_echo_pool` used a violet Ring + three Rune boxes, expanded/rotated for 0.42 s.
+
+r2.1:
+- keeps the inherited movement trigger, pool, distance threshold and duration
+- replaces the Ring mesh with three small directional floor streaks
+- hides the three legacy Rune boxes
+- aligns the streak behind the actual movement vector instead of spinning a circular glyph
+- uses restrained stretching/lift rather than ring expansion
+
+Manual isolated `movement_streaks.png` review: **accepted**. Only small directional streaks remain behind the Wanderer; no large violet movement circle is visible.
+
+Important investigation result: r2.1 proved the move echo was a genuine old prototype visual, but it was **not** the source of the three large violet circles seen in earlier combined diagnostic captures.
+
+## r2.2 — accepted death-feedback cleanup and current v1.61 lock
+
+Implementation: **`ec29c5bc01db98cda004d62c40a165d9fcd2b27c`**
+Dedicated workflow: **`32251699332` — fully green.**
+
+Exact root cause of the three large violet diagnostic circles:
+- inherited **v1.46 `death_burst_pool`**.
+- `_sync_death_feedback()` compares prior/current enemy positions; when an enemy disappears it calls `_spawn_death_burst()`.
+- each old death burst used a violet expanding `Ring` plus four Shard boxes.
+- the earlier diagnostic sequence removed exactly three enemies between frames, therefore exactly three old violet death glyphs appeared at their last positions.
+- this was a real legacy gameplay visual, not merely a screenshot artifact.
+
+r2.2:
+- preserves inherited death detection, pooling and duration
+- replaces the old violet death Ring with a compact 10-ray radial ArrayMesh dissolve burst
+- reduces/recolors the four old shards
+- reduces planar expansion from the old giant glyph to a restrained 0.72 -> 1.18 scale response
+- greatly reduces rotational speed and vertical lift
+- adds a dedicated isolated death capture using the real inherited three-enemy -> zero-enemy death path
+
+Manual isolated review:
+- `death_bursts.png`: **accepted** — old violet circles are gone; three compact purple radial dissolve/star bursts appear instead.
+- `movement_streaks.png`: **accepted** — only fine directional streaks, no large circle glyphs.
+- `impact_bursts.png`: **accepted** — only compact gold/red contact starbursts, no large violet circles.
+
+Therefore **r2.2 / `ec29c5bc...` is the current accepted v1.61 visual implementation baseline.**
+
+## Current v1.61 validation
+
+Dedicated run `32251699332` on `ec29c5bc...` is fully green:
 - Godot 4.7.1 compile/import: PASS
-- v1.61 presentation contract: PASS
+- preserve r2 impact contract: PASS
+- preserve r2.1 movement contract: PASS
+- r2.2 death presentation contract: PASS
 - main scene / inherited v1.60 integration: PASS
-- real 720×1280 combat captures: PASS
-- v1.60 combat VFX regression: PASS
-- v1.60 Wanderer regression: PASS
+- isolated real r2.2 diagnostics: PASS
+- v1.60 Combat VFX regression: PASS
+- v1.60 Wanderer/r11 regression: PASS
 - v1.60 six-enemy regression: PASS
 - v1.52.1 tutorial/game-over input-flow regression: PASS
 
-The accepted visual artifact set contains:
-- `attack_blade_trail.png`
-- `skill_arcane_wave.png`
-- `enemy_segmented_tells.png`
-- `player_blade_closeup.png`
+The accepted r2.2 diagnostic artifact set contains:
+- `death_bursts.png`
+- `movement_streaks.png`
+- `impact_bursts.png`
 
 ## v1.60 validated milestone gates (fallback head `3e567bf4...`)
 
@@ -168,7 +229,9 @@ The parent milestone remains clean:
 ## Required regression gates for future v1.61 changes
 
 Preserve and rerun at minimum:
-- v1.61 Combat Presentation compile/contract + real visual captures
+- v1.61 r2 impact contract
+- v1.61 r2.1 movement contract
+- v1.61 r2.2 death-feedback contract + isolated visual diagnostics
 - v1.60 Production Combat VFX direct regression
 - v1.60 Production Wanderer incl. r11 contract
 - v1.60 Production Enemy Silhouette / all six enemies
@@ -181,17 +244,17 @@ If future work touches materials/environments/actors, additionally rerun their d
 
 ## Current next priorities
 
-1. **Preserve `31316503...` as the accepted v1.61 r1.1 combat-presentation baseline.**
+1. **Preserve `ec29c5bc...` as the accepted v1.61 r2.2 baseline.**
 2. Do not reopen Wanderer r11 or enemy r2/r3/r4/r5.1 while working on combat polish.
-3. Next combat-quality work should target **impact readability and moment-to-moment polish** (hit/impact response, attack/skill timing presentation, restrained camera/light response) rather than increasing effect size.
-4. Keep telegraphs readable for gameplay; polish their shape/material language without changing danger radius or timing.
-5. If investigating the purple diagnostic rings, use a fresh isolated runtime/capture state first; do not “fix” them blindly from the reused close-up capture.
-6. Before making v1.61 the next TestFlight candidate, complete its own iOS playtest/build gate and perform a deliberate milestone-level upload decision.
-7. No TestFlight build for individual combat micro-passes.
+3. Do not restore any of the replaced ring/glyph language merely because older direct regressions instantiate it below the v1.61 top layer.
+4. Next visible-quality work should be a larger coherent pass, not another blind micro-effect loop: review loot/death/impact/attack/skill together at gameplay distance and prioritize only remaining obvious prototype reads.
+5. Keep telegraphs readable; never change danger radius/timing as part of visual polish.
+6. Before promoting v1.61 to the next TestFlight candidate, run the v1.61 iOS playtest/device-build gate on the accepted implementation and make a deliberate milestone-level upload decision.
+7. No TestFlight build for individual VFX micro-passes.
 
 ## Release policy
 
-- PR #82/v1.60 remains the last fully validated TestFlight-ready candidate.
-- PR #90/v1.61 is a new stacked **Draft** milestone and is not authorized for upload yet.
+- PR #82/v1.60 remains the last formally TestFlight-ready parent candidate.
+- PR #90/v1.61 is a stacked **Draft** milestone; current visual implementation `ec29c5bc...` is technically and visually accepted but is **not authorized for upload yet**.
 - No automatic TestFlight upload, App Store build bump, or version jump.
-- When v1.61 has enough visible improvement and its release/iOS gates are clean, decide the next TestFlight build deliberately.
+- When v1.61 has enough bundled visible improvement and its own release/iOS gate is clean, decide the next TestFlight build deliberately.
