@@ -17,6 +17,7 @@ on:
       - 'scripts/v75_combat_presentation_visual_capture.gd'
       - 'scripts/v75_combat_presentation_r21_visual_capture.gd'
       - 'scripts/v75_combat_presentation_r22_visual_capture.gd'
+      - 'scripts/v75_combat_presentation_gameplay_review_capture.gd'
       - '.github/workflows/v75-combat-presentation-check.yml'
   pull_request:
     paths:
@@ -31,6 +32,7 @@ on:
       - 'scripts/v75_combat_presentation_visual_capture.gd'
       - 'scripts/v75_combat_presentation_r21_visual_capture.gd'
       - 'scripts/v75_combat_presentation_r22_visual_capture.gd'
+      - 'scripts/v75_combat_presentation_gameplay_review_capture.gd'
       - '.github/workflows/v75-combat-presentation-check.yml'
 
 permissions:
@@ -98,6 +100,15 @@ jobs:
           test -s artifacts/v161_combat_presentation/movement_streaks.png
           test -s artifacts/v161_combat_presentation/impact_bursts.png
 
+      - name: Render coherent gameplay-distance review
+        run: |
+          set -o pipefail
+          xvfb-run -a ./godot --path . --script res://scripts/v75_combat_presentation_gameplay_review_capture.gd --quit-after 300 2>&1 | tee v161-gameplay-review.log
+          grep -q "v1.61 coherent gameplay review capture passed" v161-gameplay-review.log
+          test -s artifacts/v161_combat_presentation/gameplay_review_attack_pressure.png
+          test -s artifacts/v161_combat_presentation/gameplay_review_skill_pressure.png
+          test -s artifacts/v161_combat_presentation/gameplay_review_kill_loot.png
+
       - name: Upload v1.61 combat visual gate
         uses: actions/upload-artifact@v4
         with:
@@ -144,6 +155,7 @@ jobs:
             v161-r22-smoke.log
             main-integration.log
             v161-capture.log
+            v161-gameplay-review.log
             v160-combat.log
             wanderer.log
             enemies.log
