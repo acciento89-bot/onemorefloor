@@ -1,0 +1,108 @@
+name: v1.73 Run Flow Presentation Completion Check
+
+on:
+  push:
+    branches:
+      - agent/v1.73-run-flow-completion
+    paths:
+      - 'scripts/main_v97.gd'
+      - 'scripts/v100_run_flow_smoke_test.gd'
+      - 'scripts/v100_run_flow_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v100-run-flow-completion-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/main_v97.gd'
+      - 'scripts/v100_run_flow_smoke_test.gd'
+      - 'scripts/v100_run_flow_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v100-run-flow-completion-check.yml'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_TAG: '4.7.1-stable'
+  OMF_FORCE_RELEASE_SURFACES: '1'
+
+jobs:
+  run-flow-completion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_TAG}_linux.x86_64" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile active v1.73 stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v173-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v173-import.log; then
+            echo "Godot reported v1.73 compile/import errors"
+            exit 1
+          fi
+
+      - name: Validate run-flow presentation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v100_run_flow_smoke_test.gd --quit-after 480 2>&1 | tee v173-smoke.log
+          grep -q "v1.73 run flow presentation smoke test passed" v173-smoke.log
+          grep -q "V173_RUN_FLOW_SNAPSHOT:" v173-smoke.log
+
+      - name: Render fixed 720x1280 run-flow evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/v173_run_flow
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./godot \
+            --path . \
+            --rendering-method gl_compatibility \
+            --rendering-driver opengl3 \
+            --audio-driver Dummy \
+            --script res://scripts/v100_run_flow_capture.gd \
+            --quit-after 720 2>&1 | tee v173-capture.log
+          grep -q "v1.73 run flow visual capture passed" v173-capture.log
+          test "$(find artifacts/v173_run_flow -name '*.png' -type f | wc -l | tr -d ' ')" = "4"
+
+      - name: Preserve complete gameplay authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 560 2>&1 | tee gameplay.log
+          grep -q "ONE MORE FLOOR gameplay smoke test passed" gameplay.log
+
+      - name: Upload v1.73 portrait evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v173-run-flow-presentation
+          path: artifacts/v173_run_flow/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v173-run-flow-failure
+          path: |
+            v173-import.log
+            v173-smoke.log
+            v173-capture.log
+            gameplay.log
+          if-no-files-found: ignore
+          retention-days: 14
