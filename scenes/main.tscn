@@ -59,8 +59,9 @@
 ; v1.67 r1.1 capture-driven premium menu hierarchy retained: res://scripts/main_v90.gd
 ; v1.67 r1.2 authored Forge workshop + talent tree + contract-board finish retained: res://scripts/main_v91.gd
 ; v1.68 r1.1 accepted: shared authored Wanderer visual-completion kit for frontend and gameplay.
-; v1.69 r1 active: authored enemy + Warden secondary silhouette completion, Skeleton locked.
-[ext_resource type="Script" path="res://scripts/main_v93.gd" id="1_main"]
+; v1.69 r1 accepted: authored enemy + Warden secondary silhouette completion, Skeleton locked.
+; v1.70 r1 active: authored five-realm depth framing + Iron Bastion endgame boss stage.
+[ext_resource type="Script" path="res://scripts/main_v94.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
