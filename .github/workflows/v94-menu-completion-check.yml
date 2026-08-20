@@ -5,15 +5,23 @@ on:
     branches:
       - agent/v1.66-character-form
     paths:
+      - 'assets/environment/v167/**'
       - 'scripts/menu3d_stage_v167_completion.gd'
+      - 'scripts/menu3d_stage_v167_completion_r12.gd'
       - 'scripts/main_v89.gd'
+      - 'scripts/main_v90.gd'
+      - 'scripts/main_v91.gd'
       - 'scripts/v94_menu_completion_smoke_test.gd'
       - 'scenes/main.tscn'
       - '.github/workflows/v94-menu-completion-check.yml'
   pull_request:
     paths:
+      - 'assets/environment/v167/**'
       - 'scripts/menu3d_stage_v167_completion.gd'
+      - 'scripts/menu3d_stage_v167_completion_r12.gd'
       - 'scripts/main_v89.gd'
+      - 'scripts/main_v90.gd'
+      - 'scripts/main_v91.gd'
       - 'scripts/v94_menu_completion_smoke_test.gd'
       - 'scenes/main.tscn'
       - '.github/workflows/v94-menu-completion-check.yml'
