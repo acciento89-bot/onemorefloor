@@ -55,8 +55,9 @@
 ; v1.65 r1.3 environment surface/depth baseline retained: res://scripts/main_v86.gd
 ; v1.66 r1.1 character form/readability baseline retained: res://scripts/main_v87.gd
 ; v1.66 release hardening retained: res://scripts/main_v88.gd
-; v1.67 frontend completion active: shared gameplay Wanderer + complete authored menu composition.
-[ext_resource type="Script" path="res://scripts/main_v89.gd" id="1_main"]
+; v1.67 r1 shared gameplay Wanderer/frontend stage retained: res://scripts/main_v89.gd
+; v1.67 r1.1 active: capture-driven premium menu hierarchy + authored Forge focal correction.
+[ext_resource type="Script" path="res://scripts/main_v90.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]

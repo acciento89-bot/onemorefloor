@@ -23,12 +23,15 @@ func _run() -> void:
 	if not game.has_method("_v89_frontend_completion_ready"):
 		_fail("v1.67 frontend completion main layer is not active")
 		return
+	if not game.has_method("_v90_menu_visual_completion_ready"):
+		_fail("v1.67 r1.1 menu visual layer is not active")
+		return
 	var stage = game.v70_menu_stage
 	if stage == null or not stage.has_method("frontend_completion_ready"):
 		_fail("frontend completion menu stage is missing")
 		return
-	if String(stage.debug_snapshot().get("frontend_completion_version", "")) != "1.67-frontend-completion-r1":
-		_fail("frontend completion version marker missing")
+	if String(stage.debug_snapshot().get("frontend_completion_version", "")) != "1.67-frontend-completion-r1.1":
+		_fail("frontend completion r1.1 version marker missing")
 		return
 
 	for screen in FRONTEND_SCREENS:
@@ -55,12 +58,18 @@ func _run() -> void:
 			if not bool(stage.gameplay_actor_factory.call("v166_character_form_player_ready", stage.actor_model)):
 				_fail("menu Wanderer gameplay character-form contract failed on %s" % screen)
 				return
+		if screen == "forge" and not bool(snapshot.get("forge_engine_authored", false)):
+			_fail("Forge authored engine focal is missing")
+			return
 
 	_stage("regressions")
 	stage.set_screen("home")
 	await process_frame
 	if not bool(game.call("_v89_frontend_completion_ready")):
 		_fail("frontend completion main readiness failed")
+		return
+	if not bool(game.call("_v90_menu_visual_completion_ready")):
+		_fail("frontend r1.1 visual readiness failed")
 		return
 	if not bool(game.call("_v87_character_form_ready")):
 		_fail("v1.66 gameplay character-form regression")
