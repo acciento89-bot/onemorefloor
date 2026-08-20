@@ -68,7 +68,13 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf artifacts/v173_run_flow
-          ./godot --headless --path . --script res://scripts/v100_run_flow_capture.gd --quit-after 720 2>&1 | tee v173-capture.log
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./godot \
+            --path . \
+            --rendering-method gl_compatibility \
+            --rendering-driver opengl3 \
+            --audio-driver Dummy \
+            --script res://scripts/v100_run_flow_capture.gd \
+            --quit-after 720 2>&1 | tee v173-capture.log
           grep -q "v1.73 run flow visual capture passed" v173-capture.log
           test "$(find artifacts/v173_run_flow -name '*.png' -type f | wc -l | tr -d ' ')" = "4"
 
