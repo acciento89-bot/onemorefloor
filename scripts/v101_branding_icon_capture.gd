@@ -1,17 +1,18 @@
 extends SceneTree
 
-# ONE MORE FLOOR v1.74 r1.1 — Product Identity candidate.
-# Renders the shipping icon from the accepted production 3D Wanderer rather
-# than maintaining a separate illustrated/cartoon character identity.
-# r1 was rejected because the gameplay chamber dominated at small icon sizes;
-# r1.1 keeps the exact actor but isolates and crops it as the product mark.
+# ONE MORE FLOOR v1.74 r1.2 — Product Identity candidate.
+# Uses the accepted Hero frontend stage as the source of truth for the shipping
+# icon. This keeps the exact v1.68 gameplay Wanderer, its accepted frontend
+# materials and the deliberate forward-facing Hero presentation.
+# r1: rejected — chamber dominated the icon.
+# r1.1: rejected — isolated gameplay pose still read too small/side-on.
 
-const ProductionWorld = preload("res://scripts/world3d_chamber_v170_realm_completion.gd")
+const HeroStage = preload("res://scripts/menu3d_stage_v168_character_completion.gd")
 const OUTPUT_DIR := "res://artifacts/v174_branding"
 const ICON_SIZE := Vector2i(1024, 1024)
 
 var viewport: SubViewport
-var world
+var stage
 
 func _init() -> void:
 	call_deferred("_run")
@@ -31,61 +32,45 @@ func _run() -> void:
 	viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR
 	root.add_child(viewport)
 
-	world = ProductionWorld.new()
-	viewport.add_child(world)
-	world.set_active(true)
-	for _i in range(12):
+	stage = HeroStage.new()
+	viewport.add_child(stage)
+	for _i in range(10):
+		await process_frame
+	stage.set_screen("hero")
+	for _i in range(8):
 		await process_frame
 
-	if not world.has_method("production_realm_completion_ready") or not bool(world.call("production_realm_completion_ready")):
-		_fail("production v1.70+ world not ready")
+	if not stage.has_method("frontend_completion_ready") or not bool(stage.frontend_completion_ready()):
+		_fail("accepted Hero frontend stage not ready")
 		return
-	if world.player_root == null or not bool(world.actor_factory.wanderer_completion_v168_ready(world.player_root)):
-		_fail("accepted v1.68 Wanderer not ready")
+	if stage.actor_model == null or stage.actor_anchor == null:
+		_fail("accepted Hero Wanderer missing")
+		return
+	if String(stage.actor_model.get_meta("wanderer_completion_v168", "")) != "1.68-wanderer-visual-completion-r1.1":
+		_fail("Hero is not using accepted v1.68 Wanderer")
 		return
 
-	# Use the real gameplay actor and its real authored pose authority.
-	var player_pos := Vector2(360.0, 585.0)
-	world.call("_capture_signature_state", [])
-	world.previous_enemy_positions.clear()
-	world.sync_runtime(player_pos, [], [], [], [], Vector2(0.24, -0.12), 28.20, 1.0, 0.0, 71)
-	world.sync_runtime(player_pos, [], [], [], [], Vector2.ZERO, 28.24, 0.0, 0.0, 71)
+	# Strip only the surrounding menu architecture for the branding capture.
+	# The exact Hero actor hierarchy and materials stay intact.
+	_hide_non_actor_geometry(stage.stage_root, stage.actor_model)
 
-	# r1 review: the chamber read well but the actor became a dot at 180/60 px.
-	# Hide only non-player geometry in this capture scene; production world files
-	# remain untouched. Lights, camera and WorldEnvironment remain active.
-	_hide_non_player_geometry(world, world.player_root)
+	# Lock the accepted Hero orientation instead of allowing menu idle sway.
+	stage.set_process(false)
+	stage.actor_anchor.rotation = Vector3(0.0, PI, 0.0)
+	stage.actor_anchor.position = Vector3(0.0, 2.96, 0.04)
+	stage.actor_model.scale = Vector3.ONE * 2.05
+	stage.gameplay_actor_factory.animate_player(stage.actor_model, 7.5, 0.0, 0.0, 0.0)
+
+	# Use a Hero-style frontal perspective crop. The actor intentionally owns most
+	# of the square so Hood, chest plate and blade still read at 60 px.
+	stage.camera.projection = Camera3D.PROJECTION_PERSPECTIVE
+	stage.camera.fov = 31.0
+	stage.camera.position = Vector3(0.0, 3.34, 5.55)
+	stage.camera.look_at(Vector3(0.0, 3.30, 0.02), Vector3.UP)
+	stage.camera.current = true
+
 	_build_branding_backdrop()
-
-	# Capture-only scale and crop. This never touches the production asset data.
-	world.player_root.scale = Vector3.ONE * 3.0
-	world.camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	world.camera.size = 2.10
-	world.camera.position = Vector3(0.0, 2.55, 4.80)
-	world.camera.look_at(Vector3(0.0, 0.68, 0.0), Vector3.UP)
-	world.camera.current = true
-
-	# Controlled portrait key/rim lights make Hood, chest plate and blade separate
-	# at home-screen size while preserving the accepted actor materials.
-	var rim := OmniLight3D.new()
-	rim.name = "V174IconRim"
-	rim.position = Vector3(1.55, 2.10, 1.30)
-	rim.light_color = Color("8a63ff")
-	rim.light_energy = 4.25
-	rim.omni_range = 5.2
-	rim.shadow_enabled = false
-	rim.set_meta("branding_capture_only", true)
-	world.add_child(rim)
-
-	var face_key := OmniLight3D.new()
-	face_key.name = "V174IconKey"
-	face_key.position = Vector3(-1.35, 2.35, 2.45)
-	face_key.light_color = Color("e2e8ff")
-	face_key.light_energy = 3.35
-	face_key.omni_range = 5.0
-	face_key.shadow_enabled = false
-	face_key.set_meta("branding_capture_only", true)
-	world.add_child(face_key)
+	_build_branding_lights()
 
 	for _i in range(8):
 		await process_frame
@@ -100,12 +85,11 @@ func _run() -> void:
 		_fail("invalid icon render size: %dx%d" % [image.get_width(), image.get_height()])
 		return
 
-	# Shipping master: fully opaque square PNG, no text, no transparency.
+	# App icon master: full square, opaque RGB, no text or UI.
 	image.convert(Image.FORMAT_RGB8)
 	if not _save(image, "app_icon_v174_1024.png"):
 		return
 
-	# Small-size proofs catch silhouettes that only work when viewed large.
 	var preview180 := image.duplicate()
 	preview180.resize(180, 180, Image.INTERPOLATE_LANCZOS)
 	if not _save(preview180, "app_icon_v174_180.png"):
@@ -115,78 +99,105 @@ func _run() -> void:
 	if not _save(preview60, "app_icon_v174_60.png"):
 		return
 
-	print("V174_BRANDING_ICON:production-wanderer-r1.1:1024x1024:opaque")
+	print("V174_BRANDING_ICON:accepted-hero-wanderer-r1.2:1024x1024:opaque")
 	print("v1.74 branding icon visual capture passed")
-	world.queue_free()
+	stage.queue_free()
 	viewport.queue_free()
 	await process_frame
 	quit(0)
 
-func _hide_non_player_geometry(node: Node, player: Node3D) -> void:
+func _hide_non_actor_geometry(node: Node, actor: Node3D) -> void:
 	for child in node.get_children():
-		if child == player or player.is_ancestor_of(child):
+		if child == actor or actor.is_ancestor_of(child) or child.is_ancestor_of(actor):
+			_hide_non_actor_geometry(child, actor)
 			continue
 		if child is MeshInstance3D:
 			(child as MeshInstance3D).visible = false
-		_hide_non_player_geometry(child, player)
+		_hide_non_actor_geometry(child, actor)
 
 func _build_branding_backdrop() -> void:
-	var backdrop_mat := StandardMaterial3D.new()
-	backdrop_mat.albedo_color = Color("090b16")
-	backdrop_mat.metallic = 0.10
-	backdrop_mat.roughness = 0.78
+	var back_mat := StandardMaterial3D.new()
+	back_mat.albedo_color = Color("070914")
+	back_mat.metallic = 0.05
+	back_mat.roughness = 0.82
 
-	var backdrop_mesh := BoxMesh.new()
-	backdrop_mesh.size = Vector3(3.20, 3.20, 0.12)
-	var backdrop := MeshInstance3D.new()
-	backdrop.name = "V174IconBackdrop"
-	backdrop.mesh = backdrop_mesh
-	backdrop.material_override = backdrop_mat
-	backdrop.position = Vector3(0.0, 0.72, -1.10)
-	backdrop.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	backdrop.set_meta("branding_capture_only", true)
-	world.add_child(backdrop)
+	var back_mesh := BoxMesh.new()
+	back_mesh.size = Vector3(5.8, 5.8, 0.10)
+	var back := MeshInstance3D.new()
+	back.name = "V174BrandingBackdrop"
+	back.mesh = back_mesh
+	back.material_override = back_mat
+	back.position = Vector3(0.0, 3.35, -1.15)
+	back.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	stage.add_child(back)
 
 	var halo_mat := StandardMaterial3D.new()
-	halo_mat.albedo_color = Color("251944")
+	halo_mat.albedo_color = Color("21143d")
 	halo_mat.emission_enabled = true
-	halo_mat.emission = Color("6745be")
-	halo_mat.emission_energy_multiplier = 1.35
-	halo_mat.metallic = 0.0
-	halo_mat.roughness = 0.66
+	halo_mat.emission = Color("6d46c8")
+	halo_mat.emission_energy_multiplier = 1.10
+	halo_mat.roughness = 0.70
 
 	var halo_mesh := SphereMesh.new()
-	halo_mesh.radius = 0.52
-	halo_mesh.height = 1.04
-	halo_mesh.radial_segments = 32
-	halo_mesh.rings = 16
+	halo_mesh.radius = 0.72
+	halo_mesh.height = 1.44
+	halo_mesh.radial_segments = 36
+	halo_mesh.rings = 18
 	var halo := MeshInstance3D.new()
-	halo.name = "V174IconHalo"
+	halo.name = "V174BrandingHalo"
 	halo.mesh = halo_mesh
 	halo.material_override = halo_mat
-	halo.position = Vector3(0.0, 0.88, -0.91)
-	halo.scale = Vector3(1.30, 1.30, 0.10)
+	halo.position = Vector3(0.0, 3.42, -0.96)
+	halo.scale = Vector3(1.28, 1.28, 0.08)
 	halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	halo.set_meta("branding_capture_only", true)
-	world.add_child(halo)
+	stage.add_child(halo)
 
 	var base_mat := StandardMaterial3D.new()
-	base_mat.albedo_color = Color("171b2c")
-	base_mat.metallic = 0.34
-	base_mat.roughness = 0.54
+	base_mat.albedo_color = Color("161b29")
+	base_mat.metallic = 0.38
+	base_mat.roughness = 0.48
 	var base_mesh := CylinderMesh.new()
-	base_mesh.top_radius = 0.72
-	base_mesh.bottom_radius = 0.84
-	base_mesh.height = 0.10
-	base_mesh.radial_segments = 32
+	base_mesh.top_radius = 0.88
+	base_mesh.bottom_radius = 1.02
+	base_mesh.height = 0.12
+	base_mesh.radial_segments = 36
 	var base := MeshInstance3D.new()
-	base.name = "V174IconBase"
+	base.name = "V174BrandingBase"
 	base.mesh = base_mesh
 	base.material_override = base_mat
-	base.position = Vector3(0.0, -0.11, 0.0)
-	base.scale = Vector3(1.0, 1.0, 0.66)
-	base.set_meta("branding_capture_only", true)
-	world.add_child(base)
+	base.position = Vector3(0.0, 2.80, 0.02)
+	base.scale = Vector3(1.0, 1.0, 0.68)
+	stage.add_child(base)
+
+func _build_branding_lights() -> void:
+	# Mirrors the accepted Hero key/rim relationship, strengthened only for the
+	# small icon crop.
+	var key := OmniLight3D.new()
+	key.name = "V174HeroKey"
+	key.position = Vector3(-1.25, 4.35, 1.85)
+	key.light_color = Color("e0d8ff")
+	key.light_energy = 2.25
+	key.omni_range = 4.6
+	key.shadow_enabled = false
+	stage.add_child(key)
+
+	var rim := OmniLight3D.new()
+	rim.name = "V174HeroRim"
+	rim.position = Vector3(1.65, 3.70, 0.65)
+	rim.light_color = Color("9c78dc")
+	rim.light_energy = 1.55
+	rim.omni_range = 3.5
+	rim.shadow_enabled = false
+	stage.add_child(rim)
+
+	var warm := OmniLight3D.new()
+	warm.name = "V174BladeWarmRim"
+	warm.position = Vector3(1.20, 3.25, 2.10)
+	warm.light_color = Color("e1ad66")
+	warm.light_energy = 0.85
+	warm.omni_range = 3.2
+	warm.shadow_enabled = false
+	stage.add_child(warm)
 
 func _save(image: Image, filename: String) -> bool:
 	var path := "%s/%s" % [OUTPUT_DIR, filename]
