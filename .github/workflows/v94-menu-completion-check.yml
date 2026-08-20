@@ -1,0 +1,84 @@
+name: v1.67 Frontend Completion Check
+
+on:
+  push:
+    branches:
+      - agent/v1.66-character-form
+    paths:
+      - 'scripts/menu3d_stage_v167_completion.gd'
+      - 'scripts/main_v89.gd'
+      - 'scripts/v94_menu_completion_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v94-menu-completion-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/menu3d_stage_v167_completion.gd'
+      - 'scripts/main_v89.gd'
+      - 'scripts/v94_menu_completion_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v94-menu-completion-check.yml'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: '4.7.1'
+  GODOT_TAG: '4.7.1-stable'
+
+jobs:
+  frontend-completion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 \
+            -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_TAG}_linux.x86_64" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile active project
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v167-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v167-import.log; then
+            echo "Godot reported frontend completion compile/import errors"
+            exit 1
+          fi
+
+      - name: Validate complete frontend and shared gameplay Wanderer
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v94_menu_completion_smoke_test.gd --quit-after 420 2>&1 | tee v167-frontend.log
+          grep -q "v1.67 frontend completion smoke test passed" v167-frontend.log
+
+      - name: Preserve final gameplay release gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 420 2>&1 | tee gameplay.log
+          grep -q "ONE MORE FLOOR gameplay smoke test passed" gameplay.log
+
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v94-frontend-completion-failure
+          path: |
+            v167-import.log
+            v167-frontend.log
+            gameplay.log
+          if-no-files-found: ignore
+          retention-days: 14

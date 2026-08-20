@@ -2,60 +2,54 @@
 
 Canonical handoff. **Repository truth wins over chat memory.**
 
-## Active candidate — v1.66 Character Form & Readability
-- PR #103 / branch `agent/v1.66-character-form`.
-- Parent: accepted `main` at `567c83c0cace9c6028075266aa36beb622b554fc`.
-- Active path: `main.tscn` -> `main_v87.gd` -> `world3d_chamber_v166_character_form.gd` -> `world3d_actor_factory_v166_character_form.gd`.
-- Detailed state: `docs/V166_CHARACTER_FORM_STATE.md`.
-- **r1 is rejected. r1.1 is the active candidate and is not yet visually accepted.**
+## Active development mode — COMPLETE THE GAME, NOT RELEASE
+The project is back in active product-completion development. Release preparation is **not** the current goal. The immediate goal is to finish the visible game end-to-end: frontend/menu presentation, shared character identity, remaining environment/character polish, UX consistency, then final device QA.
 
-Why v1.66 is next: accepted v1.65 r1.3 moved environment quality ahead of actor quality. Wanderer and several enemies still compress into low-detail/single-mass silhouettes at gameplay distance.
+## Active candidate — v1.67 Frontend Completion r1
+- Branch / PR: `agent/v1.66-character-form` / PR #103.
+- Parent gameplay candidate: v1.66 Character Form & Readability r1.1.
+- Active scene path: `scenes/main.tscn` -> `scripts/main_v89.gd`.
+- Frontend stage: `scripts/menu3d_stage_v167_completion.gd`.
+- Gameplay actor authority reused by frontend: `scripts/world3d_actor_factory_v166_character_form.gd`.
 
-### r1 — rejected
-Initial bundle `a070def65ce22075990b783d50f3d50e1d025cfe` was technically healthy: compile/readiness/hardened v1.64 regression and unsigned iPhone/iPad build all passed.
+### Why this pass exists
+The menu previously loaded `res://assets/models/actors/wanderer.gltf` directly while gameplay used the much newer v1.66 actor-factory stack (Hood r11, authored armor/cape/blade, material hierarchy and character-form refinements). That created two visibly different Wanderers.
 
-It is nevertheless rejected because code review confirmed the added enemy form used `SphereMesh` rounded secondary volumes. That directly violates the locked anti-blob/mannequin art direction. r1 cannot become a production lock even if its delayed screenshots eventually render.
+v1.67 removes that split. Home and Hero now instantiate the **same gameplay Wanderer factory** used inside the tower. Future Wanderer improvements therefore propagate to gameplay and frontend together.
 
-A pure v91 capture-harness fix `592ff0c74b7777567633106d706b6a58cee356bb` aligned the fixed 720x1280 viewport lifecycle with the already-stable v1.65 capture path; it changed no game presentation values.
+### v1.67 r1 scope
+- Home/Hero use the exact v1.66 gameplay Wanderer authority.
+- Home, Hero, Forge, Talents, Vault, Missions and Tower Pass receive a unified authored 3D composition/lighting pass.
+- Existing v1.59/v1.60 OBJ environment assets remain the environment authority; no return to giant procedural blockout architecture.
+- Existing v1.62 UI/input, v1.63 combat identity, v1.64 character lighting and v1.65 environment depth remain protected.
+- Store remains hidden in production while no native StoreKit provider exists.
+- New validation: `scripts/v94_menu_completion_smoke_test.gd` + `.github/workflows/v94-menu-completion-check.yml`.
 
-### r1.1 — active candidate
-Current r1.1 removes the rejected sphere/blob additions and replaces them with thin faceted BoxMesh presentation plates/forms:
-- Wanderer keeps the stronger chest/pauldron/blade hierarchy around accepted Hood r11;
-- Goblin: shoulder plate / buckle / pouch;
-- Bat: thorax plate + faceted wing roots;
-- Ghoul: asymmetric shoulders / sternum / hip plate;
-- Necromancer: mantle / collar / waist plates;
-- Warden: shoulder / chest / hip armor plates;
-- Skeleton remains a complete geometry lock;
-- no camera, lighting, collision/navigation, hitbox, gameplay, input, save/progression or UI changes.
+## Current gameplay candidate — v1.66 Character Form & Readability r1.1
+- World: `world3d_chamber_v166_character_form.gd`.
+- Actor factory: `world3d_actor_factory_v166_character_form.gd`.
+- r1 rounded/SphereMesh direction is rejected.
+- r1.1 uses restrained faceted secondary forms; Skeleton geometry remains locked.
+- v92 consolidated gameplay/release-regression gate passed after fixing the Forgotten Castle first-floor signature-enemy RNG hole.
+- The pending macOS v91 visual evidence remains useful for judging actor form, but it no longer blocks continuing game-completion work.
 
-v91 r1.1 gate additionally forbids any `SphereMesh` inside `CharacterFormV166` and preserves the existing no-collision/no-navigation contract.
+## TestFlight
+- Build 30 is the existing TestFlight validation build and was successfully uploaded after retry.
+- Do not create extra TestFlight builds for every visual/development pass.
+- Next TestFlight should be a meaningful integrated completion build after several remaining game-completion passes are bundled.
 
-Acceptance still requires ten fixed 720x1280 v1.65-before/v1.66-r1.1-after images across all five realms. Reject/correct r1.1 if plates read as pasted boxes, silhouettes become too wide or the added form dominates the actor.
-
-## Accepted production parent — v1.65 Environment Surface & Depth r1.3
-- Production implementation: `a5951b244166bf824e403eda037a4568194348c6`.
-- Final visual/test checkpoint: `c1078573877a4e204405a41f781e92201ac20b85`.
-- Final matched visual workflow: `32292817771` — fully green; artifact `9380157967`; ten 720x1280 captures visually accepted.
-- Final unsigned iOS workflow: `32292817944` — fully green; unsigned iPhone/iPad compile + package PASS; TestFlight upload SKIPPED.
-- Accepted direction: restrained material breakup/patina across all five realms; no neon/debug bars and no large applied low-poly floor patches.
-
-## Locked parents
-- v1.64 Character Lighting r1.1: `b4a63b0be50caa5ed08c9984c2101c059347dfe9`; accepted matched run `32286008428`.
-- v1.63 Combat Identity: `7262f42002aeeba338559190e8a87a616329ec54`; accepted combined review `32280114378`.
-- v1.62 UI: `71c8ecec5387400af7ef1c4bd29a3f87f9323d17`.
-- v1.61 Combat Presentation: `bb367aad35338dd6d32fbdf7d4de4208efef2ad0`.
-- v1.60 Authored 3D: `3e567bf409a8492a55f672b226ce9ce81c16780f`; Wanderer safe point `00a78086d47b06093c1c7554c2713067f3def132`; Hood r11 `4f82a5aeb717a088747eb31849b2d2d97340ba27`.
-
-## TestFlight state
-- Build 30 remains the requested TestFlight build number; no Build 31 was created.
-- Original trigger workflow `32293490622` successfully dispatched `ios-testflight.yml` on main.
-- First actual Build 30 TestFlight run `32296684353` was cancelled before Apple upload confirmation.
-- The cancelled Build 30 job was explicitly re-run **with the same workflow/run lineage and same build number**; no new trigger commit and no new build number were created.
-- Current Build 30 retry job ID: `96241827655` (queued at the last recorded checkpoint).
-- v1.66 branch development must not touch `.github/testflight-trigger`; branch TestFlight steps remain skipped.
+## Remaining completion blocks
+1. **Frontend/Menu completion** — active now.
+2. Character visual acceptance and any remaining actor quality corrections.
+3. Full gameplay/environment consistency sweep across all realms/endgame.
+4. UX/menus/settings/tutorial/progression consistency and dead-route cleanup.
+5. Audio/VFX/haptics polish and device-performance pass.
+6. Integrated TestFlight build for real iPhone/iPad playtest.
+7. Only after that: release metadata/App Store submission work.
 
 ## Continuity rules
-Preserve accepted animation/pivots, gameplay authority, danger semantics, geometry/VFX/UI/lighting/environment locks and rollback points. Gameplay/device images decide visual acceptance; technically green but visually rejected passes stay rejected. Presentation-only geometry must not acquire collision/navigation authority. No accidental repeated TestFlight build-number increments.
-
-See `docs/V166_CHARACTER_FORM_STATE.md`, `docs/V165_ENVIRONMENT_DEPTH_STATE.md`, `docs/V164_CHARACTER_LIGHTING_STATE.md`, `docs/V163_COMBAT_IDENTITY_STATE.md`, `docs/UI_V162_STATE.md`.
+- After each major pass, update this file.
+- Do not call the game release-ready merely because CI is green; visual/device acceptance decides.
+- Preserve accepted gameplay authority, hitboxes, navigation/collision, timing/damage, save/progression and input contracts unless a verified gameplay blocker requires change.
+- Keep menu and gameplay Wanderer on one shared actor authority from v1.67 onward.
+- Avoid repeated TestFlight build-number churn; bundle meaningful completion work first.
