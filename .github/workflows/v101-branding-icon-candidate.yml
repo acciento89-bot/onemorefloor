@@ -62,7 +62,7 @@ jobs:
             --script res://scripts/v101_branding_icon_capture.gd \
             --quit-after 720 2>&1 | tee v174-icon.log
           grep -q "v1.74 branding icon visual capture passed" v174-icon.log
-          grep -q "V174_BRANDING_ICON:accepted-hero-wanderer-r1.2:1024x1024:opaque" v174-icon.log
+          grep -q "V174_BRANDING_ICON:accepted-hero-wanderer-r1.3:1024x1024:opaque" v174-icon.log
           test -s artifacts/v174_branding/app_icon_v174_1024.png
           test -s artifacts/v174_branding/app_icon_v174_180.png
           test -s artifacts/v174_branding/app_icon_v174_60.png
