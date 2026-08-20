@@ -1,11 +1,13 @@
 extends "res://scripts/world3d_chamber_v169_enemy_completion.gd"
 
-# ONE MORE FLOOR v1.70 r1 — Realm + Endgame Visual Completion.
+# ONE MORE FLOOR v1.70 r1.1 — Realm + Endgame Visual Completion.
 # Adds authored physical framing and foreground/midground depth to all five
-# accepted realms. v1.65 materials, v1.68 Wanderer, v1.69 enemies/boss, camera,
-# collision, navigation, combat timing, input, saves and progression are inherited.
+# accepted realms. r1.1 is the capture-driven Iron correction: the stage remains,
+# but uses dark plate response and a tighter dais instead of a broad rust plane.
+# v1.65 materials, v1.68 Wanderer, v1.69 enemies/boss, camera, collision,
+# navigation, combat timing, input, saves and progression remain inherited.
 
-const REALM_COMPLETION_V170_VERSION := "1.70-realm-endgame-visual-completion-r1"
+const REALM_COMPLETION_V170_VERSION := "1.70-realm-endgame-visual-completion-r1.1"
 const V170_ROOT := "res://assets/environment/v170/"
 const V170_ASSETS := {
 	"lower_halls": V170_ROOT + "lower_halls_frame_v170.obj",
@@ -50,7 +52,7 @@ func debug_snapshot() -> Dictionary:
 	data["production_realm_completion_ready"] = production_realm_completion_ready()
 	data["production_realm_completion_version"] = REALM_COMPLETION_V170_VERSION
 	data["production_realm_completion_instances"] = v170_instances.size()
-	data["production_realm_completion_profile"] = "authored-edge-framing-foreground-depth-boss-dais"
+	data["production_realm_completion_profile"] = "authored-edge-framing-foreground-depth-restrained-boss-dais-r1.1"
 	data["production_realm_completion_gameplay_geometry_changed"] = false
 	return data
 
@@ -62,9 +64,9 @@ func _build_v170_realm_completion() -> void:
 
 	_mount_v170("lower_halls", LowerFrameV170, v165_lower_stone, Vector3.ONE)
 	_mount_v170("ossuary", OssuaryFrameV170, v165_ossuary_stone, Vector3.ONE)
-	# The authored Iron mesh contains a visual three-tier boss dais. Compress Y
-	# so it reads as a stage plane without changing the Warden's gameplay height.
-	_mount_v170("iron_bastion", IronStageV170, v165_iron_oxidized, Vector3(1.0, 0.24, 1.0))
+	# r1 visual review: oxidized orange made the dais compete with the boss.
+	# Dark iron preserves the stage silhouette while letting the Warden dominate.
+	_mount_v170("iron_bastion", IronStageV170, v165_iron_plate, Vector3(1.0, 0.24, 1.0))
 	_mount_v170("rift_descent", RiftFrameV170, v165_rift_stone, Vector3.ONE)
 	_mount_v170("starless_spire", SpireFrameV170, v165_spire_stone, Vector3.ONE)
 
