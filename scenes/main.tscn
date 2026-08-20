@@ -46,14 +46,24 @@
 ; v1.62 r1 shared UI foundation retained: res://scripts/main_v76.gd
 ; v1.62 r1.1 dark panel-balance baseline retained: res://scripts/main_v77.gd
 ; v1.62 r2 Vault hierarchy baseline retained: res://scripts/main_v78.gd
-; v1.62 r2.1 active Store action-chip baseline retained: res://scripts/main_v79.gd
+; v1.62 r2.1 Store action-chip baseline retained: res://scripts/main_v79.gd
 ; v1.62 r3 runtime Decision/Game Over CTA baseline retained: res://scripts/main_v80.gd
 ; v1.63 r1 projectile/trail identity baseline retained: res://scripts/main_v82.gd
 ; v1.63 r2 technical boss-frame replacement retained: res://scripts/main_v83.gd
 ; v1.63 r2.1 BossDominance correction retained: res://scripts/main_v84.gd
 ; v1.64 r1.1 character lighting/material integration baseline retained: res://scripts/main_v85.gd
-; v1.65 r1 active environment surface/depth top layer.
-[ext_resource type="Script" path="res://scripts/main_v86.gd" id="1_main"]
+; v1.65 r1.3 environment surface/depth baseline retained: res://scripts/main_v86.gd
+; v1.66 r1.1 character form/readability baseline retained: res://scripts/main_v87.gd
+; v1.66 release hardening retained: res://scripts/main_v88.gd
+; v1.67 r1 shared gameplay Wanderer/frontend stage retained: res://scripts/main_v89.gd
+; v1.67 r1.1 capture-driven premium menu hierarchy retained: res://scripts/main_v90.gd
+; v1.67 r1.2 authored Forge workshop + talent tree + contract-board finish retained: res://scripts/main_v91.gd
+; v1.68 r1.1 accepted: shared authored Wanderer visual-completion kit for frontend and gameplay.
+; v1.69 r1 accepted: authored enemy + Warden secondary silhouette completion, Skeleton locked.
+; v1.70 r1.1 accepted: authored five-realm depth framing + restrained Iron Bastion boss stage.
+; v1.71 r1.1 accepted: safe abandon flow, tutorial handoff and final production Settings/Tutorial presentation.
+; v1.72 r1 active: priority audio, rate-limited haptics and mobile runtime budgets.
+[ext_resource type="Script" path="res://scripts/main_v96.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]

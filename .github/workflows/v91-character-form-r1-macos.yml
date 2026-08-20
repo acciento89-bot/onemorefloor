@@ -1,0 +1,84 @@
+name: v1.66 Character Form r1 macOS Review
+
+on:
+  push:
+    branches:
+      - agent/v1.66-character-form
+    paths:
+      - 'scripts/world3d_actor_factory_v166_character_form.gd'
+      - 'scripts/world3d_chamber_v166_character_form.gd'
+      - 'scripts/main_v87.gd'
+      - 'scripts/v91_character_form_r1_smoke_test.gd'
+      - 'scripts/v91_character_form_r1_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v91-character-form-r1-macos.yml'
+  pull_request:
+    paths:
+      - 'scripts/world3d_actor_factory_v166_character_form.gd'
+      - 'scripts/world3d_chamber_v166_character_form.gd'
+      - 'scripts/main_v87.gd'
+      - 'scripts/v91_character_form_r1_smoke_test.gd'
+      - 'scripts/v91_character_form_r1_capture.gd'
+      - 'scenes/main.tscn'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: '4.7.1'
+  GODOT_TAG: '4.7.1-stable'
+
+jobs:
+  character-form-r1-macos:
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1 for macOS
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/godot.zip" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_macos.universal.zip"
+          mkdir -p "$RUNNER_TEMP/godot"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          GODOT="$RUNNER_TEMP/godot/Godot.app/Contents/MacOS/Godot"
+          test -x "$GODOT"
+          "$GODOT" --version
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+
+      - name: Compile active v1.66 stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --editor --path . --quit
+
+      - name: Validate v1.66 character form r1
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --path . --script res://scripts/v91_character_form_r1_smoke_test.gd
+
+      - name: Preserve hardened v1.64 runtime material ordering
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --path . --script res://scripts/v89_character_lighting_r1_smoke_test.gd
+
+      - name: Render five matched 720x1280 realm pairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/v166_character_form_r1
+          "$GODOT" --headless --path . --script res://scripts/v91_character_form_r1_capture.gd
+          test "$(find artifacts/v166_character_form_r1 -name '*.png' -type f | wc -l | tr -d ' ')" = "10"
+
+      - name: Upload v1.66 matched visual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: v91-character-form-r1-before-after
+          path: artifacts/v166_character_form_r1/*.png
+          if-no-files-found: error
+          retention-days: 14

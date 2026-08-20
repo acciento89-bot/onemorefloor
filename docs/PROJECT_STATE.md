@@ -2,60 +2,113 @@
 
 Canonical handoff. **Repository truth wins over chat memory.**
 
-## Active / accepted — v1.65 Environment Surface & Depth
-- PR #100 / `agent/v1.65-environment-depth`, stacked on accepted v1.64 / PR #95.
-- **Accepted production implementation: `a5951b244166bf824e403eda037a4568194348c6` — v1.65 r1.3.**
-- Final visual/test checkpoint: `c1078573877a4e204405a41f781e92201ac20b85`.
-- Active path: `main.tscn` -> `main_v86.gd` -> `world3d_chamber_v165_environment_depth_r13.gd`.
-- Detailed history: `docs/V165_ENVIRONMENT_DEPTH_STATE.md`.
+## Active mode — INTEGRATED DEVICE CANDIDATE, NOT APP STORE RELEASE
+The visible and functional completion blocks through v1.72 are accepted. The next step is one integrated iPhone/iPad TestFlight candidate for real-device validation. App Store submission work remains deferred until that device pass is accepted.
 
-v1.65 r1.3 improves the five combat realms through mobile-safe procedural material breakup plus restrained presentation-only surface/depth dressing. Camera, collision/navigation, combat authority, character geometry/animation, UI, input, saves and progression remain unchanged.
+## Accepted frontend lock — v1.67 r1.2
+- Branch / PR: `agent/v1.66-character-form` / PR #103.
+- Home/Hero share gameplay Wanderer authority.
+- Forge uses the authored workshop kit.
+- Talents use the progression-tree composition.
+- Missions use the contract-board composition.
+- Vault empty state and Tower Pass direction are retained.
+- Existing interaction rectangles, routes and progression authority remain unchanged.
 
-Accepted visual direction:
-- Lower Halls: restrained soot/wear and compact chips instead of regular bright strips.
-- Ossuary: darker dust/patina plus small bone fragments; no large pale applied polygons.
-- Iron Bastion: restrained rust/patina/debris while Warden dominance stays intact.
-- Rift Descent: stronger dark-purple material depth with compact accents; no neon/debug fracture bars.
-- Starless Spire: cold-blue material breakup with compact inlay chips; no long blue bars.
+## Accepted character lock — v1.68 Wanderer Visual Completion r1.1
+- Production stack inherited through `scripts/main_v92.gd`.
+- Gameplay world: `scripts/world3d_chamber_v168_character_completion.gd`.
+- Shared actor factory: `scripts/world3d_actor_factory_v168_character_completion.gd`.
+- Frontend stage: `scripts/menu3d_stage_v168_character_completion.gd`.
+- r1 was technically green but visually rejected because wide horizontal pauldrons read like wings.
+- r1.1 corrected only pauldrons, chest proportion, trim and tabard.
+- Accepted head before enemy work: `750af8112831f7082c3925670b242253ff228ce0`.
+- Real Hero/gameplay review accepted r1.1; Hood r11 and articulated animation authority are preserved.
 
-### v1.65 decision history
-- r1: technically green, visually rejected for long brass/purple/blue debug-bar language.
-- r1.1: technically green, visually too subtle.
-- r1.2: materially stronger, but visually rejected for large low-poly-looking wear patches in Ossuary/Iron.
-- **r1.3: visually accepted.**
+## Accepted enemy + boss lock — v1.69 r1
+- Production stack inherited through `scripts/main_v93.gd`.
+- Gameplay world: `scripts/world3d_chamber_v169_enemy_completion.gd`.
+- Actor factory: `scripts/world3d_actor_factory_v169_enemy_completion.gd`.
+- Dedicated gate run `32338789376`: SUCCESS.
+- Evidence artifact `9395598136` / `v169-enemy-boss-visual-completion`.
+- Five authored OBJ secondary kits replace the visible v1.66 BoxMesh secondary armour layer for Goblin, Bat, Ghoul, Necromancer and Warden.
+- Skeleton remains the locked geometric readability reference.
+- Warden keeps shield/blade dominance while chest and shoulder armour read as one authored boss mass.
+- Full gameplay authority remained green.
 
-Final r1.3 visual gate:
-- workflow **`32292817771` — fully green**;
-- artifact **`9380157967`**;
-- all ten matched before/after captures asserted at 720x1280;
-- v1.65 readiness/camera/no-collision contract PASS;
-- hardened v1.64 runtime material-order regression PASS.
+## Accepted realm + endgame lock — v1.70 r1.1
+- Production stack inherited through `scripts/main_v94.gd`.
+- Gameplay world: `scripts/world3d_chamber_v170_realm_completion.gd`.
+- Accepted correction head: `db2940898206ff0291e4f6c2af3bcff27d3f64e7`.
+- r1 added authored edge/foreground framing to all five realms but its Iron boss dais was visually rejected as too broad/orange and competed with the Warden.
+- r1.1 retains the successful Lower Halls, Ossuary, Rift and Starless framing while tightening the Iron stage and switching it to dark plate response.
+- Dedicated v1.70 run `32340024229`: SUCCESS.
+- Evidence artifact `9396034866` / `v170-realm-endgame-visual-completion`.
+- Fixed 720x1280 matched review accepted r1.1: Warden remains dominant, Iron stage reads as supporting architecture, and the four other realms retain their added depth.
+- Full gameplay smoke and unsigned iPhone/iPad device build run `32340024326` passed on the accepted head.
 
-Final r1.3 unsigned iOS gate:
-- workflow **`32292817944` — fully green**;
-- metadata/import/Xcode export/project inspection PASS;
-- **unsigned iPhone/iPad compile + package PASS**;
-- artifacts PASS;
-- TestFlight override/API key/release archive/export/**upload SKIPPED**.
+## Accepted UX / completion lock — v1.71 r1.1
+- Production stack inherited through `scripts/main_v95.gd`.
+- Accepted correction head: `3a883e6ebe040bcbb4cd36e7a9377305e91f443f`.
+- Pause `RETURN HOME` now requires an explicit abandon confirmation; cancel preserves the live run.
+- Replay Tutorial requested during a run starts from Home in the same session instead of relying on an app restart.
+- Tutorial may be deliberately skipped before the guided run starts; guided combat remains authoritative once started.
+- Settings use production copy, retain Privacy Policy, and no longer expose development/playtest wording.
+- Production Store remains fail-closed/hidden until a real native StoreKit provider exists.
+- r1 gate was technically green, but real portrait review rejected Settings copy leakage and clipped Tutorial body text.
+- r1.1 redraws Settings cleanly and uses explicit portrait-safe Tutorial line layout.
+- Dedicated v1.71 run `32350270829`: SUCCESS.
+- Evidence artifact `9399620857` / `v171-ux-completion`.
+- Fixed 720x1280 review accepted Settings, Pause, Abandon Confirm and Tutorial surfaces.
+- Route graph, Privacy/Store guards, abandon flow, tutorial replay/skip and complete gameplay smoke all passed.
 
-## Locked parents
-- v1.64 Character Lighting r1.1: `b4a63b0be50caa5ed08c9984c2101c059347dfe9`; accepted matched run `32286008428`.
-- v1.63 Combat Identity: `7262f42002aeeba338559190e8a87a616329ec54`; combined review `32280114378` accepted.
-- v1.62 UI: `71c8ecec5387400af7ef1c4bd29a3f87f9323d17`.
-- v1.61 Combat Presentation: `bb367aad35338dd6d32fbdf7d4de4208efef2ad0`.
-- v1.60 Authored 3D: `3e567bf409a8492a55f672b226ce9ce81c16780f`; Wanderer safe point `00a78086d47b06093c1c7554c2713067f3def132`; Hood r11 `4f82a5aeb717a088747eb31849b2d2d97340ba27`.
+## Accepted feedback / device-performance lock — v1.72 r1
+- Active scene: `scenes/main.tscn` -> `scripts/main_v96.gd`.
+- Accepted implementation head: `04fbc6a977839acadf50759c6c56aea7cea1db81`.
+- `ReleaseAudioV3` keeps the accepted realm music and authored SFX assets but adds event priorities and per-event cooldowns so low-value attack/hit chatter cannot steal boss, NOVA, claim or milestone feedback.
+- Eight SFX voices remain the hard audio budget; priority preemption is allowed only in the direction of more important feedback.
+- Haptics are centrally strength-classified and rate-limited so dense combat cannot become continuous vibration; infrequent loot/claim/boss/milestone outcomes receive semantic haptic feedback.
+- Mobile runtime readiness locks the 60-FPS target, GL Compatibility renderer, 2x 3D MSAA and the accepted pooled world budgets: 18 enemies, 28 player projectiles, 36 enemy projectiles and 24 coins.
+- No combat balance, progression, camera, actor geometry or accepted visual lock changed.
+- Dedicated v1.72 run `32351081073`: SUCCESS, including prioritized-feedback/mobile-budget smoke and complete gameplay smoke.
+- Unsigned iPhone/iPad device build run `32351081135`: SUCCESS on the same head.
+- That iOS run explicitly skipped TestFlight override, App Store archive/export and Apple upload steps; no TestFlight build was created by the v1.72 validation run.
+
+## Preserved gameplay/art locks
+- v1.67 r1.2 frontend/menu baseline.
+- v1.68 r1.1 Wanderer visual completion / Hood r11.
+- v1.69 r1 enemy + boss authored silhouettes.
+- v1.70 r1.1 realm/endgame authored framing.
+- v1.71 r1.1 UX route/modal completion.
+- v1.72 r1 priority feedback + mobile runtime budgets.
+- v1.65 r1.3 environment material/depth baseline beneath v1.70.
+- v1.64 r1.1 character-lighting/material ordering.
+- v1.63 projectile/boss combat identity.
+- v1.62 UI/input foundations.
+- Save, migration, backup, progression, endless/endgame and gameplay authority remain smoke-gated.
+
+## TestFlight
+- Build 30 is successfully uploaded and remains the current integrated validation build.
+- No v1.66-v1.72 completion micro-pass created another TestFlight build.
+- The next TestFlight must be one integrated candidate containing the accepted frontend, character, enemy/boss, realm/endgame, UX and feedback/performance locks.
+- Do not retry or create additional TestFlight builds automatically if that integrated upload fails; inspect and report the failure first.
+
+## Active next — Integrated TestFlight Candidate
+Required sequence:
+1. Review PR #103 as a whole against `main` and ensure only intended accepted completion work is present.
+2. Run/finalize the integrated release gate on the exact candidate head.
+3. Merge/promote the accepted candidate to `main` only after the whole diff is verified.
+4. Bump the next TestFlight build exactly once and dispatch one integrated iPhone/iPad upload.
+5. Verify the actual Apple upload step succeeds before claiming the build is on TestFlight.
+6. Perform real-device iPhone/iPad playtest and fix only device-proven regressions.
+
+## Remaining completion blocks
+1. **Integrated TestFlight build for real iPhone/iPad playtest — ACTIVE NEXT.**
+2. Device-driven corrections if needed.
+3. Only after device/visual acceptance: release metadata and App Store submission.
 
 ## Continuity rules
-Preserve accepted animation/pivots, gameplay authority, danger semantics, geometry/VFX/UI/lighting/environment locks and rollback points. Gameplay/device images decide visual acceptance; technically green but visually rejected passes stay rejected. Presentation details must not acquire collision/navigation authority. No accidental repeated TestFlight uploads.
-
-## Current release action
-**v1.65 r1.3 is complete from visual + unsigned-device-build perspective.** The user explicitly requested exactly one TestFlight upload after this development block.
-
-Release sequence:
-1. create a fresh release bundle from accepted `agent/v1.65-environment-depth` to stale `main`;
-2. merge only the accepted bundle;
-3. verify current stored TestFlight build trigger/build number immediately before dispatch;
-4. trigger **exactly one** TestFlight upload;
-5. track the actual workflow through App Store Connect upload success; if the attempt fails, report it before any retry.
-
-See `docs/V165_ENVIRONMENT_DEPTH_STATE.md`, `docs/V164_CHARACTER_LIGHTING_STATE.md`, `docs/V163_COMBAT_IDENTITY_STATE.md`, `docs/UI_V162_STATE.md`.
+- Update this file after each major accepted/rejected pass.
+- Real captures and device acceptance decide visual completion; CI only proves technical health.
+- Keep menu and gameplay Wanderer on one shared actor authority.
+- Preserve accepted gameplay/input/save contracts unless a verified blocker requires a change.
+- Bundle meaningful work before TestFlight; avoid build-number churn.

@@ -1,0 +1,273 @@
+name: v1.72 Integrated Device Candidate Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/v1.66-character-form
+    paths:
+      - '.github/workflows/v92-release-completion-gate.yml'
+      - 'docs/RELEASE_READINESS.md'
+      - 'docs/PROJECT_STATE.md'
+      - 'scripts/main_v89.gd'
+      - 'scripts/main_v90.gd'
+      - 'scripts/main_v91.gd'
+      - 'scripts/main_v92.gd'
+      - 'scripts/main_v93.gd'
+      - 'scripts/main_v94.gd'
+      - 'scripts/main_v95.gd'
+      - 'scripts/main_v96.gd'
+      - 'scripts/release_audio_v3.gd'
+      - 'scripts/menu3d_stage_v167_completion*.gd'
+      - 'scripts/world3d_actor_factory_v168_character_completion.gd'
+      - 'scripts/world3d_actor_factory_v169_enemy_completion.gd'
+      - 'scripts/world3d_chamber_v168_character_completion.gd'
+      - 'scripts/world3d_chamber_v169_enemy_completion.gd'
+      - 'scripts/world3d_chamber_v170_realm_completion.gd'
+      - 'scripts/v94_menu_completion_smoke_test.gd'
+      - 'scripts/v95_character_completion_smoke_test.gd'
+      - 'scripts/v96_enemy_completion_smoke_test.gd'
+      - 'scripts/v97_realm_completion_smoke_test.gd'
+      - 'scripts/v98_ux_completion_smoke_test.gd'
+      - 'scripts/v99_feedback_performance_smoke_test.gd'
+      - 'scenes/main.tscn'
+  pull_request:
+    paths:
+      - '.github/workflows/v92-release-completion-gate.yml'
+      - 'docs/RELEASE_READINESS.md'
+      - 'docs/PROJECT_STATE.md'
+      - 'scripts/main_v89.gd'
+      - 'scripts/main_v90.gd'
+      - 'scripts/main_v91.gd'
+      - 'scripts/main_v92.gd'
+      - 'scripts/main_v93.gd'
+      - 'scripts/main_v94.gd'
+      - 'scripts/main_v95.gd'
+      - 'scripts/main_v96.gd'
+      - 'scripts/release_audio_v3.gd'
+      - 'scripts/menu3d_stage_v167_completion*.gd'
+      - 'scripts/world3d_actor_factory_v168_character_completion.gd'
+      - 'scripts/world3d_actor_factory_v169_enemy_completion.gd'
+      - 'scripts/world3d_chamber_v168_character_completion.gd'
+      - 'scripts/world3d_chamber_v169_enemy_completion.gd'
+      - 'scripts/world3d_chamber_v170_realm_completion.gd'
+      - 'scripts/v94_menu_completion_smoke_test.gd'
+      - 'scripts/v95_character_completion_smoke_test.gd'
+      - 'scripts/v96_enemy_completion_smoke_test.gd'
+      - 'scripts/v97_realm_completion_smoke_test.gd'
+      - 'scripts/v98_ux_completion_smoke_test.gd'
+      - 'scripts/v99_feedback_performance_smoke_test.gd'
+      - 'scenes/main.tscn'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_TAG: '4.7.1-stable'
+  OMF_FORCE_RELEASE_SURFACES: '1'
+
+jobs:
+  integrated-device-candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 52
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_TAG}_linux.x86_64" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile complete active project
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee integrated-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" integrated-import.log; then
+            echo "Godot reported candidate compile/import errors"
+            exit 1
+          fi
+
+      - name: Validate exact production entrypoint and metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          project = Path('project.godot').read_text()
+          preset = Path('export_presets.cfg').read_text()
+          trigger = Path('.github/testflight-trigger').read_text()
+          scene = Path('scenes/main.tscn').read_text()
+
+          project_version = re.search(r'config/version="([^"]+)"', project)
+          ios_short = re.search(r'application/short_version="([^"]+)"', preset)
+          ios_build = re.search(r'application/version="([0-9]+)"', preset)
+          bundle = re.search(r'application/bundle_identifier="([^"]+)"', preset)
+          target = re.search(r'application/targeted_device_family=([0-9]+)', preset)
+          viewport_w = re.search(r'window/size/viewport_width=([0-9]+)', project)
+          viewport_h = re.search(r'window/size/viewport_height=([0-9]+)', project)
+          active_main = re.search(r'\[ext_resource type="Script" path="([^"]+)" id="1_main"\]', scene)
+          trigger_build = re.search(r'^build=([0-9]+)$', trigger, re.M)
+
+          required = [project_version, ios_short, ios_build, bundle, target, viewport_w, viewport_h, active_main, trigger_build]
+          if any(v is None for v in required):
+              raise SystemExit('Missing integrated candidate metadata')
+          if project_version.group(1) != ios_short.group(1):
+              raise SystemExit(f'Version mismatch: project={project_version.group(1)} iOS={ios_short.group(1)}')
+          if bundle.group(1) != 'de.kamilunavo.onemorefloor':
+              raise SystemExit('Unexpected iOS bundle identifier')
+          if target.group(1) != '2':
+              raise SystemExit('iOS target must include iPhone + iPad')
+          if viewport_w.group(1) != '720' or viewport_h.group(1) != '1280':
+              raise SystemExit('Reference viewport changed')
+          if 'renderer/rendering_method="gl_compatibility"' not in project:
+              raise SystemExit('GL Compatibility release renderer missing')
+          if active_main.group(1) != 'res://scripts/main_v96.gd':
+              raise SystemExit(f'Wrong active production entrypoint: {active_main.group(1)}')
+          if trigger_build.group(1) != '30':
+              raise SystemExit('Pre-promotion candidate must preserve the already-used Build 30 trigger')
+          print(f'Integrated candidate metadata OK: {project_version.group(1)} / checked-in iOS build {ios_build.group(1)} / active={active_main.group(1)}')
+          PY
+
+      - name: Validate production Store and Privacy surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v93_release_surface_smoke_test.gd --quit-after 360 2>&1 | tee release-surfaces.log
+          grep -q "v1.66 production release surface smoke test passed" release-surfaces.log
+
+      - name: Validate accepted frontend v1.67
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v94_menu_completion_smoke_test.gd --quit-after 420 2>&1 | tee frontend.log
+
+      - name: Validate accepted Wanderer v1.68
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v95_character_completion_smoke_test.gd --quit-after 420 2>&1 | tee wanderer.log
+
+      - name: Validate accepted enemies and boss v1.69
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v96_enemy_completion_smoke_test.gd --quit-after 420 2>&1 | tee enemies.log
+
+      - name: Validate accepted realms and endgame v1.70
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v97_realm_completion_smoke_test.gd --quit-after 420 2>&1 | tee realms.log
+
+      - name: Validate accepted UX completion v1.71
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v98_ux_completion_smoke_test.gd --quit-after 420 2>&1 | tee ux.log
+          grep -q "v1.71 UX completion smoke test passed" ux.log
+
+      - name: Validate accepted feedback and mobile budgets v1.72
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v99_feedback_performance_smoke_test.gd --quit-after 480 2>&1 | tee feedback.log
+          grep -q "v1.72 feedback performance smoke test passed" feedback.log
+
+      - name: Validate complete gameplay authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 520 2>&1 | tee gameplay.log
+          grep -q "ONE MORE FLOOR gameplay smoke test passed" gameplay.log
+
+      - name: Validate saves settings privacy pause tutorial lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/release_smoke_test.gd --quit-after 360 2>&1 | tee release-smoke.log
+          grep -q "ONE MORE FLOOR v1.0 release smoke test passed" release-smoke.log
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v50_release_candidate_smoke_test.gd --quit-after 360 2>&1 | tee lifecycle.log
+          grep -q "ONE MORE FLOOR v1.37 release-candidate smoke test passed" lifecycle.log
+
+      - name: Validate endless and endgame progression
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v27_endless_smoke_test.gd --quit-after 340 2>&1 | tee endless.log
+          grep -q "ONE MORE FLOOR v1.14 endless ascension smoke test passed" endless.log
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v28_endgame_smoke_test.gd --quit-after 360 2>&1 | tee endgame.log
+          grep -q "ONE MORE FLOOR v1.15 endgame realms smoke test passed" endgame.log
+
+      - name: Preserve accepted combat visual language
+        shell: bash
+        env:
+          OMF_V66_SCENARIO: all
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://scripts/v89_character_lighting_r1_smoke_test.gd --quit-after 340 2>&1 | tee lighting.log
+          grep -q "v1.64 character lighting r1 smoke test passed" lighting.log
+          ./godot --headless --path . --script res://scripts/v86_boss_dominance_smoke_test.gd --quit-after 360 2>&1 | tee boss.log
+          grep -q "v1.63 boss dominance r2.1 smoke test passed" boss.log
+          ./godot --headless --path . --script res://scripts/v83_projectile_identity_smoke_test.gd --quit-after 340 2>&1 | tee projectile.log
+          grep -q "v1.63 projectile identity r1 smoke test passed" projectile.log
+          ./godot --headless --path . --script res://scripts/v75_combat_presentation_r32_smoke_test.gd --quit-after 340 2>&1 | tee danger.log
+          grep -q "v1.61 combat presentation r3.2 smoke test passed" danger.log
+          ./godot --headless --path . --script res://scripts/v80_ui_runtime_cta_smoke_test.gd --quit-after 340 2>&1 | tee ui.log
+          grep -q "v1.62 UI foundation r3 runtime CTA smoke test passed" ui.log
+          ./godot --headless --path . --script res://scripts/v66_input_flow_smoke_test.gd --quit-after 340 2>&1 | tee input.log
+          grep -q "v1.52.1 tutorial/game-over input-flow smoke test passed" input.log
+
+      - name: Integrated candidate verdict
+        shell: bash
+        run: |
+          echo "ONE MORE FLOOR v1.72 INTEGRATED DEVICE CANDIDATE GATE PASSED"
+
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v172-integrated-device-candidate-failure
+          path: |
+            integrated-import.log
+            release-surfaces.log
+            frontend.log
+            wanderer.log
+            enemies.log
+            realms.log
+            ux.log
+            feedback.log
+            gameplay.log
+            release-smoke.log
+            lifecycle.log
+            endless.log
+            endgame.log
+            lighting.log
+            boss.log
+            projectile.log
+            danger.log
+            ui.log
+            input.log
+          if-no-files-found: ignore
+          retention-days: 14

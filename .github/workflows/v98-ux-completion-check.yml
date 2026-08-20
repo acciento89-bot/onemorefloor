@@ -1,0 +1,104 @@
+name: v1.71 UX Completion Check
+
+on:
+  push:
+    branches:
+      - agent/v1.66-character-form
+    paths:
+      - 'scripts/main_v94.gd'
+      - 'scripts/main_v95.gd'
+      - 'scripts/v98_ux_completion_smoke_test.gd'
+      - 'scripts/v98_ux_completion_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v98-ux-completion-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/main_v94.gd'
+      - 'scripts/main_v95.gd'
+      - 'scripts/v98_ux_completion_smoke_test.gd'
+      - 'scripts/v98_ux_completion_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v98-ux-completion-check.yml'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_TAG: '4.7.1-stable'
+  OMF_FORCE_RELEASE_SURFACES: '1'
+
+jobs:
+  ux-completion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 24
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_TAG}_linux.x86_64" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile active v1.71 stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v171-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v171-import.log; then
+            echo "Godot reported v1.71 import/compile errors"
+            exit 1
+          fi
+
+      - name: Validate completed route and modal UX
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v98_ux_completion_smoke_test.gd --quit-after 480 2>&1 | tee v171-smoke.log
+          grep -q "v1.71 UX completion smoke test passed" v171-smoke.log
+
+      - name: Render v1.71 UX portrait evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/v171_ux_completion
+          mkdir -p artifacts/v171_ux_completion
+          xvfb-run -a ./godot --path . --script res://scripts/v98_ux_completion_capture.gd --quit-after 480 2>&1 | tee v171-capture.log
+          grep -q "v1.71 UX completion visual capture passed" v171-capture.log
+          test "$(find artifacts/v171_ux_completion -name '*.png' -type f | wc -l | tr -d ' ')" = "4"
+
+      - name: Preserve complete gameplay authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 480 2>&1 | tee gameplay.log
+          grep -q "ONE MORE FLOOR gameplay smoke test passed" gameplay.log
+
+      - name: Upload v1.71 visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v171-ux-completion
+          path: artifacts/v171_ux_completion/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v171-ux-completion-failure
+          path: |
+            v171-import.log
+            v171-smoke.log
+            v171-capture.log
+            gameplay.log
+          if-no-files-found: ignore
+          retention-days: 14

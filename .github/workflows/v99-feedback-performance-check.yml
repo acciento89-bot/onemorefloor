@@ -1,0 +1,84 @@
+name: v1.72 Feedback + Performance Check
+
+on:
+  push:
+    branches:
+      - agent/v1.66-character-form
+    paths:
+      - 'scripts/release_audio_v3.gd'
+      - 'scripts/main_v96.gd'
+      - 'scripts/v99_feedback_performance_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v99-feedback-performance-check.yml'
+  pull_request:
+    paths:
+      - 'scripts/release_audio_v3.gd'
+      - 'scripts/main_v96.gd'
+      - 'scripts/v99_feedback_performance_smoke_test.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v99-feedback-performance-check.yml'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_TAG: '4.7.1-stable'
+  OMF_FORCE_RELEASE_SURFACES: '1'
+
+jobs:
+  feedback-performance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 24
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_TAG}_linux.x86_64" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile active v1.72 stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v172-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v172-import.log; then
+            echo "Godot reported v1.72 import/compile errors"
+            exit 1
+          fi
+
+      - name: Validate prioritized feedback and mobile budgets
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v99_feedback_performance_smoke_test.gd --quit-after 480 2>&1 | tee v172-smoke.log
+          grep -q "v1.72 feedback performance smoke test passed" v172-smoke.log
+          grep -q "V172_FEEDBACK_SNAPSHOT:" v172-smoke.log
+
+      - name: Preserve complete gameplay authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 480 2>&1 | tee gameplay.log
+          grep -q "ONE MORE FLOOR gameplay smoke test passed" gameplay.log
+
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v172-feedback-performance-failure
+          path: |
+            v172-import.log
+            v172-smoke.log
+            gameplay.log
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,110 @@
+name: v1.68 Wanderer Visual Completion Check
+
+on:
+  push:
+    branches:
+      - agent/v1.66-character-form
+    paths:
+      - 'assets/models/actors/v168/**'
+      - 'scripts/world3d_actor_factory_v168_character_completion.gd'
+      - 'scripts/world3d_chamber_v168_character_completion.gd'
+      - 'scripts/menu3d_stage_v168_character_completion.gd'
+      - 'scripts/main_v92.gd'
+      - 'scripts/v95_character_completion_smoke_test.gd'
+      - 'scripts/v95_character_completion_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v95-character-completion-check.yml'
+  pull_request:
+    paths:
+      - 'assets/models/actors/v168/**'
+      - 'scripts/world3d_actor_factory_v168_character_completion.gd'
+      - 'scripts/world3d_chamber_v168_character_completion.gd'
+      - 'scripts/menu3d_stage_v168_character_completion.gd'
+      - 'scripts/main_v92.gd'
+      - 'scripts/v95_character_completion_smoke_test.gd'
+      - 'scripts/v95_character_completion_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v95-character-completion-check.yml'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_TAG: '4.7.1-stable'
+
+jobs:
+  character-completion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_TAG}_linux.x86_64" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile and import v1.68 authored character kit
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v168-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource|OBJ:.*ERROR" v168-import.log; then
+            echo "Godot reported v1.68 import/compile errors"
+            exit 1
+          fi
+
+      - name: Validate shared menu and gameplay Wanderer
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v95_character_completion_smoke_test.gd --quit-after 420 2>&1 | tee v168-smoke.log
+          grep -q "v1.68 Wanderer visual completion smoke test passed" v168-smoke.log
+
+      - name: Render matched v1.66 vs v1.68 and Hero captures
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/v168_character_completion
+          xvfb-run -a ./godot --path . --script res://scripts/v95_character_completion_capture.gd --quit-after 420 2>&1 | tee v168-capture.log
+          grep -q "v1.68 Wanderer matched visual capture passed" v168-capture.log
+          test -s artifacts/v168_character_completion/hero_v168.png
+          test -s artifacts/v168_character_completion/before_v166.png
+          test -s artifacts/v168_character_completion/after_v168.png
+
+      - name: Preserve complete gameplay authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 420 2>&1 | tee gameplay.log
+          grep -q "ONE MORE FLOOR gameplay smoke test passed" gameplay.log
+
+      - name: Upload v1.68 visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v168-wanderer-visual-completion
+          path: artifacts/v168_character_completion/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v168-character-completion-failure
+          path: |
+            v168-import.log
+            v168-smoke.log
+            v168-capture.log
+            gameplay.log
+          if-no-files-found: ignore
+          retention-days: 14

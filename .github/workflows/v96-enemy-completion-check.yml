@@ -1,0 +1,109 @@
+name: v1.69 Enemy + Boss Visual Completion Check
+
+on:
+  push:
+    branches:
+      - agent/v1.66-character-form
+    paths:
+      - 'assets/models/enemies/v169/**'
+      - 'scripts/world3d_actor_factory_v169_enemy_completion.gd'
+      - 'scripts/world3d_chamber_v169_enemy_completion.gd'
+      - 'scripts/main_v93.gd'
+      - 'scripts/v96_enemy_completion_smoke_test.gd'
+      - 'scripts/v96_enemy_completion_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v96-enemy-completion-check.yml'
+  pull_request:
+    paths:
+      - 'assets/models/enemies/v169/**'
+      - 'scripts/world3d_actor_factory_v169_enemy_completion.gd'
+      - 'scripts/world3d_chamber_v169_enemy_completion.gd'
+      - 'scripts/main_v93.gd'
+      - 'scripts/v96_enemy_completion_smoke_test.gd'
+      - 'scripts/v96_enemy_completion_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v96-enemy-completion-check.yml'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_TAG: '4.7.1-stable'
+
+jobs:
+  enemy-completion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 24
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_TAG}_linux.x86_64" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile and import v1.69 authored enemy kits
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v169-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource|OBJ:.*ERROR" v169-import.log; then
+            echo "Godot reported v1.69 import/compile errors"
+            exit 1
+          fi
+
+      - name: Validate enemy and boss visual completion
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v96_enemy_completion_smoke_test.gd --quit-after 420 2>&1 | tee v169-smoke.log
+          grep -q "v1.69 enemy and boss visual completion smoke test passed" v169-smoke.log
+
+      - name: Render five matched realm comparisons
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/v169_enemy_completion
+          xvfb-run -a ./godot --path . --script res://scripts/v96_enemy_completion_capture.gd --quit-after 480 2>&1 | tee v169-capture.log
+          grep -q "v1.69 enemy and boss matched visual capture passed" v169-capture.log
+          for realm in lower_halls ossuary iron_warden rift_descent starless_spire; do
+            test -s "artifacts/v169_enemy_completion/before_${realm}.png"
+            test -s "artifacts/v169_enemy_completion/after_${realm}.png"
+          done
+
+      - name: Preserve complete gameplay authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 420 2>&1 | tee gameplay.log
+          grep -q "ONE MORE FLOOR gameplay smoke test passed" gameplay.log
+
+      - name: Upload v1.69 visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v169-enemy-boss-visual-completion
+          path: artifacts/v169_enemy_completion/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v169-enemy-completion-failure
+          path: |
+            v169-import.log
+            v169-smoke.log
+            v169-capture.log
+            gameplay.log
+          if-no-files-found: ignore
+          retention-days: 14
