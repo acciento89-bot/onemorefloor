@@ -1,0 +1,109 @@
+name: v1.70 Realm + Endgame Visual Completion Check
+
+on:
+  push:
+    branches:
+      - agent/v1.66-character-form
+    paths:
+      - 'assets/environment/v170/**'
+      - 'scripts/world3d_chamber_v170_realm_completion.gd'
+      - 'scripts/main_v94.gd'
+      - 'scripts/v97_realm_completion_smoke_test.gd'
+      - 'scripts/v97_realm_completion_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v97-realm-completion-check.yml'
+  pull_request:
+    paths:
+      - 'assets/environment/v170/**'
+      - 'scripts/world3d_chamber_v170_realm_completion.gd'
+      - 'scripts/main_v94.gd'
+      - 'scripts/v97_realm_completion_smoke_test.gd'
+      - 'scripts/v97_realm_completion_capture.gd'
+      - 'scenes/main.tscn'
+      - '.github/workflows/v97-realm-completion-check.yml'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_TAG: '4.7.1-stable'
+
+jobs:
+  realm-completion:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 24
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_TAG}_linux.x86_64" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile and import v1.70 authored realm kits
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v170-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource|OBJ:.*ERROR" v170-import.log; then
+            echo "Godot reported v1.70 import/compile errors"
+            exit 1
+          fi
+
+      - name: Validate realm and endgame completion
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v97_realm_completion_smoke_test.gd --quit-after 420 2>&1 | tee v170-smoke.log
+          grep -q "v1.70 realm and endgame visual completion smoke test passed" v170-smoke.log
+
+      - name: Render five matched realm comparisons
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/v170_realm_completion
+          mkdir -p artifacts/v170_realm_completion
+          xvfb-run -a ./godot --path . --script res://scripts/v97_realm_completion_capture.gd --quit-after 480 2>&1 | tee v170-capture.log
+          grep -q "v1.70 realm and endgame matched visual capture passed" v170-capture.log
+          for realm in lower_halls ossuary iron_warden rift_descent starless_spire; do
+            test -s "artifacts/v170_realm_completion/before_${realm}.png"
+            test -s "artifacts/v170_realm_completion/after_${realm}.png"
+          done
+          test "$(find artifacts/v170_realm_completion -name '*.png' -type f | wc -l | tr -d ' ')" = "10"
+
+      - name: Preserve complete gameplay authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 420 2>&1 | tee gameplay.log
+          grep -q "ONE MORE FLOOR gameplay smoke test passed" gameplay.log
+
+      - name: Upload v1.70 visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v170-realm-endgame-visual-completion
+          path: artifacts/v170_realm_completion/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v170-realm-completion-failure
+          path: |
+            v170-import.log
+            v170-smoke.log
+            v170-capture.log
+            gameplay.log
+          if-no-files-found: ignore
+          retention-days: 14
