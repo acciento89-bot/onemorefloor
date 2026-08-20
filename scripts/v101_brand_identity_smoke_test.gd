@@ -1,8 +1,7 @@
 extends SceneTree
 
 # ONE MORE FLOOR v1.74 — Branding + Product Identity contract.
-# The shipping icon/Home identity may change; all accepted v1.73 gameplay/input
-# authority must remain inherited and the legacy cartoon asset must not ship as icon.
+# Shipping identity may change; all accepted v1.73 gameplay/input authority stays inherited.
 
 const EXPECTED_ICON := "res://assets/art/app_icon_v174.svg"
 const LEGACY_ICON := "res://assets/art/wanderer.svg"
@@ -52,11 +51,14 @@ func _run() -> void:
 	if not bool(snapshot.get("ready", false)):
 		_fail("v1.74 snapshot not ready")
 		return
-	if String(snapshot.get("version", "")) != "1.74-branding-product-identity-r1":
-		_fail("v1.74 version marker invalid")
+	if String(snapshot.get("version", "")) != "1.74-branding-product-identity-r1.1":
+		_fail("v1.74 r1.1 version marker invalid")
 		return
 	if bool(snapshot.get("legacy_icon_active", true)) or bool(snapshot.get("input_override", true)):
 		_fail("legacy icon/input override contract invalid")
+		return
+	if not bool(snapshot.get("home_crest_compact_r11", false)):
+		_fail("r1.1 compact Home crest correction missing")
 		return
 
 	print("V174_BRAND_IDENTITY_SNAPSHOT:%s" % JSON.stringify(snapshot))
