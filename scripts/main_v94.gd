@@ -1,11 +1,12 @@
 extends "res://scripts/main_v93.gd"
 
-# ONE MORE FLOOR v1.70 r1 — Realm + Endgame Visual Completion.
+# ONE MORE FLOOR v1.70 r1.1 — Realm + Endgame Visual Completion.
 # Frontend and accepted character/enemy stacks stay inherited; only the gameplay
-# world advances to the authored five-realm completion layer.
+# world advances to the accepted authored five-realm completion layer. r1.1 is
+# the capture-driven Iron boss-stage correction.
 
 const RealmCompletionWorldV170 = preload("res://scripts/world3d_chamber_v170_realm_completion.gd")
-const V94_REALM_COMPLETION := "1.70-realm-endgame-visual-completion-r1"
+const V94_REALM_COMPLETION := "1.70-realm-endgame-visual-completion-r1.1"
 
 func _ready() -> void:
 	super._ready()

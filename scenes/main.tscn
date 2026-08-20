@@ -60,8 +60,9 @@
 ; v1.67 r1.2 authored Forge workshop + talent tree + contract-board finish retained: res://scripts/main_v91.gd
 ; v1.68 r1.1 accepted: shared authored Wanderer visual-completion kit for frontend and gameplay.
 ; v1.69 r1 accepted: authored enemy + Warden secondary silhouette completion, Skeleton locked.
-; v1.70 r1 active: authored five-realm depth framing + Iron Bastion endgame boss stage.
-[ext_resource type="Script" path="res://scripts/main_v94.gd" id="1_main"]
+; v1.70 r1.1 accepted: authored five-realm depth framing + restrained Iron Bastion boss stage.
+; v1.71 r1 active: UX completion, safe run abandon, tutorial replay handoff and final production copy.
+[ext_resource type="Script" path="res://scripts/main_v95.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
