@@ -63,8 +63,9 @@
 ; v1.70 r1.1 accepted: authored five-realm depth framing + restrained Iron Bastion boss stage.
 ; v1.71 r1.1 accepted: safe abandon flow, tutorial handoff and final production Settings/Tutorial presentation.
 ; v1.72 r1 accepted: priority audio, rate-limited haptics and mobile runtime budgets.
-; v1.73 r1 active: complete Decision/Game Over and running transition/boss-intro presentation.
-[ext_resource type="Script" path="res://scripts/main_v97.gd" id="1_main"]
+; v1.73 r1 accepted: complete Decision/Game Over and running transition/boss-intro presentation.
+; v1.74 r1 candidate: shipping icon + Home product identity alignment.
+[ext_resource type="Script" path="res://scripts/main_v98.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/fullscreen_backdrop.gd" id="2_full"]
 [ext_resource type="Script" path="res://scripts/visual_pack_fx_overlay.gd" id="3_fx"]
 [ext_resource type="Script" path="res://scripts/menu_shell.gd" id="4_menu"]
