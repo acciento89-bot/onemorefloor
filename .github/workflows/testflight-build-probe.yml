@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: read
-  actions: read
+  actions: write
 
 jobs:
   read-build-inventory:
@@ -16,6 +16,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Cancel obsolete pre-merge macOS validations
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for RUN_ID in 32354922312 32354922487 32354922504 32354922479; do
+            code=$(curl -sS -o "$RUNNER_TEMP/cancel-${RUN_ID}.txt" -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/cancel")
+            if [[ "$code" == "202" || "$code" == "409" ]]; then
+              echo "OBSOLETE_RUN_${RUN_ID}_CANCEL_HTTP=$code"
+            else
+              cat "$RUNNER_TEMP/cancel-${RUN_ID}.txt" || true
+              echo "Unexpected cancel HTTP $code for run $RUN_ID"
+              exit 1
+            fi
+          done
 
       - name: Locate latest signed TestFlight dispatch
         shell: bash
