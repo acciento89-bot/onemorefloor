@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: family-life-os-testflight-bridge-${{ github.ref }}
@@ -25,6 +26,21 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 45
     steps:
+      - name: Publish bridge pending status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TARGET_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          PAYLOAD=$(jq -n --arg target_url "$TARGET_URL" '{state:"pending",target_url:$target_url,description:"Family Life OS Build 3 TestFlight bridge running",context:"family-life-os/build-3-testflight-bridge"}')
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "$PAYLOAD" >/dev/null
+
       - name: Checkout Family Life OS source
         uses: actions/checkout@v5
         with:
@@ -148,12 +164,7 @@ jobs:
           APP_COUNT=$(jq '.data | length' "$APP_RESPONSE")
           if [[ "$APP_COUNT" == '0' ]]; then
             echo 'app_record=false' >> "$GITHUB_OUTPUT"
-            {
-              echo '### Manual Apple gate'
-              echo "The Bundle ID is ready, but App Store Connect has no app record for $BUNDLE_ID."
-              echo 'Apple currently requires new app records to be created in the App Store Connect website.'
-              echo 'Use: Apps -> + -> New App, platform iOS, bundle ID de.kamilunavo.familyprototype.'
-            } >> "$GITHUB_STEP_SUMMARY"
+            echo "App Store Connect has no app record for $BUNDLE_ID." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
@@ -266,6 +277,31 @@ jobs:
           path: diagnostics/
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Publish bridge result status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPLOAD_STATUS: ${{ steps.upload.outputs.status }}
+          PREFLIGHT: ${{ steps.apple_preflight.outputs.app_record }}
+        run: |
+          set -euo pipefail
+          if [[ "$PREFLIGHT" == 'true' && "$UPLOAD_STATUS" == '0' ]]; then
+            STATE='success'
+            DESCRIPTION='Family Life OS Build 3 uploaded to TestFlight'
+          else
+            STATE='failure'
+            DESCRIPTION='Family Life OS Build 3 TestFlight bridge failed'
+          fi
+          TARGET_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          PAYLOAD=$(jq -n --arg state "$STATE" --arg target_url "$TARGET_URL" --arg description "$DESCRIPTION" '{state:$state,target_url:$target_url,description:$description,context:"family-life-os/build-3-testflight-bridge"}')
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "$PAYLOAD" >/dev/null
 
       - name: Fail if Family Life OS upload failed
         if: steps.upload.outcome != 'skipped' && steps.upload.outputs.status != '0'
