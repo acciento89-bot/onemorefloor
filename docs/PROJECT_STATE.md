@@ -2,8 +2,8 @@
 
 Canonical handoff. **Repository truth wins over chat memory.**
 
-## Active mode — COMPLETE THE GAME, NOT RELEASE
-Finish the visible and functional game end-to-end before the next integrated TestFlight build. App Store submission work remains deferred.
+## Active mode — INTEGRATED DEVICE CANDIDATE, NOT APP STORE RELEASE
+The visible and functional completion blocks through v1.72 are accepted. The next step is one integrated iPhone/iPad TestFlight candidate for real-device validation. App Store submission work remains deferred until that device pass is accepted.
 
 ## Accepted frontend lock — v1.67 r1.2
 - Branch / PR: `agent/v1.66-character-form` / PR #103.
@@ -47,7 +47,7 @@ Finish the visible and functional game end-to-end before the next integrated Tes
 - Full gameplay smoke and unsigned iPhone/iPad device build run `32340024326` passed on the accepted head.
 
 ## Accepted UX / completion lock — v1.71 r1.1
-- Active scene: `scenes/main.tscn` -> `scripts/main_v95.gd`.
+- Production stack inherited through `scripts/main_v95.gd`.
 - Accepted correction head: `3a883e6ebe040bcbb4cd36e7a9377305e91f443f`.
 - Pause `RETURN HOME` now requires an explicit abandon confirmation; cancel preserves the live run.
 - Replay Tutorial requested during a run starts from Home in the same session instead of relying on an app restart.
@@ -61,12 +61,25 @@ Finish the visible and functional game end-to-end before the next integrated Tes
 - Fixed 720x1280 review accepted Settings, Pause, Abandon Confirm and Tutorial surfaces.
 - Route graph, Privacy/Store guards, abandon flow, tutorial replay/skip and complete gameplay smoke all passed.
 
+## Accepted feedback / device-performance lock — v1.72 r1
+- Active scene: `scenes/main.tscn` -> `scripts/main_v96.gd`.
+- Accepted implementation head: `04fbc6a977839acadf50759c6c56aea7cea1db81`.
+- `ReleaseAudioV3` keeps the accepted realm music and authored SFX assets but adds event priorities and per-event cooldowns so low-value attack/hit chatter cannot steal boss, NOVA, claim or milestone feedback.
+- Eight SFX voices remain the hard audio budget; priority preemption is allowed only in the direction of more important feedback.
+- Haptics are centrally strength-classified and rate-limited so dense combat cannot become continuous vibration; infrequent loot/claim/boss/milestone outcomes receive semantic haptic feedback.
+- Mobile runtime readiness locks the 60-FPS target, GL Compatibility renderer, 2x 3D MSAA and the accepted pooled world budgets: 18 enemies, 28 player projectiles, 36 enemy projectiles and 24 coins.
+- No combat balance, progression, camera, actor geometry or accepted visual lock changed.
+- Dedicated v1.72 run `32351081073`: SUCCESS, including prioritized-feedback/mobile-budget smoke and complete gameplay smoke.
+- Unsigned iPhone/iPad device build run `32351081135`: SUCCESS on the same head.
+- That iOS run explicitly skipped TestFlight override, App Store archive/export and Apple upload steps; no TestFlight build was created by the v1.72 validation run.
+
 ## Preserved gameplay/art locks
 - v1.67 r1.2 frontend/menu baseline.
 - v1.68 r1.1 Wanderer visual completion / Hood r11.
 - v1.69 r1 enemy + boss authored silhouettes.
 - v1.70 r1.1 realm/endgame authored framing.
 - v1.71 r1.1 UX route/modal completion.
+- v1.72 r1 priority feedback + mobile runtime budgets.
 - v1.65 r1.3 environment material/depth baseline beneath v1.70.
 - v1.64 r1.1 character-lighting/material ordering.
 - v1.63 projectile/boss combat identity.
@@ -75,26 +88,23 @@ Finish the visible and functional game end-to-end before the next integrated Tes
 
 ## TestFlight
 - Build 30 is successfully uploaded and remains the current integrated validation build.
-- Do not create TestFlight builds for each completion pass.
-- The next TestFlight bundles the finished world, UX and polish blocks.
+- No v1.66-v1.72 completion micro-pass created another TestFlight build.
+- The next TestFlight must be one integrated candidate containing the accepted frontend, character, enemy/boss, realm/endgame, UX and feedback/performance locks.
+- Do not retry or create additional TestFlight builds automatically if that integrated upload fails; inspect and report the failure first.
 
-## Active next — v1.72 Audio / Haptics / Device Performance Polish
-Purpose: make moment-to-moment feedback feel deliberate on iPhone/iPad and remove avoidable mobile runtime waste without changing combat balance.
-
-Required sweep:
-- audit gameplay events so boss phases, NOVA, crits, loot, claims, run decisions and destructive UI actions have distinct but restrained feedback;
-- add semantic haptic patterns with cooldown/rate limiting so combat bursts cannot buzz continuously;
-- harden SFX voice allocation so low-priority attack/hit spam cannot steal boss/claim feedback;
-- preserve Music/SFX/Haptics settings and existing realm music identities;
-- add a mobile-safe runtime budget gate for pooled actors/VFX, viewport MSAA, renderer and active audio voices;
-- preserve 60-FPS target and current iPhone/iPad build contract;
-- no new decorative combat VFX unless a missing gameplay tell requires one.
+## Active next — Integrated TestFlight Candidate
+Required sequence:
+1. Review PR #103 as a whole against `main` and ensure only intended accepted completion work is present.
+2. Run/finalize the integrated release gate on the exact candidate head.
+3. Merge/promote the accepted candidate to `main` only after the whole diff is verified.
+4. Bump the next TestFlight build exactly once and dispatch one integrated iPhone/iPad upload.
+5. Verify the actual Apple upload step succeeds before claiming the build is on TestFlight.
+6. Perform real-device iPhone/iPad playtest and fix only device-proven regressions.
 
 ## Remaining completion blocks
-1. **Audio/VFX/haptics + device-performance polish — ACTIVE v1.72.**
-2. Integrated TestFlight build for real iPhone/iPad playtest.
-3. Device-driven corrections if needed.
-4. Only after device/visual acceptance: release metadata and App Store submission.
+1. **Integrated TestFlight build for real iPhone/iPad playtest — ACTIVE NEXT.**
+2. Device-driven corrections if needed.
+3. Only after device/visual acceptance: release metadata and App Store submission.
 
 ## Continuity rules
 - Update this file after each major accepted/rejected pass.
