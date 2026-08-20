@@ -1,11 +1,12 @@
 extends "res://scripts/world3d_actor_factory_v166_character_form.gd"
 
-# ONE MORE FLOOR v1.68 r1 — Wanderer Visual Completion.
-# Replaces the visibly coarse authored body kit with a tighter faceted set while
-# preserving the proven v1.55 articulated pivots, Hood r11, sockets, animation
-# state selection, hitboxes and gameplay authority.
+# ONE MORE FLOOR v1.68 r1.1 — Wanderer Visual Completion.
+# r1.1 is the targeted correction after matched portrait/gameplay review rejected
+# r1's wing-like shoulders. It keeps the tapered authored body direction while
+# tightening pauldrons, chest trim and tabard. v1.55 pivots, Hood r11, sockets,
+# hitboxes, state selection and gameplay authority remain unchanged.
 
-const WANDERER_COMPLETION_V168_VERSION := "1.68-wanderer-visual-completion-r1"
+const WANDERER_COMPLETION_V168_VERSION := "1.68-wanderer-visual-completion-r1.1"
 const V168_ROOT := "res://assets/models/actors/v168/"
 const V168_ASSET_PATHS := [
 	V168_ROOT + "wanderer_torso_v168.obj",
@@ -62,8 +63,9 @@ func character_quality_snapshot(root: Node3D = null) -> Dictionary:
 	var data: Dictionary = super.character_quality_snapshot(root)
 	data["wanderer_completion_v168_version"] = WANDERER_COMPLETION_V168_VERSION
 	data["wanderer_completion_v168_ready"] = wanderer_completion_v168_ready(root) if root != null else false
-	data["wanderer_completion_v168_profile"] = "authored-faceted-armour-tabard-trim-shared-menu-gameplay"
+	data["wanderer_completion_v168_profile"] = "authored-faceted-armour-r11-tight-shoulder-tabard-shared-menu-gameplay"
 	data["wanderer_completion_v168_asset_count"] = V168_ASSET_PATHS.size()
+	data["wanderer_completion_v168_r1_rejected"] = true
 	data["hood_r11_preserved"] = root != null and String(root.get_meta("wanderer_hood_r11", "")) == WANDERER_HOOD_R11_VERSION
 	return data
 
@@ -82,31 +84,31 @@ func _apply_wanderer_completion_v168(root: Node3D) -> void:
 	_swap_v168(imported, "V160AuthoredBootR", WandererBootV168)
 	_swap_v168(imported, "V160AuthoredBlade", WandererBladeV168)
 
-	# Keep the accepted right-handed orientation contract. Left pauldron is still
-	# rotated by the authored layer instead of mirrored with negative scaling.
 	var chest := _find_named_mesh(imported, "V160AuthoredChestplate")
 	if chest != null:
-		chest.scale = Vector3(0.98, 0.98, 0.96)
+		chest.scale = Vector3(0.93, 0.98, 0.94)
 	var torso := _find_named_mesh(imported, "V160AuthoredTorso")
 	if torso != null:
-		torso.scale = Vector3(0.98, 1.00, 0.94)
+		torso.scale = Vector3(0.95, 1.00, 0.92)
+	# r1's outward shoulder span dominated the portrait and created a wing read.
+	# Keep the authored asymmetry but make the armor sit on the shoulder joint.
 	for name_value in ["V160AuthoredPauldronL", "V160AuthoredPauldronR"]:
 		var p := _find_named_mesh(imported, name_value)
 		if p != null:
-			p.scale = Vector3(0.78, 0.84, 0.84)
+			p.scale = Vector3(0.62, 0.72, 0.76)
+			p.position.y -= 0.015
 	for name_value in ["V160AuthoredGauntletL", "V160AuthoredGauntletR"]:
 		var g := _find_named_mesh(imported, name_value)
 		if g != null:
-			g.scale = Vector3(0.94, 0.96, 0.94)
+			g.scale = Vector3(0.92, 0.96, 0.92)
 	for name_value in ["V160AuthoredBootL", "V160AuthoredBootR"]:
 		var b := _find_named_mesh(imported, name_value)
 		if b != null:
-			b.scale = Vector3(0.94, 0.96, 0.96)
+			b.scale = Vector3(0.92, 0.96, 0.94)
 	var blade := _find_named_mesh(imported, "V160AuthoredBlade")
 	if blade != null:
 		blade.scale = Vector3(1.08, 1.04, 1.10)
 
-	# Stronger material separation at portrait distance without adding glow spam.
 	_refine_mesh_material(imported, "V160AuthoredChestplate", Color("3b4654"), Color("c5d0dc"), 0.40, 0.42, 0.28)
 	_refine_mesh_material(imported, "V160AuthoredPauldronL", Color("35414f"), Color("b8c6d4"), 0.43, 0.38, 0.24)
 	_refine_mesh_material(imported, "V160AuthoredPauldronR", Color("35414f"), Color("b8c6d4"), 0.43, 0.38, 0.24)
@@ -116,10 +118,13 @@ func _apply_wanderer_completion_v168(root: Node3D) -> void:
 	if hips != null:
 		_remove_named_child(hips, "V168ArmorTrim")
 		_remove_named_child(hips, "V168Tabard")
-		_add_v168_piece(hips, "V168ArmorTrim", WandererTrimV168, wanderer_materials["gold"], Vector3(0.0, -0.015, 0.015))
-		var tabard := _add_v168_piece(hips, "V168Tabard", WandererTabardV168, wanderer_materials["cape"], Vector3(0.0, -0.02, -0.015))
+		var trim := _add_v168_piece(hips, "V168ArmorTrim", WandererTrimV168, wanderer_materials["gold"], Vector3(0.0, -0.005, 0.018))
+		if trim != null:
+			trim.scale = Vector3(0.94, 0.94, 0.94)
+		var tabard := _add_v168_piece(hips, "V168Tabard", WandererTabardV168, wanderer_materials["cape"], Vector3(0.0, -0.015, -0.008))
 		if tabard != null:
-			tabard.rotation.x = -0.035
+			tabard.rotation.x = -0.025
+			tabard.scale = Vector3(0.94, 0.98, 0.92)
 
 	root.set_meta("wanderer_completion_v168", WANDERER_COMPLETION_V168_VERSION)
 

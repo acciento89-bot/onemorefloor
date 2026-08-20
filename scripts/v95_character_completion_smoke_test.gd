@@ -1,5 +1,7 @@
 extends SceneTree
 
+const EXPECTED_VERSION := "1.68-wanderer-visual-completion-r1.1"
+
 func _init() -> void:
 	call_deferred("_run")
 
@@ -27,7 +29,7 @@ func _run() -> void:
 	if not bool(world.call("production_character_completion_ready")):
 		_fail("v1.68 gameplay Wanderer is not ready")
 		return
-	if String(world.player_root.get_meta("wanderer_completion_v168", "")) != "1.68-wanderer-visual-completion-r1":
+	if String(world.player_root.get_meta("wanderer_completion_v168", "")) != EXPECTED_VERSION:
 		_fail("gameplay Wanderer marker missing")
 		return
 
@@ -38,8 +40,8 @@ func _run() -> void:
 	if stage.actor_model == null:
 		_fail("Hero menu Wanderer missing")
 		return
-	if String(stage.actor_model.get_meta("wanderer_completion_v168", "")) != "1.68-wanderer-visual-completion-r1":
-		_fail("Hero menu is not using the v1.68 gameplay Wanderer")
+	if String(stage.actor_model.get_meta("wanderer_completion_v168", "")) != EXPECTED_VERSION:
+		_fail("Hero menu is not using the corrected v1.68 gameplay Wanderer")
 		return
 	if not bool(stage.gameplay_actor_factory.call("wanderer_completion_v168_ready", stage.actor_model)):
 		_fail("Hero menu v1.68 Wanderer contract failed")

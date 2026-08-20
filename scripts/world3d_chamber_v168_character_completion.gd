@@ -1,11 +1,11 @@
 extends "res://scripts/world3d_chamber_v166_character_form.gd"
 
-# ONE MORE FLOOR v1.68 r1 — shared Wanderer visual-completion world layer.
+# ONE MORE FLOOR v1.68 r1.1 — shared Wanderer visual-completion world layer.
 # Environments, camera, enemies, combat timing and collision remain inherited;
-# only the player actor factory is promoted to the v1.68 authored Wanderer kit.
+# only the player actor factory is promoted to the corrected v1.68 authored kit.
 
 const ActorFactoryV168 = preload("res://scripts/world3d_actor_factory_v168_character_completion.gd")
-const CHARACTER_COMPLETION_WORLD_VERSION := "1.68-wanderer-visual-completion-r1"
+const CHARACTER_COMPLETION_WORLD_VERSION := "1.68-wanderer-visual-completion-r1.1"
 
 func _build_player() -> void:
 	actor_factory = ActorFactoryV168.new()

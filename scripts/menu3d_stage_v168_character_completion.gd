@@ -1,10 +1,10 @@
 class_name Menu3DStageV168CharacterCompletion
 extends "res://scripts/menu3d_stage_v167_completion_r12.gd"
 
-# ONE MORE FLOOR v1.68 r1 — same completed Wanderer in frontend and gameplay.
+# ONE MORE FLOOR v1.68 r1.1 — same corrected Wanderer in frontend and gameplay.
 
 const GameplayActorFactoryV168 = preload("res://scripts/world3d_actor_factory_v168_character_completion.gd")
-const FRONTEND_CHARACTER_COMPLETION_VERSION := "1.68-wanderer-visual-completion-r1"
+const FRONTEND_CHARACTER_COMPLETION_VERSION := "1.68-wanderer-visual-completion-r1.1"
 
 func _init() -> void:
 	gameplay_actor_factory = GameplayActorFactoryV168.new()

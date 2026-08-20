@@ -7,7 +7,7 @@ The current goal is to finish the visible and functional game end-to-end before 
 
 ## Accepted frontend lock — v1.67 r1.2
 - Branch / PR: `agent/v1.66-character-form` / PR #103.
-- Frontend r1.2 is accepted as the menu baseline after real 720x1280 portrait review.
+- Frontend r1.2 is the accepted menu baseline after real 720x1280 portrait review.
 - Home/Hero share the gameplay Wanderer authority.
 - Forge uses the dedicated authored v1.67 workshop kit.
 - Talents use the progression-tree composition.
@@ -15,7 +15,7 @@ The current goal is to finish the visible and functional game end-to-end before 
 - Vault empty state and Tower Pass direction are retained.
 - Existing interaction rectangles / routes / progression authority remain unchanged.
 
-## Active candidate — v1.68 Wanderer Visual Completion r1
+## Active candidate — v1.68 Wanderer Visual Completion r1.1
 - Active scene: `scenes/main.tscn` -> `scripts/main_v92.gd`.
 - Gameplay world: `scripts/world3d_chamber_v168_character_completion.gd`.
 - Shared actor factory: `scripts/world3d_actor_factory_v168_character_completion.gd`.
@@ -24,30 +24,19 @@ The current goal is to finish the visible and functional game end-to-end before 
 - v1.55 articulated glTF pivots / animation state authority remain unchanged.
 - No hitbox, socket, collision, damage, timing, input, save or progression changes.
 
-### v1.68 authored Wanderer kit
-Eight new authored OBJ resources replace the coarse body-kit surfaces while preserving the same animated pivots:
-1. torso
-2. chestplate
-3. pauldron
-4. gauntlet
-5. boot
-6. blade
-7. brass armour trim
-8. front tabard
+### r1 decision — REJECTED VISUALLY
+Dedicated v1.68 run `32335181802` passed import/compile, shared menu/gameplay identity, matched captures and the full gameplay smoke. Real 720x1280 image review then rejected r1 because the new pauldrons were too wide/horizontal: at gameplay distance they read like wings, and in Hero they made the Wanderer more block-like instead of more premium. CI was green but visual acceptance failed.
 
-Target visual changes:
-- tapered torso / waist instead of a box-like mannequin read;
-- faceted chest and shoulder silhouette;
-- clearer glove / boot termination;
-- stronger sword profile;
-- restrained brass hierarchy and tabard break-up;
-- identical character in Hero/Home and gameplay.
+### r1.1 correction
+Keep the successful tapered torso / authored kit direction but correct only the image-proven problems:
+- smaller, more downward-sitting faceted pauldrons;
+- narrower chestplate silhouette;
+- restrained brass trim;
+- slimmer front tabard;
+- retain r1 gauntlets, boots and blade;
+- retain Hood r11 and all animation/gameplay authority.
 
-### v1.68 validation
-- `scripts/v95_character_completion_smoke_test.gd` checks the same v1.68 actor in menu and gameplay, Hood r11 preservation and new authored pieces.
-- `scripts/v95_character_completion_capture.gd` renders real Hero plus matched v1.66-before / v1.68-after gameplay captures at 720x1280.
-- `.github/workflows/v95-character-completion-check.yml` runs compile/import, v1.68 smoke, visual capture and the full gameplay smoke on Ubuntu.
-- **Visual acceptance is pending. CI green alone does not accept the character.**
+The same `v95` gate and matched capture harness must prove r1.1. Visual acceptance remains pending until the new Hero and v1.66-before/v1.68-after images are inspected.
 
 ## Preserved gameplay/art locks
 - v1.67 r1.2 frontend/menu baseline.
@@ -56,7 +45,7 @@ Target visual changes:
 - v1.64 r1.1 character-lighting/material ordering.
 - v1.63 projectile/boss combat identity.
 - v1.62 UI/input foundations.
-- save, migration, backup, settings, tutorial, endless/endgame and gameplay authority remain covered by smoke gates.
+- Save, migration, backup, settings, tutorial, endless/endgame and gameplay authority remain covered by smoke gates.
 
 ## TestFlight
 - Build 30 is successfully uploaded and remains the current integrated validation build.
@@ -64,7 +53,7 @@ Target visual changes:
 - Next TestFlight bundles several completed blocks after character, enemy/boss, world, UX and polish work converge.
 
 ## Remaining completion blocks
-1. **Wanderer visual completion** — active v1.68 r1, pending matched image review.
+1. **Wanderer visual completion** — active v1.68 r1.1, pending matched image review.
 2. Enemy + boss visual completion and distance readability.
 3. Full realm/endgame visual consistency sweep.
 4. UX/settings/tutorial/progression consistency and dead-route cleanup.

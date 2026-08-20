@@ -1,12 +1,12 @@
 extends "res://scripts/main_v91.gd"
 
-# ONE MORE FLOOR v1.68 r1 — Wanderer Visual Completion.
-# Promotes the same v1.68 authored Wanderer into both the completed frontend and
-# the combat world. Menus, realm art, gameplay, input and progression are inherited.
+# ONE MORE FLOOR v1.68 r1.1 — Wanderer Visual Completion.
+# r1.1 is the portrait-driven shoulder/chest correction; the same corrected
+# actor remains authoritative in frontend and combat world.
 
 const CharacterCompletionWorldV168 = preload("res://scripts/world3d_chamber_v168_character_completion.gd")
 const CharacterCompletionMenuV168 = preload("res://scripts/menu3d_stage_v168_character_completion.gd")
-const V92_CHARACTER_COMPLETION := "1.68-wanderer-visual-completion-r1"
+const V92_CHARACTER_COMPLETION := "1.68-wanderer-visual-completion-r1.1"
 
 func _ready() -> void:
 	super._ready()
