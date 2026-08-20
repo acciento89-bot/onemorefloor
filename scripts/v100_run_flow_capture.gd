@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Fixed portrait evidence for the v1.73 run-flow presentation surfaces.
-# Capture lifecycle intentionally mirrors the accepted v1.71 UX harness.
+# Uses deterministic headless redraws; no frame_post_draw signal dependency.
 
 const MainScene = preload("res://scenes/main.tscn")
 const CAPTURE_SIZE := Vector2i(720, 1280)
@@ -100,9 +100,10 @@ func _save_frame(stem: String) -> bool:
 	for _i in range(3):
 		await process_frame
 	print("V173_RUN_FLOW_CAPTURE_FRAMES_READY:%s" % stem)
-	await RenderingServer.frame_post_draw
-	print("V173_RUN_FLOW_CAPTURE_FRAME_DRAWN:%s" % stem)
+	RenderingServer.force_draw(false, 0.0)
+	print("V173_RUN_FLOW_CAPTURE_FORCE_DRAWN:%s" % stem)
 	var image := viewport.get_texture().get_image()
+	print("V173_RUN_FLOW_CAPTURE_TEXTURE_READ:%s" % stem)
 	if image == null or image.is_empty():
 		_fail("empty capture: %s" % stem)
 		return false
