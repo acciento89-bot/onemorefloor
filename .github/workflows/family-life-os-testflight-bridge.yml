@@ -1,9 +1,9 @@
 name: Family Life OS TestFlight Bridge
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - agent/family-life-os-testflight-bridge
     paths:
       - '.github/workflows/family-life-os-testflight-bridge.yml'
 
