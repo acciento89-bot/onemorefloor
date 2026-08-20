@@ -17,7 +17,7 @@ concurrency:
 env:
   TEAM_ID: 'TKG684N5GL'
   BUNDLE_ID: 'de.kamilunavo.familyprototype'
-  BUILD_NUMBER: '1'
+  BUILD_NUMBER: '3'
   SOURCE_REF: 'main'
 
 jobs:
@@ -278,7 +278,7 @@ jobs:
         if: steps.upload.outcome != 'skipped' && steps.upload.outputs.status == '0'
         shell: bash
         run: |
-          echo 'Family Life OS 0.1.0 (1) was handed to App Store Connect/TestFlight successfully.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Family Life OS 0.1.0 (3) was handed to App Store Connect/TestFlight successfully.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove App Store Connect key
         if: always()
