@@ -2,8 +2,8 @@
 
 Canonical handoff. **Repository truth wins over chat memory.**
 
-## Active mode — POST-TESTFLIGHT COMPLETION, NOT APP STORE RELEASE
-The visible and functional completion blocks through v1.73 are accepted. TestFlight build 31 (`1.26.0 (31)`) is confirmed available for iOS testing. Development continues on remaining visible production-quality gaps before App Store submission work.
+## Active mode — v1.74 BRANDING CANDIDATE, NOT APP STORE RELEASE
+The visible and functional completion blocks through v1.73 are accepted. TestFlight build 31 (`1.26.0 (31)`) is confirmed available for iOS testing. Active development is v1.74 Branding + Product Identity Completion on `agent/v1.74-branding-product-identity`; visual evidence must pass before acceptance.
 
 ## Accepted frontend lock — v1.67 r1.2
 - Home/Hero share gameplay Wanderer authority.
@@ -65,18 +65,30 @@ The visible and functional completion blocks through v1.73 are accepted. TestFli
 
 ## Accepted run-flow presentation lock — v1.73 r1
 - Branch / PR at acceptance: `agent/v1.73-run-flow-completion` / PR #106.
-- Active scene: `scenes/main.tscn` -> `scripts/main_v97.gd`.
-- Accepted implementation/evidence head before this docs-only lock: `3d9cc8c93a8c765aa89cd8603fec648665acb408`.
+- Accepted scene: `scenes/main.tscn` -> `scripts/main_v97.gd`.
+- Accepted implementation/evidence head: `3d9cc8c93a8c765aa89cd8603fec648665acb408`.
+- Main merge commit: `3c80025824dffb9654cd21065f2acb9a1fe66398`.
 - Decision/Cash-Out is fully redrawn while preserving the authoritative `CASH` and `NEXT` input rectangles.
 - Game Over/Run Result is fully redrawn while preserving `RETRY` and `HOME_BTN` input rectangles.
 - Floor/Realm transitions use a production presentation plate over the accepted live 3D chamber.
 - Warden, Crypt Keeper, Hollow King, Null Sovereign, miniboss and endgame boss intros share one production boss-intro treatment.
 - No combat balance, progression, saves, camera, actor geometry or StoreKit authority changed.
 - Dedicated v1.73 gate run `32368136475`: SUCCESS.
-- Gate includes compile/import, v1.73 contract smoke, four fixed 720x1280 portrait captures and complete gameplay smoke.
 - Evidence artifact `9406154225` / `v173-run-flow-presentation`.
-- Visual review accepted Decision, Game Over, Floor Transition and Hollow King Boss Intro with no clipped text, broken CTA layout or portrait safe-area regression.
-- The capture workflow now uses Xvfb + real OpenGL3 / GL Compatibility rendering; `--headless` alone uses Godot's dummy renderer and cannot produce valid SubViewport texture evidence.
+- Visual review accepted Decision, Game Over, Floor Transition and Hollow King Boss Intro.
+- Real captures use Xvfb + OpenGL3 / GL Compatibility because Godot `--headless` uses a dummy renderer.
+
+## Active candidate — v1.74 Branding + Product Identity r1
+- Branch: `agent/v1.74-branding-product-identity`.
+- Candidate scene: `scenes/main.tscn` -> `scripts/main_v98.gd`.
+- Shipping project icon changes from legacy `assets/art/wanderer.svg` to `assets/art/app_icon_v174.svg`.
+- New icon is a full-bleed 1024x1024 dark-fantasy mark: gothic tower/portal, faceless hooded Wanderer, steel silhouette, gold core and ascending violet blade.
+- Home receives a compact matching crest in the top safe band; navigation and input authority remain inherited.
+- `assets/art/wanderer.svg` is retained as a legacy asset but is no longer the application icon.
+- Dedicated contract/capture workflow: `.github/workflows/v101-brand-identity-check.yml`.
+- Acceptance requires real-GL review of `home_brand_v174.png` and `app_icon_v174.png` plus full gameplay smoke.
+- Current status: **visual/CI evidence pending**.
+- No TestFlight trigger or release-version change.
 
 ## Preserved gameplay/art locks
 - v1.67 r1.2 frontend/menu baseline.
@@ -95,22 +107,11 @@ The visible and functional completion blocks through v1.73 are accepted. TestFli
 ## TestFlight
 - Current confirmed TestFlight build: **ONE MORE FLOOR 1.26.0 (31)**.
 - Build 31 is confirmed available to test on iOS.
-- v1.73 did **not** modify `.github/testflight-trigger` and did not dispatch another TestFlight upload.
+- v1.74 must not modify `.github/testflight-trigger` or dispatch another TestFlight upload.
 - Do not create another TestFlight build automatically for completion micro-passes; bundle meaningful work first.
 
-## Active next — v1.74 Branding + Product Identity Completion
-The next visible production-quality gap is the remaining old app/product identity, especially the legacy cartoon Wanderer shown by the iOS/TestFlight app icon compared with the accepted dark-fantasy 3D Wanderer and current game presentation.
-
-Required scope:
-1. Audit the repository's app icon, launch/branding assets and visible legacy 2D identity.
-2. Replace the old cartoon/prototype-facing icon direction with a production dark-fantasy identity that matches the accepted Wanderer/world without changing gameplay authority.
-3. Keep icon legibility at iOS small sizes and preserve required App Store icon dimensions/alpha rules.
-4. Remove or replace only genuinely visible legacy identity assets; do not churn archived/reference assets that no longer ship.
-5. Add deterministic visual evidence and iOS packaging checks before acceptance.
-6. Do not trigger TestFlight automatically.
-
 ## Remaining completion blocks
-1. **v1.74 Branding + Product Identity Completion — ACTIVE NEXT.**
+1. **v1.74 Branding + Product Identity Completion — ACTIVE CANDIDATE.**
 2. Audit any remaining visible legacy 2D/proxy surfaces after branding.
 3. Real-device corrections if new completion work exposes device-specific regressions.
 4. Only after device/visual acceptance: release metadata and App Store submission work.

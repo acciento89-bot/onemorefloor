@@ -1,0 +1,116 @@
+name: v1.74 Branding Product Identity Check
+
+on:
+  push:
+    branches:
+      - agent/v1.74-branding-product-identity
+    paths:
+      - 'assets/art/app_icon_v174.svg'
+      - 'scripts/main_v98.gd'
+      - 'scripts/v101_brand_identity_smoke_test.gd'
+      - 'scripts/v101_brand_identity_capture.gd'
+      - 'scenes/main.tscn'
+      - 'project.godot'
+      - 'docs/V174_BRANDING_PRODUCT_IDENTITY_STATE.md'
+      - 'docs/PROJECT_STATE.md'
+      - '.github/workflows/v101-brand-identity-check.yml'
+  pull_request:
+    paths:
+      - 'assets/art/app_icon_v174.svg'
+      - 'scripts/main_v98.gd'
+      - 'scripts/v101_brand_identity_smoke_test.gd'
+      - 'scripts/v101_brand_identity_capture.gd'
+      - 'scenes/main.tscn'
+      - 'project.godot'
+      - 'docs/V174_BRANDING_PRODUCT_IDENTITY_STATE.md'
+      - 'docs/PROJECT_STATE.md'
+      - '.github/workflows/v101-brand-identity-check.yml'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_TAG: '4.7.1-stable'
+  OMF_FORCE_RELEASE_SURFACES: '1'
+
+jobs:
+  brand-identity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_TAG}_linux.x86_64" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Compile active v1.74 stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v174-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v174-import.log; then
+            echo "Godot reported v1.74 compile/import errors"
+            exit 1
+          fi
+
+      - name: Validate product identity contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/v101_brand_identity_smoke_test.gd --quit-after 520 2>&1 | tee v174-smoke.log
+          grep -q "v1.74 branding product identity smoke test passed" v174-smoke.log
+          grep -q "V174_BRAND_IDENTITY_SNAPSHOT:" v174-smoke.log
+
+      - name: Render Home and icon evidence with real GL
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/v174_brand_identity
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./godot \
+            --path . \
+            --rendering-method gl_compatibility \
+            --rendering-driver opengl3 \
+            --audio-driver Dummy \
+            --script res://scripts/v101_brand_identity_capture.gd \
+            --quit-after 760 2>&1 | tee v174-capture.log
+          grep -q "v1.74 branding product identity visual capture passed" v174-capture.log
+          test "$(find artifacts/v174_brand_identity -name '*.png' -type f | wc -l | tr -d ' ')" = "2"
+
+      - name: Preserve complete gameplay authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.local/share/godot/app_userdata/ONE MORE FLOOR"
+          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 560 2>&1 | tee gameplay.log
+          grep -q "ONE MORE FLOOR gameplay smoke test passed" gameplay.log
+
+      - name: Upload v1.74 identity evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v174-branding-product-identity
+          path: artifacts/v174_brand_identity/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v174-branding-product-identity-failure
+          path: |
+            v174-import.log
+            v174-smoke.log
+            v174-capture.log
+            gameplay.log
+          if-no-files-found: ignore
+          retention-days: 14
