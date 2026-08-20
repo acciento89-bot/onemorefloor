@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   read-build-inventory:
@@ -15,6 +16,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Locate latest signed TestFlight dispatch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/ios-testflight.yml/runs?event=workflow_dispatch&branch=main&per_page=10" \
+            > "$RUNNER_TEMP/ios-runs.json"
+          python3 - <<'PY'
+          import json, os
+          data = json.load(open(os.path.join(os.environ['RUNNER_TEMP'], 'ios-runs.json')))
+          runs = data.get('workflow_runs', [])
+          if not runs:
+              raise SystemExit('No main workflow_dispatch iOS runs found')
+          run = runs[0]
+          print(f"SIGNED_RUN_ID={run['id']}")
+          print(f"SIGNED_RUN_NUMBER={run['run_number']}")
+          print(f"SIGNED_RUN_STATUS={run['status']}")
+          print(f"SIGNED_RUN_CONCLUSION={run.get('conclusion')}")
+          print(f"SIGNED_RUN_HEAD_SHA={run['head_sha']}")
+          print(f"SIGNED_RUN_CREATED_AT={run['created_at']}")
+          print(f"SIGNED_RUN_URL={run['html_url']}")
+          PY
 
       - name: Query App Store Connect build inventory
         shell: bash
@@ -60,7 +88,6 @@ jobs:
           if len(apps) != 1:
               raise SystemExit(f'Expected exactly one app for {bundle_id}, got {len(apps)}')
           app_id = apps[0]['id']
-
           build_query = urllib.parse.urlencode({'filter[app]': app_id, 'sort': '-uploadedDate', 'limit': '50'})
           builds = get('https://api.appstoreconnect.apple.com/v1/builds?' + build_query).get('data', [])
           numeric = []
@@ -82,4 +109,4 @@ jobs:
           PY
 
       - name: Probe verdict
-        run: echo 'TestFlight build inventory probe passed'
+        run: echo 'TestFlight release status probe passed'
