@@ -1,0 +1,94 @@
+name: Family Life OS StoreKit Preflight PR
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/family-life-os-storekit-preflight-pr.yml'
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: 'de.kamilunavo.familyprototype'
+  MONTHLY_ID: 'de.kamilunavo.family.familypro.monthly'
+  ANNUAL_ID: 'de.kamilunavo.family.familypro.annual'
+
+jobs:
+  preflight:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Verify App Store Connect secrets
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8" >> "$GITHUB_ENV"
+
+      - name: Query subscriptions
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v); Base64.urlsafe_encode64(v, padding: false); end
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          header = b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          payload = b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'}))
+          input = "#{header}.#{payload}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+          AUTH="Authorization: Bearer $JWT"
+          APP="$RUNNER_TEMP/app.json"
+          SUBS="$RUNNER_TEMP/subscriptions.json"
+          curl --fail-with-body --silent --show-error --get -H "$AUTH" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
+            --data-urlencode 'fields[apps]=name,bundleId' \
+            'https://api.appstoreconnect.apple.com/v1/apps' -o "$APP"
+          APP_ID=$(jq -r '.data[0].id // empty' "$APP")
+          APP_NAME=$(jq -r '.data[0].attributes.name // empty' "$APP")
+          test -n "$APP_ID"
+          curl --fail-with-body --silent --show-error --get -H "$AUTH" \
+            --data-urlencode 'include=subscriptions' \
+            --data-urlencode 'fields[subscriptionGroups]=referenceName,subscriptions' \
+            --data-urlencode 'fields[subscriptions]=name,productId,state,subscriptionPeriod,familySharable' \
+            --data-urlencode 'limit=200' \
+            --data-urlencode 'limit[subscriptions]=50' \
+            "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/subscriptionGroups" -o "$SUBS"
+          MONTHLY=$(jq -c --arg id "$MONTHLY_ID" '.included // [] | map(select(.type=="subscriptions" and .attributes.productId==$id)) | first // empty' "$SUBS")
+          ANNUAL=$(jq -c --arg id "$ANNUAL_ID" '.included // [] | map(select(.type=="subscriptions" and .attributes.productId==$id)) | first // empty' "$SUBS")
+          {
+            echo '## Family Life OS StoreKit preflight'
+            echo "- App: $APP_NAME ($BUNDLE_ID)"
+            echo "- Subscription groups: $(jq '.data | length' "$SUBS")"
+            if [[ -n "$MONTHLY" ]]; then echo "- Monthly: $(jq -r '.attributes.state' <<<"$MONTHLY") / $(jq -r '.attributes.subscriptionPeriod' <<<"$MONTHLY") — $MONTHLY_ID"; else echo "- Monthly: MISSING — $MONTHLY_ID"; fi
+            if [[ -n "$ANNUAL" ]]; then echo "- Annual: $(jq -r '.attributes.state' <<<"$ANNUAL") / $(jq -r '.attributes.subscriptionPeriod' <<<"$ANNUAL") — $ANNUAL_ID"; else echo "- Annual: MISSING — $ANNUAL_ID"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          test -n "$MONTHLY"
+          test -n "$ANNUAL"
+          [[ "$(jq -r '.attributes.subscriptionPeriod' <<<"$MONTHLY")" == 'ONE_MONTH' ]]
+          [[ "$(jq -r '.attributes.subscriptionPeriod' <<<"$ANNUAL")" == 'ONE_YEAR' ]]
+          for STATE in "$(jq -r '.attributes.state' <<<"$MONTHLY")" "$(jq -r '.attributes.state' <<<"$ANNUAL")"; do
+            case "$STATE" in MISSING_METADATA|DEVELOPER_ACTION_NEEDED|REJECTED|DEVELOPER_REMOVED_FROM_SALE|REMOVED_FROM_SALE) exit 1;; esac
+          done
+          echo '- Result: GREEN' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
