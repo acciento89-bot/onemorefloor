@@ -1,0 +1,82 @@
+name: NavoTap IAP Review Note Fix
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/navotap-iap-review-note-fix.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  update-review-notes:
+    runs-on: macos-26
+    env:
+      BUNDLE_ID: com.kamilunavo.onemoretap
+      REVIEW_NOTE: "NavoTap is a one-tap arcade game. Theme purchases are permanent cosmetic unlocks and do not affect scoring, difficulty, or hit detection. Remove Ads permanently disables automatic interstitial advertising. The optional rewarded ad used to continue a failed run remains available because the user explicitly chooses it in exchange for the continue reward. Restore Purchases is available from the in-app Shop."
+    steps:
+      - name: Prepare App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "${{ secrets.ASC_ISSUER_ID }}"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Update all NavoTap IAP review notes
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v) = Base64.urlsafe_encode64(v, padding: false)
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          h = b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p = b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'}))
+          input = "#{h}.#{p}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new, input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+
+          APPS="$RUNNER_TEMP/apps.json"
+          curl --fail-with-body --silent --show-error --get \
+            -H "Authorization: Bearer $JWT" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
+            'https://api.appstoreconnect.apple.com/v1/apps' -o "$APPS"
+          APP_ID=$(jq -r '.data[0].id // empty' "$APPS")
+          test -n "$APP_ID"
+
+          IAPS="$RUNNER_TEMP/iaps.json"
+          curl --fail-with-body --silent --show-error --get \
+            -H "Authorization: Bearer $JWT" \
+            --data-urlencode 'limit=200' \
+            'https://api.appstoreconnect.apple.com/v1/apps/'"$APP_ID"'/inAppPurchasesV2' -o "$IAPS"
+
+          jq -r '.data[] | [.id,.attributes.productId] | @tsv' "$IAPS" | while IFS=$'\t' read -r IAP_ID PRODUCT_ID; do
+            BODY=$(jq -n --arg id "$IAP_ID" --arg note "$REVIEW_NOTE" '{data:{type:"inAppPurchases",id:$id,attributes:{reviewNote:$note}}}')
+            OUT="$RUNNER_TEMP/patch-$IAP_ID.json"
+            curl --fail-with-body --silent --show-error -X PATCH \
+              -H "Authorization: Bearer $JWT" \
+              -H 'Content-Type: application/json' \
+              -d "$BODY" \
+              'https://api.appstoreconnect.apple.com/v2/inAppPurchases/'"$IAP_ID" -o "$OUT"
+            jq -e --arg note "$REVIEW_NOTE" '.data.attributes.reviewNote == $note' "$OUT" >/dev/null
+            echo "UPDATED_REVIEW_NOTE | PRODUCT=$PRODUCT_ID"
+          done
+
+      - name: Remove App Store Connect key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
