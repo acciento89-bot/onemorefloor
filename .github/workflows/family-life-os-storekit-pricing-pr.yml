@@ -57,8 +57,7 @@ jobs:
           AUTH="Authorization: Bearer $JWT"; API='https://api.appstoreconnect.apple.com/v1'; TMP="$RUNNER_TEMP/asc.json"
 
           post() {
-            local ep="$1" body="$2"
-            local code
+            local ep="$1" body="$2" code
             code=$(curl --silent --show-error -H "$AUTH" -H 'Content-Type: application/json' -X POST -d "$body" -o "$TMP" -w '%{http_code}' "$API/$ep")
             if [[ "$code" != 201 ]]; then
               echo "POST $ep failed HTTP $code" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -68,8 +67,7 @@ jobs:
           }
 
           patch204() {
-            local ep="$1" body="$2"
-            local code
+            local ep="$1" body="$2" code
             code=$(curl --silent --show-error -H "$AUTH" -H 'Content-Type: application/json' -X PATCH -d "$body" -o "$TMP" -w '%{http_code}' "$API/$ep")
             if [[ "$code" != 204 ]]; then
               echo "PATCH $ep failed HTTP $code" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -86,42 +84,38 @@ jobs:
           test -n "$MONTHLY"; test -n "$ANNUAL"
 
           ensure_availability() {
-            local sid="$1" plan="$2"
+            local sid="$1"
             curl --fail-with-body --silent --show-error --get -H "$AUTH" --data-urlencode 'fields[subscriptionPlanAvailabilities]=planType,availableInNewTerritories,availableTerritories' "$API/subscriptions/$sid/planAvailabilities" -o "$TMP"
-            local aid
-            aid=$(jq -r --arg p "$plan" '.data[]? | select(.attributes.planType==$p) | .id' "$TMP" | head -1)
-            local territories
+            local aid territories body
+            aid=$(jq -r '.data[]? | select(.attributes.planType=="UPFRONT") | .id' "$TMP" | head -1)
             territories=$(jq -nc --arg t "$TERRITORY" '[{type:"territories",id:$t}]')
             if [[ -z "$aid" ]]; then
-              local body
-              body=$(jq -nc --arg s "$sid" --arg p "$plan" --argjson territories "$territories" '{data:{type:"subscriptionPlanAvailabilities",attributes:{planType:$p,availableInNewTerritories:false},relationships:{subscription:{data:{type:"subscriptions",id:$s}},availableTerritories:{data:$territories}}}}')
+              body=$(jq -nc --arg s "$sid" --argjson territories "$territories" '{data:{type:"subscriptionPlanAvailabilities",attributes:{planType:"UPFRONT",availableInNewTerritories:false},relationships:{subscription:{data:{type:"subscriptions",id:$s}},availableTerritories:{data:$territories}}}}')
               post 'subscriptionPlanAvailabilities' "$body"
-              echo "Created $plan availability for $TERRITORY" | tee -a "$GITHUB_STEP_SUMMARY"
+              echo "Created UPFRONT availability for $TERRITORY" | tee -a "$GITHUB_STEP_SUMMARY"
             else
-              local body
               body=$(jq -nc --argjson territories "$territories" '{data:$territories}')
               patch204 "subscriptionPlanAvailabilities/$aid/relationships/availableTerritories" "$body"
-              echo "Confirmed $plan availability for $TERRITORY" | tee -a "$GITHUB_STEP_SUMMARY"
+              echo "Confirmed UPFRONT availability for $TERRITORY" | tee -a "$GITHUB_STEP_SUMMARY"
             fi
           }
 
           ensure_price() {
-            local sid="$1" plan="$2" target="$3" label="$4"
+            local sid="$1" target="$2" label="$3"
             curl --fail-with-body --silent --show-error --get -H "$AUTH" \
               --data-urlencode "filter[territory]=$TERRITORY" \
               --data-urlencode 'fields[subscriptionPricePoints]=customerPrice,proceeds,territory' \
               --data-urlencode 'limit=8000' \
               "$API/subscriptions/$sid/pricePoints" -o "$TMP"
-            local pp
+            local pp body
             pp=$(jq -r --arg p "$target" '.data[]? | select(.attributes.customerPrice==$p) | .id' "$TMP" | head -1)
             if [[ -z "$pp" ]]; then
               echo "$label price point $target EUR not found for $TERRITORY" | tee -a "$GITHUB_STEP_SUMMARY"
               exit 1
             fi
-
             curl --fail-with-body --silent --show-error --get -H "$AUTH" \
               --data-urlencode "filter[territory]=$TERRITORY" \
-              --data-urlencode "filter[planType]=$plan" \
+              --data-urlencode 'filter[planType]=UPFRONT' \
               --data-urlencode 'include=subscriptionPricePoint,territory' \
               --data-urlencode 'fields[subscriptionPrices]=startDate,preserved,planType,territory,subscriptionPricePoint' \
               --data-urlencode 'fields[subscriptionPricePoints]=customerPrice,territory' \
@@ -130,18 +124,15 @@ jobs:
               echo "$label already priced at $target EUR in $TERRITORY" | tee -a "$GITHUB_STEP_SUMMARY"
               return
             fi
-
-            local body
-            body=$(jq -nc --arg s "$sid" --arg pp "$pp" --arg p "$plan" '{data:{type:"subscriptionPrices",attributes:{startDate:null,planType:$p},relationships:{subscription:{data:{type:"subscriptions",id:$s}},subscriptionPricePoint:{data:{type:"subscriptionPricePoints",id:$pp}}}}}')
+            body=$(jq -nc --arg s "$sid" --arg pp "$pp" '{data:{type:"subscriptionPrices",attributes:{startDate:null,planType:"UPFRONT"},relationships:{subscription:{data:{type:"subscriptions",id:$s}},subscriptionPricePoint:{data:{type:"subscriptionPricePoints",id:$pp}}}}}')
             post 'subscriptionPrices' "$body"
-            echo "Set $label to $target EUR in $TERRITORY ($plan)" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "Set $label to $target EUR in $TERRITORY" | tee -a "$GITHUB_STEP_SUMMARY"
           }
 
-          ensure_availability "$MONTHLY" 'MONTHLY'
-          ensure_availability "$ANNUAL" 'UPFRONT'
-          ensure_price "$MONTHLY" 'MONTHLY' "$MONTHLY_PRICE_DE" 'Monthly'
-          ensure_price "$ANNUAL" 'UPFRONT' "$ANNUAL_PRICE_DE" 'Annual'
-
+          ensure_availability "$MONTHLY"
+          ensure_availability "$ANNUAL"
+          ensure_price "$MONTHLY" "$MONTHLY_PRICE_DE" 'Monthly'
+          ensure_price "$ANNUAL" "$ANNUAL_PRICE_DE" 'Annual'
           echo 'Family Pro Germany pricing configured: 5.99 EUR monthly / 49.99 EUR annual.' | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Remove key
