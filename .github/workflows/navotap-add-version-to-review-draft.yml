@@ -1,0 +1,82 @@
+name: NavoTap Add Version to Review Draft
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/navotap-add-version-to-review-draft.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  add-version:
+    runs-on: macos-26
+    env:
+      BUNDLE_ID: com.kamilunavo.onemoretap
+      VERSION_ID: c1ac791d-a356-43ff-9b60-845dd6407e24
+    steps:
+      - name: Prepare ASC key
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Add App Store version 1.0 to existing draft
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v)=Base64.urlsafe_encode64(v,padding:false)
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'})); input="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+          auth=(-H "Authorization: Bearer $JWT")
+
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode "filter[bundleId]=$BUNDLE_ID" https://api.appstoreconnect.apple.com/v1/apps -o "$RUNNER_TEMP/apps.json"
+          APP_ID=$(jq -r '.data[0].id' "$RUNNER_TEMP/apps.json")
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode 'limit=200' "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/reviewSubmissions" -o "$RUNNER_TEMP/subs.json"
+          SUB_ID=$(jq -r '[.data[]|select(.attributes.state=="READY_FOR_REVIEW")][0].id // empty' "$RUNNER_TEMP/subs.json")
+          test -n "$SUB_ID"
+          echo "DRAFT_SUBMISSION_ID=$SUB_ID"
+
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode 'fields[reviewSubmissionItems]=state,appStoreVersion,inAppPurchaseVersion' --data-urlencode 'limit=200' "https://api.appstoreconnect.apple.com/v1/reviewSubmissions/$SUB_ID/items" -o "$RUNNER_TEMP/items-before.json"
+          BEFORE=$(jq '.data|length' "$RUNNER_TEMP/items-before.json")
+          VERSION_ITEMS=$(jq '[.data[]|select(.relationships.appStoreVersion.data.id? != null)]|length' "$RUNNER_TEMP/items-before.json")
+          echo "BEFORE_ITEMS=$BEFORE | VERSION_ITEMS=$VERSION_ITEMS"
+
+          if [ "$VERSION_ITEMS" -eq 0 ]; then
+            BODY=$(jq -n --arg sid "$SUB_ID" --arg vid "$VERSION_ID" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$sid}},appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}')
+            HTTP=$(curl --silent --show-error -w '%{http_code}' -o "$RUNNER_TEMP/create-item.json" -X POST "${auth[@]}" -H 'Content-Type: application/json' -d "$BODY" 'https://api.appstoreconnect.apple.com/v1/reviewSubmissionItems')
+            echo "CREATE_ITEM_HTTP=$HTTP"
+            cat "$RUNNER_TEMP/create-item.json"
+            test "$HTTP" = "201"
+          else
+            echo 'Version review item already exists; no write required.'
+          fi
+
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode 'fields[reviewSubmissionItems]=state,appStoreVersion,inAppPurchaseVersion' --data-urlencode 'limit=200' "https://api.appstoreconnect.apple.com/v1/reviewSubmissions/$SUB_ID/items" -o "$RUNNER_TEMP/items-after.json"
+          AFTER=$(jq '.data|length' "$RUNNER_TEMP/items-after.json")
+          VERSION_ITEMS_AFTER=$(jq '[.data[]|select(.relationships.appStoreVersion.data.id? != null)]|length' "$RUNNER_TEMP/items-after.json")
+          IAP_ITEMS_AFTER=$(jq '[.data[]|select(.relationships.inAppPurchaseVersion.data.id? != null)]|length' "$RUNNER_TEMP/items-after.json")
+          READY_AFTER=$(jq '[.data[]|select(.attributes.state=="READY_FOR_REVIEW")]|length' "$RUNNER_TEMP/items-after.json")
+          echo "SUMMARY | SUBMISSION=$SUB_ID | TOTAL=$AFTER | APP_VERSION_ITEMS=$VERSION_ITEMS_AFTER | IAP_ITEMS=$IAP_ITEMS_AFTER | READY=$READY_AFTER"
+          test "$AFTER" -eq 6
+          test "$VERSION_ITEMS_AFTER" -eq 1
+          test "$IAP_ITEMS_AFTER" -eq 5
+          test "$READY_AFTER" -eq 6
+
+      - name: Remove ASC key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
