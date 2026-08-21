@@ -1,0 +1,265 @@
+name: NavoTap TestFlight Bridge
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/navotap-testflight-bridge.yml'
+      - '.github/navotap-build2.trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: navotap-testflight-bridge-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TEAM_ID: 'TKG684N5GL'
+  BUNDLE_ID: 'com.kamilunavo.onemoretap'
+  MARKETING_VERSION: '0.2.0'
+  BUILD_NUMBER: '2'
+  SOURCE_REF: '16daf6697ed34a35917fab71e0f6225ef66b7b2e'
+
+jobs:
+  upload-navotap:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - name: Checkout locked NavoTap source
+        uses: actions/checkout@v5
+        with:
+          repository: acciento89-bot/onemoretap
+          ref: ${{ env.SOURCE_REF }}
+          path: navotap
+
+      - name: Verify protected App Store Connect secrets
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+          echo 'Protected OneMoreFloor App Store Connect credentials are available to the NavoTap bridge.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Select proven Xcode toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          xcodebuild -version
+          xcode-select -p
+
+      - name: Validate locked NavoTap release configuration
+        working-directory: navotap
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_REF"
+          python3 -m json.tool OneMoreTap/Resources/NavoTap.storekit >/dev/null
+          plutil -lint OneMoreTap/Resources/Info.plist
+          plutil -lint OneMoreTap.xcodeproj/project.pbxproj
+
+          grep -q 'ca-app-pub-8944085355624754~4792390111' OneMoreTap/Resources/Info.plist
+          grep -q 'ca-app-pub-8944085355624754/7162618768' OneMoreTap/Monetization/AdService.swift
+          grep -q 'ca-app-pub-8944085355624754/3694930864' OneMoreTap/Monetization/AdService.swift
+
+          if grep -R --exclude='*.md' --exclude='*.storekit' -n 'ca-app-pub-3940256099942544' OneMoreTap; then
+            echo '::error title=AdMob preflight::Google sample/test runtime identifier remains in NavoTap'
+            exit 1
+          fi
+
+          grep -q 'PRODUCT_BUNDLE_IDENTIFIER = com.kamilunavo.onemoretap;' OneMoreTap.xcodeproj/project.pbxproj
+          grep -q 'MARKETING_VERSION = 0.2.0;' OneMoreTap.xcodeproj/project.pbxproj
+          grep -q 'CURRENT_PROJECT_VERSION = 2;' OneMoreTap.xcodeproj/project.pbxproj
+          echo "Locked source validated: $SOURCE_REF — $BUNDLE_ID $MARKETING_VERSION ($BUILD_NUMBER)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Prepare App Store Connect API key
+        shell: bash
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Verify NavoTap App Store Connect record
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'
+          require 'base64'
+          require 'json'
+          def b64url(value)
+            Base64.urlsafe_encode64(value, padding: false)
+          end
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          header = b64url(JSON.generate({ alg: 'ES256', kid: ENV.fetch('ASC_KEY_ID'), typ: 'JWT' }))
+          payload = b64url(JSON.generate({ iss: ENV.fetch('ASC_ISSUER_ID'), iat: now, exp: now + 600, aud: 'appstoreconnect-v1' }))
+          signing_input = "#{header}.#{payload}"
+          der = key.sign(OpenSSL::Digest::SHA256.new, signing_input)
+          sequence = OpenSSL::ASN1.decode(der)
+          raw = sequence.value.map do |integer|
+            [integer.value.to_i.to_s(16).rjust(64, '0')].pack('H*')
+          end.join
+          puts "#{signing_input}.#{b64url(raw)}"
+          RUBY
+          )
+          RESPONSE="$RUNNER_TEMP/navotap-app-record.json"
+          curl --fail-with-body --silent --show-error --get \
+            -H "Authorization: Bearer $JWT" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
+            --data-urlencode 'fields[apps]=name,bundleId,sku,primaryLocale' \
+            'https://api.appstoreconnect.apple.com/v1/apps' \
+            -o "$RESPONSE"
+          test "$(jq '.data | length' "$RESPONSE")" -ge 1
+          APP_NAME=$(jq -r '.data[0].attributes.name' "$RESPONSE")
+          echo "App Store Connect record found: $APP_NAME ($BUNDLE_ID)." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Archive signed NavoTap Release
+        working-directory: navotap
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/NavoTap.xcarchive"
+          xcodebuild \
+            -project OneMoreTap.xcodeproj \
+            -scheme NavoTap \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/NavoTap.xcarchive" \
+            -xcconfig Config/Signing.xcconfig \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            archive
+
+      - name: Verify signed archive identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/NavoTap.xcarchive/Products/Applications/NavoTap.app"
+          test -d "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          ACTUAL_BUNDLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
+          ACTUAL_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
+          ACTUAL_BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")
+          test "$ACTUAL_BUNDLE" = "$BUNDLE_ID"
+          test "$ACTUAL_VERSION" = "$MARKETING_VERSION"
+          test "$ACTUAL_BUILD" = "$BUILD_NUMBER"
+          echo "Signed archive verified: $ACTUAL_BUNDLE $ACTUAL_VERSION ($ACTUAL_BUILD)." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create App Store Connect export options
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          PLIST
+          plutil -lint "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Upload NavoTap to TestFlight with Apple cloud signing
+        id: upload
+        continue-on-error: true
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -uo pipefail
+          set +e
+          rm -rf "$RUNNER_TEMP/NavoTapTestFlightExport"
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/NavoTap.xcarchive" \
+            -exportPath "$RUNNER_TEMP/NavoTapTestFlightExport" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            2>&1 | tee "$RUNNER_TEMP/navotap-testflight-export.log"
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          mkdir -p diagnostics
+          cp "$RUNNER_TEMP/navotap-testflight-export.log" diagnostics/TestFlight-export.log
+          DIST_LOG=$(find /var/folders "$RUNNER_TEMP" -name '*.xcdistributionlogs' -type d -print 2>/dev/null | tail -1 || true)
+          if [[ -n "$DIST_LOG" && -d "$DIST_LOG" ]]; then
+            ditto -c -k --sequesterRsrc --keepParent "$DIST_LOG" diagnostics/NavoTap-xcdistributionlogs.zip
+          fi
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Surface Apple export diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=diagnostics/TestFlight-export.log
+          [[ -f "$LOG" ]] || exit 0
+          grep -Ei 'error:|failed|failure|provision|bundle|app store|profile|certificate|identifier|account|authentication|permission|not found|does not exist|missingApp' "$LOG" \
+            | tail -120 \
+            | sed -E 's/API Key <identifier: [^;>]+; issuer: [^>]+>/API Key [REDACTED]/g' \
+            | tee diagnostics/TestFlight-errors.txt || true
+          if [[ -s diagnostics/TestFlight-errors.txt ]]; then
+            {
+              echo '### NavoTap Apple export diagnostics'
+              echo '```text'
+              cat diagnostics/TestFlight-errors.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload TestFlight diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: navotap-testflight-bridge-diagnostics
+          path: diagnostics/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Fail if NavoTap upload failed
+        if: steps.upload.outputs.status != '0'
+        shell: bash
+        run: |
+          echo "NavoTap TestFlight upload failed with exit code ${{ steps.upload.outputs.status }}."
+          exit 1
+
+      - name: Mark successful bridge upload
+        if: steps.upload.outputs.status == '0'
+        shell: bash
+        run: echo 'NavoTap 0.2.0 (2) was handed to App Store Connect/TestFlight successfully.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove App Store Connect key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
