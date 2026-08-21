@@ -1,0 +1,102 @@
+name: NavoTap IAP Post-Screenshot Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/navotap-iap-post-screenshot-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-iaps:
+    runs-on: macos-26
+    env:
+      BUNDLE_ID: com.kamilunavo.onemoretap
+    steps:
+      - name: Prepare App Store Connect API key
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Verify NavoTap IAP screenshot metadata
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v) = Base64.urlsafe_encode64(v, padding: false)
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          h = b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p = b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'}))
+          input = "#{h}.#{p}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new, input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+
+          APPS="$RUNNER_TEMP/apps.json"
+          curl --fail-with-body --silent --show-error --get \
+            -H "Authorization: Bearer $JWT" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
+            'https://api.appstoreconnect.apple.com/v1/apps' -o "$APPS"
+          APP_ID=$(jq -r '.data[0].id // empty' "$APPS")
+          test -n "$APP_ID"
+
+          IAPS="$RUNNER_TEMP/iaps.json"
+          curl --fail-with-body --silent --show-error --get \
+            -H "Authorization: Bearer $JWT" \
+            --data-urlencode 'limit=200' \
+            'https://api.appstoreconnect.apple.com/v1/apps/'"$APP_ID"'/inAppPurchasesV2' -o "$IAPS"
+
+          echo '=== NavoTap post-screenshot IAP check ==='
+          FAIL=0
+          COUNT=0
+          jq -r '.data[] | [.id,.attributes.productId] | @tsv' "$IAPS" | while IFS=$'\t' read -r IAP_ID PRODUCT_ID; do
+            COUNT=$((COUNT+1))
+            DETAIL="$RUNNER_TEMP/iap-$IAP_ID.json"
+            curl --fail-with-body --silent --show-error --get \
+              -H "Authorization: Bearer $JWT" \
+              --data-urlencode 'fields[inAppPurchases]=name,productId,state,reviewNote' \
+              --data-urlencode 'include=appStoreReviewScreenshot' \
+              --data-urlencode 'fields[inAppPurchaseAppStoreReviewScreenshots]=fileName,assetDeliveryState' \
+              'https://api.appstoreconnect.apple.com/v2/inAppPurchases/'"$IAP_ID" -o "$DETAIL"
+            STATE=$(jq -r '.data.attributes.state' "$DETAIL")
+            SHOTS=$(jq '[.included[]? | select(.type=="inAppPurchaseAppStoreReviewScreenshots")] | length' "$DETAIL")
+            echo "PRODUCT=$PRODUCT_ID | STATE=$STATE | REVIEW_SCREENSHOTS=$SHOTS"
+            if [ "$SHOTS" -lt 1 ]; then FAIL=1; fi
+            if [ "$STATE" = "MISSING_METADATA" ]; then FAIL=1; fi
+          done
+
+          # Re-evaluate without subshell so the job fails if Apple still reports missing metadata.
+          TOTAL=$(jq '.data | length' "$IAPS")
+          test "$TOTAL" -eq 5
+          BAD=0
+          while IFS=$'\t' read -r IAP_ID PRODUCT_ID; do
+            DETAIL="$RUNNER_TEMP/iap-$IAP_ID.json"
+            STATE=$(jq -r '.data.attributes.state' "$DETAIL")
+            SHOTS=$(jq '[.included[]? | select(.type=="inAppPurchaseAppStoreReviewScreenshots")] | length' "$DETAIL")
+            if [ "$SHOTS" -lt 1 ] || [ "$STATE" = "MISSING_METADATA" ]; then BAD=$((BAD+1)); fi
+          done < <(jq -r '.data[] | [.id,.attributes.productId] | @tsv' "$IAPS")
+          echo "SUMMARY | TOTAL=$TOTAL | BLOCKED=$BAD"
+          test "$BAD" -eq 0
+
+      - name: Remove App Store Connect key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
