@@ -1,0 +1,108 @@
+name: NavoTap IAP Metadata Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/navotap-iap-metadata-diagnostic.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-iap-metadata:
+    runs-on: macos-26
+    env:
+      BUNDLE_ID: com.kamilunavo.onemoretap
+    steps:
+      - name: Verify protected App Store Connect secrets
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+
+      - name: Prepare App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Inspect NavoTap IAP metadata relationships
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'
+          require 'base64'
+          require 'json'
+          def b64url(v) = Base64.urlsafe_encode64(v, padding: false)
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          header = b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          payload = b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'}))
+          input = "#{header}.#{payload}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new, input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+
+          APPS="$RUNNER_TEMP/apps.json"
+          curl --fail-with-body --silent --show-error --get \
+            -H "Authorization: Bearer $JWT" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
+            --data-urlencode 'fields[apps]=name,bundleId' \
+            'https://api.appstoreconnect.apple.com/v1/apps' -o "$APPS"
+          APP_ID=$(jq -r '.data[0].id // empty' "$APPS")
+          test -n "$APP_ID"
+
+          IAPS="$RUNNER_TEMP/iaps.json"
+          curl --fail-with-body --silent --show-error --get \
+            -H "Authorization: Bearer $JWT" \
+            --data-urlencode 'limit=200' \
+            'https://api.appstoreconnect.apple.com/v1/apps/'"$APP_ID"'/inAppPurchasesV2' -o "$IAPS"
+
+          echo '=== NavoTap IAP metadata diagnostic ==='
+          jq -r '.data[] | "BASE | ID=\(.id) | PRODUCT=\(.attributes.productId) | NAME=\(.attributes.name) | STATE=\(.attributes.state)"' "$IAPS"
+
+          jq -r '.data[] | [.id,.attributes.productId] | @tsv' "$IAPS" | while IFS=$'\t' read -r IAP_ID PRODUCT_ID; do
+            DETAIL="$RUNNER_TEMP/iap-$IAP_ID.json"
+            curl --fail-with-body --silent --show-error --get \
+              -H "Authorization: Bearer $JWT" \
+              --data-urlencode 'fields[inAppPurchases]=name,productId,state,reviewNote,familySharable' \
+              --data-urlencode 'include=inAppPurchaseLocalizations,appStoreReviewScreenshot,iapPriceSchedule,inAppPurchaseAvailability' \
+              --data-urlencode 'fields[inAppPurchaseLocalizations]=name,locale,description,state' \
+              --data-urlencode 'fields[inAppPurchaseAppStoreReviewScreenshots]=fileName,assetDeliveryState' \
+              --data-urlencode 'fields[inAppPurchaseAvailabilities]=availableInNewTerritories' \
+              --data-urlencode 'fields[inAppPurchasePriceSchedules]=baseTerritory' \
+              'https://api.appstoreconnect.apple.com/v2/inAppPurchases/'"$IAP_ID" -o "$DETAIL"
+
+            echo "--- PRODUCT=$PRODUCT_ID ---"
+            jq -r '"STATE=\(.data.attributes.state) | REVIEW_NOTE=" + ((.data.attributes.reviewNote // "") | @json)' "$DETAIL"
+            LOC_COUNT=$(jq '[.included[]? | select(.type=="inAppPurchaseLocalizations")] | length' "$DETAIL")
+            SHOT_COUNT=$(jq '[.included[]? | select(.type=="inAppPurchaseAppStoreReviewScreenshots")] | length' "$DETAIL")
+            AVAIL_COUNT=$(jq '[.included[]? | select(.type=="inAppPurchaseAvailabilities")] | length' "$DETAIL")
+            PRICE_COUNT=$(jq '[.included[]? | select(.type=="inAppPurchasePriceSchedules")] | length' "$DETAIL")
+            echo "COUNTS | LOCALIZATIONS=$LOC_COUNT | REVIEW_SCREENSHOTS=$SHOT_COUNT | AVAILABILITY=$AVAIL_COUNT | PRICE_SCHEDULE=$PRICE_COUNT"
+            jq -r '.included[]? | select(.type=="inAppPurchaseLocalizations") | "LOCALIZATION | LOCALE=\(.attributes.locale) | NAME=" + ((.attributes.name // "")|@json) + " | DESCRIPTION=" + ((.attributes.description // "")|@json) + " | STATE=\(.attributes.state // "")"' "$DETAIL"
+            jq -r '.included[]? | select(.type=="inAppPurchaseAppStoreReviewScreenshots") | "REVIEW_SCREENSHOT | FILE=\(.attributes.fileName // "") | DELIVERY=" + ((.attributes.assetDeliveryState // {})|tostring)' "$DETAIL"
+            jq -r '.included[]? | select(.type=="inAppPurchaseAvailabilities") | "AVAILABILITY | NEW_TERRITORIES=\(.attributes.availableInNewTerritories)"' "$DETAIL"
+            jq -r '.included[]? | select(.type=="inAppPurchasePriceSchedules") | "PRICE_SCHEDULE | ID=\(.id)"' "$DETAIL"
+          done
+
+      - name: Remove App Store Connect key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
