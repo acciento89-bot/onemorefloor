@@ -1,0 +1,70 @@
+name: Family Life OS Build 5 Bridge Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/family-life-os-build5-bridge-diagnostic.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  TARGET_SHA: 'e7e6849834810a3c5c5ec2cb2a894de6bf583891'
+  TARGET_WORKFLOW: 'Family Life OS Build 5 TestFlight'
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect Build 5 push workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          RUNS="$RUNNER_TEMP/runs.json"
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$API/actions/runs?head_sha=$TARGET_SHA&event=push&per_page=50" -o "$RUNS"
+          RUN_ID=$(jq -r --arg name "$TARGET_WORKFLOW" '.workflow_runs[]? | select(.name==$name) | .id' "$RUNS" | head -1)
+          if [[ -z "$RUN_ID" ]]; then
+            echo 'Build 5 push workflow run not found.' | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          STATUS=$(jq -r --argjson id "$RUN_ID" '.workflow_runs[] | select(.id==$id) | .status' "$RUNS")
+          CONCLUSION=$(jq -r --argjson id "$RUN_ID" '.workflow_runs[] | select(.id==$id) | (.conclusion // "")' "$RUNS")
+          URL=$(jq -r --argjson id "$RUN_ID" '.workflow_runs[] | select(.id==$id) | .html_url' "$RUNS")
+          echo "Build 5 bridge run: id=$RUN_ID status=$STATUS conclusion=$CONCLUSION" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "$URL" | tee -a "$GITHUB_STEP_SUMMARY"
+
+          JOBS="$RUNNER_TEMP/jobs.json"
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$API/actions/runs/$RUN_ID/jobs?per_page=100" -o "$JOBS"
+          jq -r '.jobs[] | "job=\(.name) status=\(.status) conclusion=\(.conclusion // "")"' "$JOBS" | tee -a "$GITHUB_STEP_SUMMARY"
+          jq -r '.jobs[] | .steps[]? | select(.conclusion=="failure") | "FAILED STEP: \(.name)"' "$JOBS" | tee -a "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$CONCLUSION" == 'failure' ]]; then
+            JOB_ID=$(jq -r '.jobs[] | select(.conclusion=="failure") | .id' "$JOBS" | head -1)
+            if [[ -n "$JOB_ID" ]]; then
+              LOG="$RUNNER_TEMP/job.log"
+              curl -L --fail-with-body --silent --show-error \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H 'Accept: application/vnd.github+json' \
+                -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "$API/actions/jobs/$JOB_ID/logs" -o "$LOG" || true
+              if [[ -s "$LOG" ]]; then
+                echo '### Failure excerpt' >> "$GITHUB_STEP_SUMMARY"
+                echo '```text' >> "$GITHUB_STEP_SUMMARY"
+                grep -Ei 'error:|failed|failure|archive|export|upload|provision|certificate|build input file|no such file|swift' "$LOG" | tail -120 >> "$GITHUB_STEP_SUMMARY" || tail -80 "$LOG" >> "$GITHUB_STEP_SUMMARY"
+                echo '```' >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+            exit 1
+          fi
