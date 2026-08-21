@@ -14,7 +14,7 @@ env:
   TEAM_ID: 'TKG684N5GL'
   BUNDLE_ID: 'de.kamilunavo.familyprototype'
   BUILD_NUMBER: '5'
-  SOURCE_REF: 'agent/family-pro-release-hardening'
+  SOURCE_REF: 'aff7cddf93388f5a1889ccc69e6868a1a14617a4'
 
 jobs:
   upload:
@@ -27,6 +27,23 @@ jobs:
           repository: acciento89-bot/appideenchatgpt
           ref: ${{ env.SOURCE_REF }}
           path: appideenchatgpt
+
+      - name: Verify pinned release candidate
+        working-directory: appideenchatgpt
+        run: |
+          set -euo pipefail
+          ACTUAL=$(git rev-parse HEAD)
+          echo "Pinned Family Life OS source: $ACTUAL" | tee -a "$GITHUB_STEP_SUMMARY"
+          test "$ACTUAL" = "$SOURCE_REF"
+          SERVICE='apps/011-family-life-os/prototype/FamilyLifePrototype/Data/CompleteV1Services.swift'
+          MODELS='apps/011-family-life-os/prototype/FamilyLifePrototype/Domain/Models.swift'
+          if grep -Eq 'FamilyProProductID|FamilyProRenewalState' "$SERVICE"; then
+            echo 'Unexpected obsolete Family Pro helper symbols found in release candidate.' | tee -a "$GITHUB_STEP_SUMMARY"
+            grep -En 'FamilyProProductID|FamilyProRenewalState' "$SERVICE" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          grep -En 'FamilyProPolicy' "$SERVICE" | head -20 | tee -a "$GITHUB_STEP_SUMMARY"
+          grep -En 'enum FamilyProPolicy' "$MODELS" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Resolve Swift packages
         working-directory: appideenchatgpt/apps/011-family-life-os/prototype
