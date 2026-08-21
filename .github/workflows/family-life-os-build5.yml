@@ -45,6 +45,24 @@ jobs:
           grep -En 'FamilyProPolicy' "$SERVICE" | head -20 | tee -a "$GITHUB_STEP_SUMMARY"
           grep -En 'enum FamilyProPolicy' "$MODELS" | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: Apply Xcode 26 StoreKit isolation fix
+        working-directory: appideenchatgpt
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('apps/011-family-life-os/prototype/FamilyLifePrototype/Data/CompleteV1Services.swift')
+          text = path.read_text()
+          old = '    private var transactionUpdatesTask: Task<Void, Never>?\n'
+          new = '    @ObservationIgnored\n    nonisolated(unsafe) private var transactionUpdatesTask: Task<Void, Never>?\n'
+          if old not in text:
+              raise SystemExit('transactionUpdatesTask declaration not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+          SERVICE='apps/011-family-life-os/prototype/FamilyLifePrototype/Data/CompleteV1Services.swift'
+          grep -En -A2 -B2 'transactionUpdatesTask' "$SERVICE" | head -20 | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Resolve Swift packages
         working-directory: appideenchatgpt/apps/011-family-life-os/prototype
         run: |
