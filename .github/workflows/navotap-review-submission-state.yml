@@ -76,19 +76,21 @@ jobs:
           jq -r '.included[]? | select(.type=="builds") | "BUILD | ID=\(.id) | NUMBER=\(.attributes.version) | PROCESSING=\(.attributes.processingState) | EXPIRED=\(.attributes.expired)"' "$VERSIONS"
 
           REVIEWS="$RUNNER_TEMP/reviews.json"
-          curl --fail-with-body --silent --show-error --get \
+          HTTP=$(curl --silent --show-error --get \
             -H "Authorization: Bearer $JWT" \
             --data-urlencode 'limit=200' \
-            --data-urlencode 'fields[reviewSubmissions]=platform,submittedDate,state,appStoreVersionForReview,items' \
-            --data-urlencode 'include=appStoreVersionForReview,items' \
-            --data-urlencode 'fields[reviewSubmissionItems]=state,appStoreVersion,inAppPurchaseVersion' \
-            --data-urlencode 'fields[appStoreVersions]=versionString,appStoreState,appVersionState' \
-            --data-urlencode 'fields[inAppPurchaseVersions]=version,state,inAppPurchase' \
-            'https://api.appstoreconnect.apple.com/v1/apps/'"$APP_ID"'/reviewSubmissions' -o "$REVIEWS"
-
-          echo '=== REVIEW SUBMISSIONS ==='
-          jq -r '.data[] | "SUBMISSION | ID=\(.id) | STATE=\(.attributes.state) | PLATFORM=\(.attributes.platform // "") | SUBMITTED=\(.attributes.submittedDate // "")"' "$REVIEWS"
-          jq -r '.included[]? | select(.type=="reviewSubmissionItems") | "ITEM | ID=\(.id) | STATE=\(.attributes.state) | APP_VERSION_ID=\(.relationships.appStoreVersion.data.id // "") | IAP_VERSION_ID=\(.relationships.inAppPurchaseVersion.data.id // "")"' "$REVIEWS"
+            -w '%{http_code}' \
+            -o "$REVIEWS" \
+            'https://api.appstoreconnect.apple.com/v1/apps/'"$APP_ID"'/reviewSubmissions')
+          echo "REVIEW_SUBMISSIONS_HTTP=$HTTP"
+          if [ "$HTTP" = "200" ]; then
+            echo '=== REVIEW SUBMISSIONS ==='
+            jq -r '.data[] | "SUBMISSION | ID=\(.id) | STATE=\(.attributes.state) | PLATFORM=\(.attributes.platform // "") | SUBMITTED=\(.attributes.submittedDate // "")"' "$REVIEWS"
+            echo "REVIEW_SUBMISSION_COUNT=$(jq '.data | length' "$REVIEWS")"
+          else
+            cat "$REVIEWS"
+            exit 1
+          fi
 
       - name: Remove App Store Connect key
         if: always()
