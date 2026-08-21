@@ -1,3 +1,4 @@
+# Same-repository audit; secrets are required and no secret values are emitted.
 name: Family Life OS ASC Metadata Audit
 
 on:
