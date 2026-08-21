@@ -63,7 +63,10 @@ jobs:
             'https://api.appstoreconnect.apple.com/v1/apps' -o "$APP"
           APP_ID=$(jq -r '.data[0].id // empty' "$APP")
           APP_NAME=$(jq -r '.data[0].attributes.name // empty' "$APP")
-          test -n "$APP_ID"
+          if [[ -z "$APP_ID" ]]; then
+            echo "App Store Connect app record missing for $BUNDLE_ID" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           curl --fail-with-body --silent --show-error --get -H "$AUTH" \
             --data-urlencode 'include=subscriptions' \
             --data-urlencode 'fields[subscriptionGroups]=referenceName,subscriptions' \
@@ -79,15 +82,26 @@ jobs:
             echo "- Subscription groups: $(jq '.data | length' "$SUBS")"
             if [[ -n "$MONTHLY" ]]; then echo "- Monthly: $(jq -r '.attributes.state' <<<"$MONTHLY") / $(jq -r '.attributes.subscriptionPeriod' <<<"$MONTHLY") — $MONTHLY_ID"; else echo "- Monthly: MISSING — $MONTHLY_ID"; fi
             if [[ -n "$ANNUAL" ]]; then echo "- Annual: $(jq -r '.attributes.state' <<<"$ANNUAL") / $(jq -r '.attributes.subscriptionPeriod' <<<"$ANNUAL") — $ANNUAL_ID"; else echo "- Annual: MISSING — $ANNUAL_ID"; fi
-          } >> "$GITHUB_STEP_SUMMARY"
-          test -n "$MONTHLY"
-          test -n "$ANNUAL"
-          [[ "$(jq -r '.attributes.subscriptionPeriod' <<<"$MONTHLY")" == 'ONE_MONTH' ]]
-          [[ "$(jq -r '.attributes.subscriptionPeriod' <<<"$ANNUAL")" == 'ONE_YEAR' ]]
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          if [[ -z "$MONTHLY" || -z "$ANNUAL" ]]; then
+            echo 'Result: BLOCKED — expected subscription product missing.' | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          MONTHLY_PERIOD=$(jq -r '.attributes.subscriptionPeriod' <<<"$MONTHLY")
+          ANNUAL_PERIOD=$(jq -r '.attributes.subscriptionPeriod' <<<"$ANNUAL")
+          if [[ "$MONTHLY_PERIOD" != 'ONE_MONTH' || "$ANNUAL_PERIOD" != 'ONE_YEAR' ]]; then
+            echo "Result: BLOCKED — period mismatch monthly=$MONTHLY_PERIOD annual=$ANNUAL_PERIOD" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           for STATE in "$(jq -r '.attributes.state' <<<"$MONTHLY")" "$(jq -r '.attributes.state' <<<"$ANNUAL")"; do
-            case "$STATE" in MISSING_METADATA|DEVELOPER_ACTION_NEEDED|REJECTED|DEVELOPER_REMOVED_FROM_SALE|REMOVED_FROM_SALE) exit 1;; esac
+            case "$STATE" in
+              MISSING_METADATA|DEVELOPER_ACTION_NEEDED|REJECTED|DEVELOPER_REMOVED_FROM_SALE|REMOVED_FROM_SALE)
+                echo "Result: BLOCKED — subscription state $STATE" | tee -a "$GITHUB_STEP_SUMMARY"
+                exit 1
+                ;;
+            esac
           done
-          echo '- Result: GREEN' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Result: GREEN' | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Remove key
         if: always()
