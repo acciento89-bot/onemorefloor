@@ -1,0 +1,70 @@
+name: Kamilunavo Trace IAP Metadata Gaps
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/kamilunavo-trace-iap-gaps.yml'
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: 'de.kamilunavo.trace'
+  PRODUCT_ID: 'de.kamilunavo.trace.pro.lifetime'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect IAP availability and review screenshot
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
+          JWT=$(ASC_KEY_PATH="$KEY" ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v, padding: false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join; puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          H="Authorization: Bearer $JWT"
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'fields[apps]=name,bundleId' 'https://api.appstoreconnect.apple.com/v1/apps' -o "$RUNNER_TEMP/app.json"
+          APP_ID=$(jq -r '.data[0].id // empty' "$RUNNER_TEMP/app.json"); test -n "$APP_ID"
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode "filter[productId]=$PRODUCT_ID" --data-urlencode 'fields[inAppPurchases]=name,productId,inAppPurchaseType,state,inAppPurchaseAvailability,appStoreReviewScreenshot' "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/inAppPurchasesV2" -o "$RUNNER_TEMP/iap.json"
+          IAP_ID=$(jq -r '.data[0].id // empty' "$RUNNER_TEMP/iap.json"); test -n "$IAP_ID"
+          STATE=$(jq -r '.data[0].attributes.state' "$RUNNER_TEMP/iap.json")
+          echo "IAP_STATE=$STATE"
+
+          AVAIL="$RUNNER_TEMP/availability-link.json"
+          HTTP=$(curl --silent --show-error -H "$H" -o "$AVAIL" -w '%{http_code}' "https://api.appstoreconnect.apple.com/v2/inAppPurchases/$IAP_ID/relationships/inAppPurchaseAvailability")
+          echo "AVAILABILITY_LINK_HTTP=$HTTP"
+          if [[ "$HTTP" == 200 ]]; then
+            AVAIL_ID=$(jq -r '.data.id // empty' "$AVAIL")
+            echo "AVAILABILITY_ID=${AVAIL_ID:-NONE}"
+            if [[ -n "$AVAIL_ID" ]]; then
+              curl --fail --silent --show-error --get -H "$H" --data-urlencode 'fields[inAppPurchaseAvailabilities]=availableInNewTerritories,availableTerritories' --data-urlencode 'include=availableTerritories' --data-urlencode 'limit[availableTerritories]=50' "https://api.appstoreconnect.apple.com/v1/inAppPurchaseAvailabilities/$AVAIL_ID" -o "$RUNNER_TEMP/availability.json"
+              echo "AVAILABLE_IN_NEW_TERRITORIES=$(jq -r '.data.attributes.availableInNewTerritories' "$RUNNER_TEMP/availability.json")"
+              echo "AVAILABLE_TERRITORY_COUNT=$(jq '.included // [] | length' "$RUNNER_TEMP/availability.json")"
+            fi
+          else
+            jq -r '.errors[]? | "AVAILABILITY_ERROR: \(.status) \(.code): \(.title) — \(.detail)"' "$AVAIL" || true
+          fi
+
+          SHOT="$RUNNER_TEMP/screenshot-link.json"
+          HTTP=$(curl --silent --show-error -H "$H" -o "$SHOT" -w '%{http_code}' "https://api.appstoreconnect.apple.com/v2/inAppPurchases/$IAP_ID/relationships/appStoreReviewScreenshot")
+          echo "REVIEW_SCREENSHOT_LINK_HTTP=$HTTP"
+          if [[ "$HTTP" == 200 ]]; then
+            SHOT_ID=$(jq -r '.data.id // empty' "$SHOT")
+            echo "REVIEW_SCREENSHOT_ID=${SHOT_ID:-NONE}"
+          else
+            jq -r '.errors[]? | "SCREENSHOT_ERROR: \(.status) \(.code): \(.title) — \(.detail)"' "$SHOT" || true
+          fi
+          rm -f "$KEY"
