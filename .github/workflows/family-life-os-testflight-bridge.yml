@@ -18,7 +18,7 @@ concurrency:
 env:
   TEAM_ID: 'TKG684N5GL'
   BUNDLE_ID: 'de.kamilunavo.familyprototype'
-  BUILD_NUMBER: '3'
+  BUILD_NUMBER: '4'
   SOURCE_REF: 'main'
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           TARGET_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          PAYLOAD=$(jq -n --arg target_url "$TARGET_URL" '{state:"pending",target_url:$target_url,description:"Family Life OS Build 3 TestFlight bridge running",context:"family-life-os/build-3-testflight-bridge"}')
+          PAYLOAD=$(jq -n --arg target_url "$TARGET_URL" '{state:"pending",target_url:$target_url,description:"Family Life OS Build 4 TestFlight bridge running",context:"family-life-os/build-4-testflight-bridge"}')
           curl -fsSL -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H 'Accept: application/vnd.github+json' \
@@ -289,13 +289,13 @@ jobs:
           set -euo pipefail
           if [[ "$PREFLIGHT" == 'true' && "$UPLOAD_STATUS" == '0' ]]; then
             STATE='success'
-            DESCRIPTION='Family Life OS Build 3 uploaded to TestFlight'
+            DESCRIPTION='Family Life OS Build 4 uploaded to TestFlight'
           else
             STATE='failure'
-            DESCRIPTION='Family Life OS Build 3 TestFlight bridge failed'
+            DESCRIPTION='Family Life OS Build 4 TestFlight bridge failed'
           fi
           TARGET_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          PAYLOAD=$(jq -n --arg state "$STATE" --arg target_url "$TARGET_URL" --arg description "$DESCRIPTION" '{state:$state,target_url:$target_url,description:$description,context:"family-life-os/build-3-testflight-bridge"}')
+          PAYLOAD=$(jq -n --arg state "$STATE" --arg target_url "$TARGET_URL" --arg description "$DESCRIPTION" '{state:$state,target_url:$target_url,description:$description,context:"family-life-os/build-4-testflight-bridge"}')
           curl -fsSL -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H 'Accept: application/vnd.github+json' \
@@ -314,7 +314,7 @@ jobs:
         if: steps.upload.outcome != 'skipped' && steps.upload.outputs.status == '0'
         shell: bash
         run: |
-          echo 'Family Life OS 0.1.0 (3) was handed to App Store Connect/TestFlight successfully.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Family Life OS 0.1.0 (4) was handed to App Store Connect/TestFlight successfully.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove App Store Connect key
         if: always()
