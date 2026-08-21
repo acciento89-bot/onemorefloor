@@ -11,7 +11,7 @@ permissions:
   actions: read
 
 env:
-  TARGET_SHA: '608b832aeced8b0036c763ecf995e109ad08b1de'
+  TARGET_SHA: '20f58e325d593bd0255ff6bd90b219c7a2c6e80e'
   TARGET_WORKFLOW: 'Family Life OS Build 5 TestFlight'
 
 jobs:
