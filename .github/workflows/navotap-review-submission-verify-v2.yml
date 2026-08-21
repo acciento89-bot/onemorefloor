@@ -1,0 +1,63 @@
+name: NavoTap Review Submission Verify v2
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/navotap-review-submission-verify-v2.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: macos-26
+    env:
+      BUNDLE_ID: com.kamilunavo.onemoretap
+    steps:
+      - name: Prepare ASC key
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Inspect draft and items
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v)=Base64.urlsafe_encode64(v,padding:false)
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'})); input="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+          auth=(-H "Authorization: Bearer $JWT")
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode "filter[bundleId]=$BUNDLE_ID" https://api.appstoreconnect.apple.com/v1/apps -o "$RUNNER_TEMP/apps.json"
+          APP_ID=$(jq -r '.data[0].id' "$RUNNER_TEMP/apps.json")
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode 'limit=200' "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/reviewSubmissions" -o "$RUNNER_TEMP/subs.json"
+          echo "SUBMISSION_COUNT=$(jq '.data|length' "$RUNNER_TEMP/subs.json")"
+          jq -r '.data[] | "SUBMISSION | ID=\(.id) | STATE=\(.attributes.state) | SUBMITTED=\(.attributes.submittedDate // "")"' "$RUNNER_TEMP/subs.json"
+          SUB_ID=$(jq -r '[.data[]|select((.attributes.submittedDate//"")=="")][0].id // .data[0].id' "$RUNNER_TEMP/subs.json")
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode 'limit=200' "https://api.appstoreconnect.apple.com/v1/reviewSubmissions/$SUB_ID/items" -o "$RUNNER_TEMP/items.json"
+          echo '=== RAW ITEM SHAPES ==='
+          jq -c '.data[] | {id,type,attributes,relationships}' "$RUNNER_TEMP/items.json"
+          echo "ITEM_COUNT=$(jq '.data|length' "$RUNNER_TEMP/items.json")"
+          jq -r '.data[] | "ITEM | ID=\(.id) | STATE=\(.attributes.state // "") | RELS=" + (((.relationships // {})|keys)|join(","))' "$RUNNER_TEMP/items.json"
+          echo "APP_VERSION_ITEMS=$(jq '[.data[]|select(.relationships?.appStoreVersion?.data?.id != null)]|length' "$RUNNER_TEMP/items.json")"
+          echo "IAP_VERSION_ITEMS=$(jq '[.data[]|select(.relationships?.inAppPurchaseVersion?.data?.id != null)]|length' "$RUNNER_TEMP/items.json")"
+
+      - name: Remove ASC key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
