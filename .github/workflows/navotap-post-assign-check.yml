@@ -1,0 +1,48 @@
+name: NavoTap Post Assign Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/navotap-post-assign-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: macos-26
+    steps:
+      - name: Prepare ASC key
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+      - name: Read version 1.0 build relationship
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v)=Base64.urlsafe_encode64(v,padding:false)
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'})); input="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+          curl --fail-with-body --silent --show-error -H "Authorization: Bearer $JWT" \
+            'https://api.appstoreconnect.apple.com/v1/appStoreVersions/c1ac791d-a356-43ff-9b60-845dd6407e24' -o "$RUNNER_TEMP/version.json"
+          REL=$(jq -r '.data.relationships.build.data.id // empty' "$RUNNER_TEMP/version.json")
+          echo "VERSION=$(jq -r '.data.attributes.versionString' "$RUNNER_TEMP/version.json") | STATE=$(jq -r '.data.attributes.appStoreState' "$RUNNER_TEMP/version.json") | BUILD_REL=$REL"
+          test "$REL" = '981b5302-4c77-45a8-a3f5-fb0be78685bf'
+      - name: Remove ASC key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
