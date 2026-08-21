@@ -2,8 +2,7 @@ name: NavoTap TestFlight Bridge
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
     paths:
       - '.github/workflows/navotap-testflight-bridge.yml'
       - '.github/navotap-build2.trigger'
@@ -45,15 +44,14 @@ jobs:
           test -n "$ASC_ISSUER_ID"
           test -n "$ASC_KEY_ID"
           test -n "$ASC_PRIVATE_KEY_B64"
-          echo 'Protected OneMoreFloor App Store Connect credentials are available to the NavoTap bridge.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'OneMoreFloor protected App Store Connect credentials are available.' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Select proven Xcode toolchain
+      - name: Select Xcode 26.2
         shell: bash
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
           xcodebuild -version
-          xcode-select -p
 
       - name: Validate locked NavoTap release configuration
         working-directory: navotap
@@ -64,20 +62,16 @@ jobs:
           python3 -m json.tool OneMoreTap/Resources/NavoTap.storekit >/dev/null
           plutil -lint OneMoreTap/Resources/Info.plist
           plutil -lint OneMoreTap.xcodeproj/project.pbxproj
-
           grep -q 'ca-app-pub-8944085355624754~4792390111' OneMoreTap/Resources/Info.plist
           grep -q 'ca-app-pub-8944085355624754/7162618768' OneMoreTap/Monetization/AdService.swift
           grep -q 'ca-app-pub-8944085355624754/3694930864' OneMoreTap/Monetization/AdService.swift
-
           if grep -R --exclude='*.md' --exclude='*.storekit' -n 'ca-app-pub-3940256099942544' OneMoreTap; then
-            echo '::error title=AdMob preflight::Google sample/test runtime identifier remains in NavoTap'
+            echo '::error title=AdMob preflight::Google sample runtime ID remains'
             exit 1
           fi
-
           grep -q 'PRODUCT_BUNDLE_IDENTIFIER = com.kamilunavo.onemoretap;' OneMoreTap.xcodeproj/project.pbxproj
           grep -q 'MARKETING_VERSION = 0.2.0;' OneMoreTap.xcodeproj/project.pbxproj
           grep -q 'CURRENT_PROJECT_VERSION = 2;' OneMoreTap.xcodeproj/project.pbxproj
-          echo "Locked source validated: $SOURCE_REF — $BUNDLE_ID $MARKETING_VERSION ($BUILD_NUMBER)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Prepare App Store Connect API key
         shell: bash
@@ -103,34 +97,27 @@ jobs:
           require 'openssl'
           require 'base64'
           require 'json'
-          def b64url(value)
-            Base64.urlsafe_encode64(value, padding: false)
-          end
+          def b64url(v) = Base64.urlsafe_encode64(v, padding: false)
           key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
           now = Time.now.to_i
-          header = b64url(JSON.generate({ alg: 'ES256', kid: ENV.fetch('ASC_KEY_ID'), typ: 'JWT' }))
-          payload = b64url(JSON.generate({ iss: ENV.fetch('ASC_ISSUER_ID'), iat: now, exp: now + 600, aud: 'appstoreconnect-v1' }))
-          signing_input = "#{header}.#{payload}"
-          der = key.sign(OpenSSL::Digest::SHA256.new, signing_input)
-          sequence = OpenSSL::ASN1.decode(der)
-          raw = sequence.value.map do |integer|
-            [integer.value.to_i.to_s(16).rjust(64, '0')].pack('H*')
-          end.join
-          puts "#{signing_input}.#{b64url(raw)}"
+          header = b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          payload = b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'}))
+          input = "#{header}.#{payload}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new, input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{input}.#{b64url(raw)}"
           RUBY
           )
           RESPONSE="$RUNNER_TEMP/navotap-app-record.json"
           curl --fail-with-body --silent --show-error --get \
             -H "Authorization: Bearer $JWT" \
             --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
-            --data-urlencode 'fields[apps]=name,bundleId,sku,primaryLocale' \
-            'https://api.appstoreconnect.apple.com/v1/apps' \
-            -o "$RESPONSE"
+            --data-urlencode 'fields[apps]=name,bundleId' \
+            'https://api.appstoreconnect.apple.com/v1/apps' -o "$RESPONSE"
           test "$(jq '.data | length' "$RESPONSE")" -ge 1
-          APP_NAME=$(jq -r '.data[0].attributes.name' "$RESPONSE")
-          echo "App Store Connect record found: $APP_NAME ($BUNDLE_ID)." >> "$GITHUB_STEP_SUMMARY"
+          echo "App Store Connect record found: $(jq -r '.data[0].attributes.name' "$RESPONSE")." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Create unsigned NavoTap release archive
+      - name: Create unsigned NavoTap Release archive
         working-directory: navotap
         shell: bash
         run: |
@@ -150,22 +137,37 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             archive
-          test -f "$RUNNER_TEMP/NavoTap.xcarchive/Info.plist"
           test -d "$RUNNER_TEMP/NavoTap.xcarchive/Products/Applications/NavoTap.app"
 
-      - name: Verify unsigned archive identity
+      - name: Verify archive identity
         shell: bash
         run: |
           set -euo pipefail
           APP="$RUNNER_TEMP/NavoTap.xcarchive/Products/Applications/NavoTap.app"
-          test -d "$APP"
-          ACTUAL_BUNDLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
-          ACTUAL_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
-          ACTUAL_BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")
-          test "$ACTUAL_BUNDLE" = "$BUNDLE_ID"
-          test "$ACTUAL_VERSION" = "$MARKETING_VERSION"
-          test "$ACTUAL_BUILD" = "$BUILD_NUMBER"
-          echo "Unsigned archive verified: $ACTUAL_BUNDLE $ACTUAL_VERSION ($ACTUAL_BUILD). Cloud distribution signing will be applied during export." >> "$GITHUB_STEP_SUMMARY"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" = "$BUNDLE_ID"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")" = "$MARKETING_VERSION"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")" = "$BUILD_NUMBER"
+          echo "Archive verified: $BUNDLE_ID $MARKETING_VERSION ($BUILD_NUMBER)." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove ad-hoc signatures from embedded Google frameworks
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/NavoTap.xcarchive/Products/Applications/NavoTap.app"
+          for FRAMEWORK in GoogleMobileAds.framework UserMessagingPlatform.framework; do
+            BUNDLE="$APP/Frameworks/$FRAMEWORK"
+            test -d "$BUNDLE"
+            echo "Before removal: $FRAMEWORK"
+            codesign -dvv "$BUNDLE" 2>&1 | grep -E 'Signature=|Authority=|TeamIdentifier=' || true
+            codesign --remove-signature "$BUNDLE"
+            rm -rf "$BUNDLE/_CodeSignature"
+            if codesign -d "$BUNDLE" >/dev/null 2>&1; then
+              echo "::error title=Signature cleanup::$FRAMEWORK still has a code signature"
+              exit 1
+            fi
+            echo "Removed archive-time ad-hoc signature from $FRAMEWORK"
+          done
+          echo 'Embedded Google framework ad-hoc signatures removed before Apple cloud export.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create App Store Connect export options
         shell: bash
@@ -186,17 +188,18 @@ jobs:
           PLIST
           plutil -lint "$RUNNER_TEMP/ExportOptions.plist"
 
-      - name: Upload NavoTap to TestFlight with Apple cloud signing
+      - name: Export and upload NavoTap with Apple cloud signing
         id: upload
-        continue-on-error: true
         shell: bash
+        continue-on-error: true
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         run: |
           set -uo pipefail
-          set +e
+          mkdir -p diagnostics
           rm -rf "$RUNNER_TEMP/NavoTapTestFlightExport"
+          set +e
           xcodebuild \
             -exportArchive \
             -archivePath "$RUNNER_TEMP/NavoTap.xcarchive" \
@@ -206,39 +209,18 @@ jobs:
             -authenticationKeyPath "$ASC_KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            2>&1 | tee "$RUNNER_TEMP/navotap-testflight-export.log"
+            2>&1 | tee diagnostics/TestFlight-export.log
           STATUS=${PIPESTATUS[0]}
           set -e
-          mkdir -p diagnostics
-          cp "$RUNNER_TEMP/navotap-testflight-export.log" diagnostics/TestFlight-export.log
-          DIST_LOG=$(find /var/folders "$RUNNER_TEMP" -name '*.xcdistributionlogs' -type d -print 2>/dev/null | tail -1 || true)
-          if [[ -n "$DIST_LOG" && -d "$DIST_LOG" ]]; then
-            ditto -c -k --sequesterRsrc --keepParent "$DIST_LOG" diagnostics/NavoTap-xcdistributionlogs.zip
-          fi
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          if [[ "$STATUS" = 0 ]]; then
+            grep -Ei 'upload|uploaded|success' diagnostics/TestFlight-export.log | tail -40 >> "$GITHUB_STEP_SUMMARY" || true
+          else
+            grep -Ei 'error:|failed|failure|signature|provision|certificate|identifier|app store' diagnostics/TestFlight-export.log | tail -120 >> "$GITHUB_STEP_SUMMARY" || true
+          fi
           exit 0
 
-      - name: Surface Apple export diagnostics
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          LOG=diagnostics/TestFlight-export.log
-          [[ -f "$LOG" ]] || exit 0
-          grep -Ei 'error:|failed|failure|provision|bundle|app store|profile|certificate|identifier|account|authentication|permission|not found|does not exist|missingApp' "$LOG" \
-            | tail -120 \
-            | sed -E 's/API Key <identifier: [^;>]+; issuer: [^>]+>/API Key [REDACTED]/g' \
-            | tee diagnostics/TestFlight-errors.txt || true
-          if [[ -s diagnostics/TestFlight-errors.txt ]]; then
-            {
-              echo '### NavoTap Apple export diagnostics'
-              echo '```text'
-              cat diagnostics/TestFlight-errors.txt
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Upload TestFlight diagnostics
+      - name: Upload bridge diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -247,17 +229,17 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Fail if NavoTap upload failed
+      - name: Require successful Apple upload
         if: steps.upload.outputs.status != '0'
         shell: bash
         run: |
           echo "NavoTap TestFlight upload failed with exit code ${{ steps.upload.outputs.status }}."
           exit 1
 
-      - name: Mark successful bridge upload
+      - name: Mark successful TestFlight handoff
         if: steps.upload.outputs.status == '0'
         shell: bash
-        run: echo 'NavoTap 0.2.0 (2) was handed to App Store Connect/TestFlight successfully.' >> "$GITHUB_STEP_SUMMARY"
+        run: echo 'NavoTap 0.2.0 (2) was successfully handed to App Store Connect/TestFlight.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove App Store Connect key
         if: always()
