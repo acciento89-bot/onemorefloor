@@ -130,12 +130,9 @@ jobs:
           APP_NAME=$(jq -r '.data[0].attributes.name' "$RESPONSE")
           echo "App Store Connect record found: $APP_NAME ($BUNDLE_ID)." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Archive signed NavoTap Release
+      - name: Create unsigned NavoTap release archive
         working-directory: navotap
         shell: bash
-        env:
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         run: |
           set -euo pipefail
           rm -rf "$RUNNER_TEMP/NavoTap.xcarchive"
@@ -145,27 +142,30 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/NavoTap.xcarchive" \
-            -xcconfig Config/Signing.xcconfig \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$ASC_KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            MARKETING_VERSION="$MARKETING_VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
             archive
+          test -f "$RUNNER_TEMP/NavoTap.xcarchive/Info.plist"
+          test -d "$RUNNER_TEMP/NavoTap.xcarchive/Products/Applications/NavoTap.app"
 
-      - name: Verify signed archive identity
+      - name: Verify unsigned archive identity
         shell: bash
         run: |
           set -euo pipefail
           APP="$RUNNER_TEMP/NavoTap.xcarchive/Products/Applications/NavoTap.app"
           test -d "$APP"
-          codesign --verify --deep --strict --verbose=2 "$APP"
           ACTUAL_BUNDLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
           ACTUAL_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
           ACTUAL_BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")
           test "$ACTUAL_BUNDLE" = "$BUNDLE_ID"
           test "$ACTUAL_VERSION" = "$MARKETING_VERSION"
           test "$ACTUAL_BUILD" = "$BUILD_NUMBER"
-          echo "Signed archive verified: $ACTUAL_BUNDLE $ACTUAL_VERSION ($ACTUAL_BUILD)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Unsigned archive verified: $ACTUAL_BUNDLE $ACTUAL_VERSION ($ACTUAL_BUILD). Cloud distribution signing will be applied during export." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create App Store Connect export options
         shell: bash
