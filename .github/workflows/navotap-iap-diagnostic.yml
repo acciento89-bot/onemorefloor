@@ -1,0 +1,86 @@
+name: NavoTap IAP Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/navotap-iap-diagnostic.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-iaps:
+    runs-on: macos-26
+    env:
+      BUNDLE_ID: com.kamilunavo.onemoretap
+    steps:
+      - name: Verify protected App Store Connect secrets
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+
+      - name: Prepare App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Query NavoTap IAPs from App Store Connect
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'
+          require 'base64'
+          require 'json'
+          def b64url(v) = Base64.urlsafe_encode64(v, padding: false)
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          header = b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          payload = b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'}))
+          input = "#{header}.#{payload}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new, input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+
+          APPS="$RUNNER_TEMP/apps.json"
+          curl --fail-with-body --silent --show-error --get \
+            -H "Authorization: Bearer $JWT" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
+            --data-urlencode 'fields[apps]=name,bundleId' \
+            'https://api.appstoreconnect.apple.com/v1/apps' -o "$APPS"
+          APP_ID=$(jq -r '.data[0].id // empty' "$APPS")
+          test -n "$APP_ID"
+
+          IAPS="$RUNNER_TEMP/iaps.json"
+          curl --fail-with-body --silent --show-error --get \
+            -H "Authorization: Bearer $JWT" \
+            --data-urlencode 'limit=200' \
+            'https://api.appstoreconnect.apple.com/v1/apps/'"$APP_ID"'/inAppPurchasesV2' -o "$IAPS"
+
+          echo '### NavoTap App Store Connect IAP diagnostic' >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.data[] | "- `\(.attributes.productId)` — name: `\(.attributes.name)` — type: `\(.attributes.inAppPurchaseType)` — state: `\(.attributes.state)`"' "$IAPS" >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Fire matches:' >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.data[] | select(.attributes.productId | contains("theme.fire")) | "- `\(.attributes.productId)` — `\(.attributes.state)`"' "$IAPS" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove App Store Connect key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
