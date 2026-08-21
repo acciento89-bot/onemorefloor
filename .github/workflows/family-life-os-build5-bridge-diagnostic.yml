@@ -18,53 +18,51 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect Build 5 push workflow
+      - name: Print Build 5 archive failure
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
           RUNS="$RUNNER_TEMP/runs.json"
+          JOBS="$RUNNER_TEMP/jobs.json"
+          LOG="$RUNNER_TEMP/job.log"
+
           curl --fail-with-body --silent --show-error \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "$API/actions/runs?head_sha=$TARGET_SHA&event=push&per_page=50" -o "$RUNS"
           RUN_ID=$(jq -r --arg name "$TARGET_WORKFLOW" '.workflow_runs[]? | select(.name==$name) | .id' "$RUNS" | head -1)
-          if [[ -z "$RUN_ID" ]]; then
-            echo 'Build 5 push workflow run not found.' | tee -a "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-          STATUS=$(jq -r --argjson id "$RUN_ID" '.workflow_runs[] | select(.id==$id) | .status' "$RUNS")
-          CONCLUSION=$(jq -r --argjson id "$RUN_ID" '.workflow_runs[] | select(.id==$id) | (.conclusion // "")' "$RUNS")
-          URL=$(jq -r --argjson id "$RUN_ID" '.workflow_runs[] | select(.id==$id) | .html_url' "$RUNS")
-          echo "Build 5 bridge run: id=$RUN_ID status=$STATUS conclusion=$CONCLUSION" | tee -a "$GITHUB_STEP_SUMMARY"
-          echo "$URL" | tee -a "$GITHUB_STEP_SUMMARY"
-
-          JOBS="$RUNNER_TEMP/jobs.json"
+          test -n "$RUN_ID"
           curl --fail-with-body --silent --show-error \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
             "$API/actions/runs/$RUN_ID/jobs?per_page=100" -o "$JOBS"
-          jq -r '.jobs[] | "job=\(.name) status=\(.status) conclusion=\(.conclusion // "")"' "$JOBS" | tee -a "$GITHUB_STEP_SUMMARY"
-          jq -r '.jobs[] | .steps[]? | select(.conclusion=="failure") | "FAILED STEP: \(.name)"' "$JOBS" | tee -a "$GITHUB_STEP_SUMMARY"
+          JOB_ID=$(jq -r '.jobs[] | select(.conclusion=="failure") | .id' "$JOBS" | head -1)
+          test -n "$JOB_ID"
+          echo "TARGET run=$RUN_ID job=$JOB_ID"
+          jq -r '.jobs[] | .steps[]? | "STEP \(.number) \(.name): \(.conclusion // .status)"' "$JOBS"
 
-          if [[ "$CONCLUSION" == 'failure' ]]; then
-            JOB_ID=$(jq -r '.jobs[] | select(.conclusion=="failure") | .id' "$JOBS" | head -1)
-            if [[ -n "$JOB_ID" ]]; then
-              LOG="$RUNNER_TEMP/job.log"
-              curl -L --fail-with-body --silent --show-error \
-                -H "Authorization: Bearer $GH_TOKEN" \
-                -H 'Accept: application/vnd.github+json' \
-                -H 'X-GitHub-Api-Version: 2022-11-28' \
-                "$API/actions/jobs/$JOB_ID/logs" -o "$LOG" || true
-              if [[ -s "$LOG" ]]; then
-                echo '### Failure excerpt' >> "$GITHUB_STEP_SUMMARY"
-                echo '```text' >> "$GITHUB_STEP_SUMMARY"
-                grep -Ei 'error:|failed|failure|archive|export|upload|provision|certificate|build input file|no such file|swift' "$LOG" | tail -120 >> "$GITHUB_STEP_SUMMARY" || tail -80 "$LOG" >> "$GITHUB_STEP_SUMMARY"
-                echo '```' >> "$GITHUB_STEP_SUMMARY"
-              fi
-            fi
-            exit 1
+          HTTP=$(curl -L --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$API/actions/jobs/$JOB_ID/logs" -o "$LOG" -w '%{http_code}')
+          echo "LOG HTTP=$HTTP bytes=$(wc -c < "$LOG") type=$(file -b "$LOG")"
+          if [[ "$HTTP" != 200 ]]; then cat "$LOG"; exit 0; fi
+
+          if file "$LOG" | grep -qi 'zip archive'; then
+            mkdir -p "$RUNNER_TEMP/unzipped"
+            unzip -q "$LOG" -d "$RUNNER_TEMP/unzipped"
+            find "$RUNNER_TEMP/unzipped" -type f -print0 | xargs -0 cat > "$RUNNER_TEMP/plain.log"
+          else
+            cp "$LOG" "$RUNNER_TEMP/plain.log"
           fi
+
+          echo '===== TARGETED COMPILER/ARCHIVE ERRORS ====='
+          grep -Ein -C 3 'error:|fatal error|BUILD FAILED|ARCHIVE FAILED|SwiftCompile|FamilyProPolicyRegression|Models\.swift|clock-time|AppIcon|asset catalog|No such module|cannot find|ambiguous|top-level|missing required module|Command .* failed' "$RUNNER_TEMP/plain.log" | tail -220 || true
+          echo '===== LAST 120 LOG LINES ====='
+          tail -120 "$RUNNER_TEMP/plain.log"
+          exit 0
