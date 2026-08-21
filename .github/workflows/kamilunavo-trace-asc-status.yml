@@ -1,0 +1,71 @@
+name: Kamilunavo Trace ASC Status
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/kamilunavo-trace-asc-status.yml'
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: 'de.kamilunavo.trace'
+  PRODUCT_ID: 'de.kamilunavo.trace.pro.lifetime'
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read Trace App Store Connect state
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID" -a -n "$ASC_KEY_ID" -a -n "$ASC_PRIVATE_KEY_B64"
+          KEY="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
+          JWT=$(ASC_KEY_PATH="$KEY" ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v, padding: false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join; puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          H="Authorization: Bearer $JWT"
+
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'fields[apps]=name,bundleId' 'https://api.appstoreconnect.apple.com/v1/apps' -o "$RUNNER_TEMP/app.json"
+          APP_ID=$(jq -r '.data[0].id // empty' "$RUNNER_TEMP/app.json"); test -n "$APP_ID"
+          echo "APP: $(jq -r '.data[0].attributes.name' "$RUNNER_TEMP/app.json") bundle=$BUNDLE_ID appleId=$APP_ID"
+
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode "filter[app]=$APP_ID" --data-urlencode 'filter[version]=1' --data-urlencode 'filter[preReleaseVersion.version]=0.1.0' --data-urlencode 'fields[builds]=version,uploadedDate,processingState' --data-urlencode 'sort=-uploadedDate' --data-urlencode 'limit=10' 'https://api.appstoreconnect.apple.com/v1/builds' -o "$RUNNER_TEMP/builds.json"
+          if [[ $(jq '.data|length' "$RUNNER_TEMP/builds.json") -gt 0 ]]; then
+            echo "BUILD: 0.1.0 ($(jq -r '.data[0].attributes.version' "$RUNNER_TEMP/builds.json")) processingState=$(jq -r '.data[0].attributes.processingState' "$RUNNER_TEMP/builds.json") uploadedDate=$(jq -r '.data[0].attributes.uploadedDate' "$RUNNER_TEMP/builds.json")"
+          else
+            echo 'BUILD: package accepted but Build resource not visible yet'
+          fi
+
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode "filter[productId]=$PRODUCT_ID" --data-urlencode 'fields[inAppPurchases]=name,productId,inAppPurchaseType,state' "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/inAppPurchasesV2" -o "$RUNNER_TEMP/iaps.json"
+          [[ $(jq '.data|length' "$RUNNER_TEMP/iaps.json") == 1 ]]
+          IAP_ID=$(jq -r '.data[0].id' "$RUNNER_TEMP/iaps.json")
+          echo "IAP: product=$(jq -r '.data[0].attributes.productId' "$RUNNER_TEMP/iaps.json") type=$(jq -r '.data[0].attributes.inAppPurchaseType' "$RUNNER_TEMP/iaps.json") state=$(jq -r '.data[0].attributes.state' "$RUNNER_TEMP/iaps.json") appleId=$IAP_ID"
+
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode 'fields[inAppPurchaseVersions]=version,state' --data-urlencode 'limit=50' "https://api.appstoreconnect.apple.com/v2/inAppPurchases/$IAP_ID/versions" -o "$RUNNER_TEMP/versions.json"
+          VERSION_ID=$(jq -r '[.data[]|select(.attributes.state=="PREPARE_FOR_SUBMISSION")][0].id // empty' "$RUNNER_TEMP/versions.json"); test -n "$VERSION_ID"
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode 'fields[inAppPurchaseLocalizations]=locale,name,description' --data-urlencode 'limit=50' "https://api.appstoreconnect.apple.com/v1/inAppPurchaseVersions/$VERSION_ID/localizations" -o "$RUNNER_TEMP/locs.json"
+          jq -r '.data[] | "LOCALIZATION: \(.attributes.locale) | \(.attributes.name) | \(.attributes.description)"' "$RUNNER_TEMP/locs.json" | sort
+          [[ $(jq '[.data[]|select(.attributes.locale=="de-DE")]|length' "$RUNNER_TEMP/locs.json") == 1 ]]
+          [[ $(jq '[.data[]|select(.attributes.locale=="en-US")]|length' "$RUNNER_TEMP/locs.json") == 1 ]]
+
+          curl --fail --silent --show-error -H "$H" "https://api.appstoreconnect.apple.com/v2/inAppPurchases/$IAP_ID/iapPriceSchedule" -o "$RUNNER_TEMP/schedule.json"
+          SCHEDULE_ID=$(jq -r '.data.id' "$RUNNER_TEMP/schedule.json")
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode 'filter[territory]=DEU' --data-urlencode 'include=inAppPurchasePricePoint' --data-urlencode 'fields[inAppPurchasePrices]=startDate,inAppPurchasePricePoint' --data-urlencode 'fields[inAppPurchasePricePoints]=customerPrice' --data-urlencode 'limit=200' "https://api.appstoreconnect.apple.com/v1/inAppPurchasePriceSchedules/$SCHEDULE_ID/manualPrices" -o "$RUNNER_TEMP/prices.json"
+          POINT=$(jq -r '[.data[]|select(.attributes.startDate==null)][0].relationships.inAppPurchasePricePoint.data.id // empty' "$RUNNER_TEMP/prices.json"); test -n "$POINT"
+          PRICE=$(jq -r --arg id "$POINT" '.included[]|select(.type=="inAppPurchasePricePoints" and .id==$id)|.attributes.customerPrice' "$RUNNER_TEMP/prices.json")
+          echo "PRICE: DEU €$PRICE"
+          [[ "$PRICE" == '14.99' ]]
+          rm -f "$KEY"
