@@ -1,0 +1,75 @@
+name: NavoTap Assign Build 5
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/navotap-assign-build5.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  assign:
+    runs-on: macos-26
+    env:
+      BUNDLE_ID: com.kamilunavo.onemoretap
+      TARGET_VERSION: '1.0'
+      TARGET_BUILD: '5'
+    steps:
+      - name: Prepare ASC key
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Assign exact production build to version 1.0
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v)=Base64.urlsafe_encode64(v,padding:false)
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'})); input="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+          auth=(-H "Authorization: Bearer $JWT")
+
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode "filter[bundleId]=$BUNDLE_ID" https://api.appstoreconnect.apple.com/v1/apps -o "$RUNNER_TEMP/apps.json"
+          APP_ID=$(jq -r '.data[0].id' "$RUNNER_TEMP/apps.json")
+          test -n "$APP_ID"
+
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode "filter[app]=$APP_ID" --data-urlencode "filter[version]=$TARGET_BUILD" --data-urlencode 'limit=20' https://api.appstoreconnect.apple.com/v1/builds -o "$RUNNER_TEMP/builds.json"
+          BUILD_ID=$(jq -r --arg v "$TARGET_BUILD" '.data[]|select(.attributes.version==$v and .attributes.processingState=="VALID")|.id' "$RUNNER_TEMP/builds.json" | head -n1)
+          test -n "$BUILD_ID"
+          test "$(jq '[.data[]|select(.attributes.version=="5" and .attributes.processingState=="VALID")]|length' "$RUNNER_TEMP/builds.json")" -eq 1
+
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode 'filter[platform]=IOS' --data-urlencode 'limit=200' "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/appStoreVersions" -o "$RUNNER_TEMP/versions.json"
+          VERSION_ID=$(jq -r --arg v "$TARGET_VERSION" '.data[]|select(.attributes.versionString==$v)|.id' "$RUNNER_TEMP/versions.json")
+          test -n "$VERSION_ID"
+
+          BODY=$(jq -n --arg id "$BUILD_ID" '{data:{type:"builds",id:$id}}')
+          curl --fail-with-body --silent --show-error -X PATCH "${auth[@]}" -H 'Content-Type: application/json' -d "$BODY" "https://api.appstoreconnect.apple.com/v1/appStoreVersions/$VERSION_ID/relationships/build" -o "$RUNNER_TEMP/assigned.json"
+          ASSIGNED=$(jq -r '.data.id // empty' "$RUNNER_TEMP/assigned.json")
+          echo "ASSIGNED_BUILD_ID=$ASSIGNED"
+          test "$ASSIGNED" = "$BUILD_ID"
+
+          curl --fail-with-body --silent --show-error "${auth[@]}" "https://api.appstoreconnect.apple.com/v1/appStoreVersions/$VERSION_ID" -o "$RUNNER_TEMP/version-after.json"
+          REL=$(jq -r '.data.relationships.build.data.id // empty' "$RUNNER_TEMP/version-after.json")
+          echo "SUMMARY | APP_ID=$APP_ID | VERSION_ID=$VERSION_ID | VERSION=$TARGET_VERSION | BUILD_ID=$BUILD_ID | BUILD=$TARGET_BUILD | REL=$REL | STATE=$(jq -r '.data.attributes.appStoreState' "$RUNNER_TEMP/version-after.json")"
+          test "$REL" = "$BUILD_ID"
+
+      - name: Remove ASC key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
