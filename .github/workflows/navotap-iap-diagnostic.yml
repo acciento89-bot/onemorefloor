@@ -75,11 +75,13 @@ jobs:
             --data-urlencode 'limit=200' \
             'https://api.appstoreconnect.apple.com/v1/apps/'"$APP_ID"'/inAppPurchasesV2' -o "$IAPS"
 
+          echo 'NavoTap App Store Connect IAP diagnostic:'
+          jq -r '.data[] | "PRODUCT=\(.attributes.productId) | NAME=\(.attributes.name) | TYPE=\(.attributes.inAppPurchaseType) | STATE=\(.attributes.state)"' "$IAPS" | tee "$RUNNER_TEMP/iap-lines.txt"
+          echo 'Fire matches:'
+          jq -r '.data[] | select(.attributes.productId | contains("theme.fire")) | "FIRE_PRODUCT=\(.attributes.productId) | FIRE_STATE=\(.attributes.state)"' "$IAPS"
+
           echo '### NavoTap App Store Connect IAP diagnostic' >> "$GITHUB_STEP_SUMMARY"
-          jq -r '.data[] | "- `\(.attributes.productId)` — name: `\(.attributes.name)` — type: `\(.attributes.inAppPurchaseType)` — state: `\(.attributes.state)`"' "$IAPS" >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Fire matches:' >> "$GITHUB_STEP_SUMMARY"
-          jq -r '.data[] | select(.attributes.productId | contains("theme.fire")) | "- `\(.attributes.productId)` — `\(.attributes.state)`"' "$IAPS" >> "$GITHUB_STEP_SUMMARY"
+          sed 's/^/- `/' "$RUNNER_TEMP/iap-lines.txt" | sed 's/$/`/' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove App Store Connect key
         if: always()
