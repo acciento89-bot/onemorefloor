@@ -11,58 +11,44 @@ permissions:
   actions: read
 
 env:
-  TARGET_SHA: 'e7e6849834810a3c5c5ec2cb2a894de6bf583891'
+  TARGET_SHA: '608b832aeced8b0036c763ecf995e109ad08b1de'
   TARGET_WORKFLOW: 'Family Life OS Build 5 TestFlight'
 
 jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Print Build 5 archive failure
+      - name: Inspect pinned Build 5 run
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
-          RUNS="$RUNNER_TEMP/runs.json"
-          JOBS="$RUNNER_TEMP/jobs.json"
-          LOG="$RUNNER_TEMP/job.log"
-
+          RUNS="$RUNNER_TEMP/runs.json"; JOBS="$RUNNER_TEMP/jobs.json"; LOG="$RUNNER_TEMP/job.log"
           curl --fail-with-body --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
             "$API/actions/runs?head_sha=$TARGET_SHA&event=push&per_page=50" -o "$RUNS"
           RUN_ID=$(jq -r --arg name "$TARGET_WORKFLOW" '.workflow_runs[]? | select(.name==$name) | .id' "$RUNS" | head -1)
-          test -n "$RUN_ID"
-          curl --fail-with-body --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "$API/actions/runs/$RUN_ID/jobs?per_page=100" -o "$JOBS"
-          JOB_ID=$(jq -r '.jobs[] | select(.conclusion=="failure") | .id' "$JOBS" | head -1)
-          test -n "$JOB_ID"
-          echo "TARGET run=$RUN_ID job=$JOB_ID"
-          jq -r '.jobs[] | .steps[]? | "STEP \(.number) \(.name): \(.conclusion // .status)"' "$JOBS"
-
-          HTTP=$(curl -L --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "$API/actions/jobs/$JOB_ID/logs" -o "$LOG" -w '%{http_code}')
-          echo "LOG HTTP=$HTTP bytes=$(wc -c < "$LOG") type=$(file -b "$LOG")"
-          if [[ "$HTTP" != 200 ]]; then cat "$LOG"; exit 0; fi
-
-          if file "$LOG" | grep -qi 'zip archive'; then
-            mkdir -p "$RUNNER_TEMP/unzipped"
-            unzip -q "$LOG" -d "$RUNNER_TEMP/unzipped"
-            find "$RUNNER_TEMP/unzipped" -type f -print0 | xargs -0 cat > "$RUNNER_TEMP/plain.log"
-          else
-            cp "$LOG" "$RUNNER_TEMP/plain.log"
+          if [[ -z "$RUN_ID" ]]; then
+            echo "NO BUILD5 RUN FOUND FOR $TARGET_SHA"
+            jq -r '.workflow_runs[]? | "run=\(.id) name=\(.name) status=\(.status) conclusion=\(.conclusion // "")"' "$RUNS"
+            exit 1
           fi
-
-          echo '===== TARGETED COMPILER/ARCHIVE ERRORS ====='
-          grep -Ein -C 3 'error:|fatal error|BUILD FAILED|ARCHIVE FAILED|SwiftCompile|FamilyProPolicyRegression|Models\.swift|clock-time|AppIcon|asset catalog|No such module|cannot find|ambiguous|top-level|missing required module|Command .* failed' "$RUNNER_TEMP/plain.log" | tail -220 || true
-          echo '===== LAST 120 LOG LINES ====='
-          tail -120 "$RUNNER_TEMP/plain.log"
-          exit 0
+          STATUS=$(jq -r --argjson id "$RUN_ID" '.workflow_runs[]|select(.id==$id)|.status' "$RUNS")
+          CONCLUSION=$(jq -r --argjson id "$RUN_ID" '.workflow_runs[]|select(.id==$id)|(.conclusion // "")' "$RUNS")
+          echo "TARGET run=$RUN_ID status=$STATUS conclusion=$CONCLUSION"
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$API/actions/runs/$RUN_ID/jobs?per_page=100" -o "$JOBS"
+          jq -r '.jobs[] | "JOB \(.id) \(.name): \(.status)/\(.conclusion // "")", (.steps[]? | "  STEP \(.number) \(.name): \(.status)/\(.conclusion // "")")' "$JOBS"
+          JOB_ID=$(jq -r '.jobs[] | select(.conclusion=="failure") | .id' "$JOBS" | head -1)
+          if [[ -n "$JOB_ID" ]]; then
+            HTTP=$(curl -L --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "$API/actions/jobs/$JOB_ID/logs" -o "$LOG" -w '%{http_code}')
+            echo "LOG HTTP=$HTTP bytes=$(wc -c < "$LOG")"
+            if [[ "$HTTP" == 200 ]]; then
+              cp "$LOG" "$RUNNER_TEMP/plain.log"
+              echo '===== TARGETED FAILURE ====='
+              grep -Ein -C 4 'error:|fatal error|BUILD FAILED|ARCHIVE FAILED|EXPORT FAILED|Upload failed|cannot find|FamilyPro|AppIcon|provision|certificate|No such module' "$RUNNER_TEMP/plain.log" | tail -260 || true
+              echo '===== LAST 100 ====='; tail -100 "$RUNNER_TEMP/plain.log"
+            fi
+          fi
