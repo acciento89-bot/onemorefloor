@@ -23,7 +23,7 @@ jobs:
           printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
           chmod 600 "$KEY_PATH"
           echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
-      - name: Read version 1.0 build relationship
+      - name: Read direct version 1.0 build relationship
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -39,9 +39,10 @@ jobs:
           RUBY
           )
           curl --fail-with-body --silent --show-error -H "Authorization: Bearer $JWT" \
-            'https://api.appstoreconnect.apple.com/v1/appStoreVersions/c1ac791d-a356-43ff-9b60-845dd6407e24' -o "$RUNNER_TEMP/version.json"
-          REL=$(jq -r '.data.relationships.build.data.id // empty' "$RUNNER_TEMP/version.json")
-          echo "VERSION=$(jq -r '.data.attributes.versionString' "$RUNNER_TEMP/version.json") | STATE=$(jq -r '.data.attributes.appStoreState' "$RUNNER_TEMP/version.json") | BUILD_REL=$REL"
+            'https://api.appstoreconnect.apple.com/v1/appStoreVersions/c1ac791d-a356-43ff-9b60-845dd6407e24/relationships/build' -o "$RUNNER_TEMP/build-rel.json"
+          cat "$RUNNER_TEMP/build-rel.json"
+          REL=$(jq -r '.data.id // empty' "$RUNNER_TEMP/build-rel.json")
+          echo "DIRECT_BUILD_REL=$REL"
           test "$REL" = '981b5302-4c77-45a8-a3f5-fb0be78685bf'
       - name: Remove ASC key
         if: always()
