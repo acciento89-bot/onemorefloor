@@ -1,0 +1,149 @@
+name: Kamilunavo Trace Lifetime Pro Price
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/kamilunavo-trace-lifetime-pro-price.yml'
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: 'de.kamilunavo.trace'
+  PRODUCT_ID: 'de.kamilunavo.trace.pro.lifetime'
+  BASE_TERRITORY: 'DEU'
+  TARGET_PRICE: '14.99'
+
+jobs:
+  set-price:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Prepare protected ASC auth
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID" -a -n "$ASC_KEY_ID" -a -n "$ASC_PRIVATE_KEY_B64"
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+          JWT=$(ASC_KEY_PATH="$KEY_PATH" ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v); Base64.urlsafe_encode64(v, padding: false); end
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          h = b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p = b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'}))
+          input = "#{h}.#{p}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new, input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+          echo "ASC_JWT=$JWT" >> "$GITHUB_ENV"
+
+      - name: Resolve existing Lifetime Pro
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/app.json"
+          curl --fail --silent --show-error --get -H "Authorization: Bearer $ASC_JWT" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'fields[apps]=name,bundleId' \
+            'https://api.appstoreconnect.apple.com/v1/apps' -o "$APP"
+          APP_ID=$(jq -r '.data[0].id // empty' "$APP")
+          test -n "$APP_ID"
+          IAPS="$RUNNER_TEMP/iaps.json"
+          curl --fail --silent --show-error --get -H "Authorization: Bearer $ASC_JWT" \
+            --data-urlencode "filter[productId]=$PRODUCT_ID" \
+            --data-urlencode 'fields[inAppPurchases]=name,productId,inAppPurchaseType,state' \
+            "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/inAppPurchasesV2" -o "$IAPS"
+          [[ $(jq '.data | length' "$IAPS") == 1 ]]
+          IAP_ID=$(jq -r '.data[0].id' "$IAPS")
+          [[ $(jq -r '.data[0].attributes.inAppPurchaseType' "$IAPS") == 'NON_CONSUMABLE' ]]
+          echo "APP_ID=$APP_ID" >> "$GITHUB_ENV"
+          echo "IAP_ID=$IAP_ID" >> "$GITHUB_ENV"
+          echo "Lifetime Pro resolved: $PRODUCT_ID / IAP $IAP_ID." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create or verify Germany 14.99 price
+        shell: bash
+        run: |
+          set -euo pipefail
+          SCHEDULE="$RUNNER_TEMP/schedule.json"
+          HTTP=$(curl --silent --show-error -H "Authorization: Bearer $ASC_JWT" \
+            -o "$SCHEDULE" -w '%{http_code}' \
+            "https://api.appstoreconnect.apple.com/v2/inAppPurchases/$IAP_ID/iapPriceSchedule")
+          if [[ "$HTTP" == 200 ]]; then
+            SCHEDULE_ID=$(jq -r '.data.id' "$SCHEDULE")
+            PRICES="$RUNNER_TEMP/manual-prices.json"
+            HTTP2=$(curl --silent --show-error --get -H "Authorization: Bearer $ASC_JWT" \
+              --data-urlencode "filter[territory]=$BASE_TERRITORY" \
+              --data-urlencode 'include=inAppPurchasePricePoint' \
+              --data-urlencode 'fields[inAppPurchasePrices]=startDate,inAppPurchasePricePoint' \
+              --data-urlencode 'fields[inAppPurchasePricePoints]=customerPrice' \
+              --data-urlencode 'limit=200' \
+              -o "$PRICES" -w '%{http_code}' \
+              "https://api.appstoreconnect.apple.com/v1/inAppPurchasePriceSchedules/$SCHEDULE_ID/manualPrices")
+            [[ "$HTTP2" == 200 ]] || { cat "$PRICES" | jq -r '.errors[]? | "\(.status) \(.code): \(.title) — \(.detail)"'; exit 1; }
+            POINT=$(jq -r '[.data[] | select(.attributes.startDate == null)][0].relationships.inAppPurchasePricePoint.data.id // empty' "$PRICES")
+            test -n "$POINT"
+            PRICE=$(jq -r --arg id "$POINT" '.included[]? | select(.type == "inAppPurchasePricePoints" and .id == $id) | .attributes.customerPrice' "$PRICES")
+            [[ "$PRICE" == "$TARGET_PRICE" ]] || { echo "Existing Germany price=$PRICE; expected $TARGET_PRICE. Refusing overwrite."; exit 1; }
+            echo "Germany Lifetime Pro price already matches €$TARGET_PRICE." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          [[ "$HTTP" == 404 ]] || { echo "Price schedule lookup HTTP $HTTP"; cat "$SCHEDULE" | jq -r '.errors[]? | "\(.status) \(.code): \(.title) — \(.detail)"'; exit 1; }
+
+          POINTS="$RUNNER_TEMP/points.json"
+          HTTP=$(curl --silent --show-error --get -H "Authorization: Bearer $ASC_JWT" \
+            --data-urlencode "filter[territory]=$BASE_TERRITORY" \
+            --data-urlencode 'fields[inAppPurchasePricePoints]=customerPrice' \
+            --data-urlencode 'limit=8000' \
+            -o "$POINTS" -w '%{http_code}' \
+            "https://api.appstoreconnect.apple.com/v2/inAppPurchases/$IAP_ID/pricePoints")
+          [[ "$HTTP" == 200 ]] || { cat "$POINTS" | jq -r '.errors[]? | "\(.status) \(.code): \(.title) — \(.detail)"'; exit 1; }
+          MATCHES=$(jq --arg price "$TARGET_PRICE" '[.data[] | select(.attributes.customerPrice == $price)] | length' "$POINTS")
+          [[ "$MATCHES" == 1 ]] || { echo "Expected one DEU price point for $TARGET_PRICE, found $MATCHES"; exit 1; }
+          POINT_ID=$(jq -r --arg price "$TARGET_PRICE" '.data[] | select(.attributes.customerPrice == $price) | .id' "$POINTS")
+
+          LOCAL_ID='${price1}'
+          BODY="$RUNNER_TEMP/price.json"
+          jq -n --arg iap "$IAP_ID" --arg territory "$BASE_TERRITORY" --arg point "$POINT_ID" --arg local "$LOCAL_ID" \
+            '{data:{type:"inAppPurchasePriceSchedules",relationships:{inAppPurchase:{data:{type:"inAppPurchases",id:$iap}},baseTerritory:{data:{type:"territories",id:$territory}},manualPrices:{data:[{type:"inAppPurchasePrices",id:$local}]}}},included:[{type:"inAppPurchasePrices",id:$local,attributes:{startDate:null},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iap}},inAppPurchasePricePoint:{data:{type:"inAppPurchasePricePoints",id:$point}}}}]}' > "$BODY"
+          RESP="$RUNNER_TEMP/price-response.json"
+          HTTP=$(curl --silent --show-error -H "Authorization: Bearer $ASC_JWT" -H 'Content-Type: application/json' \
+            -X POST -d @"$BODY" -o "$RESP" -w '%{http_code}' \
+            'https://api.appstoreconnect.apple.com/v1/inAppPurchasePriceSchedules')
+          [[ "$HTTP" == 201 ]] || { echo "Price create HTTP $HTTP"; cat "$RESP" | jq -r '.errors[]? | "\(.status) \(.code): \(.title) — \(.detail)"'; exit 1; }
+          echo "Created Germany base price €$TARGET_PRICE for Lifetime Pro." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify TestFlight Build 1 processing and price
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD="$RUNNER_TEMP/build.json"
+          curl --fail --silent --show-error --get -H "Authorization: Bearer $ASC_JWT" \
+            --data-urlencode "filter[app]=$APP_ID" --data-urlencode 'filter[version]=1' \
+            --data-urlencode 'filter[preReleaseVersion.version]=0.1.0' \
+            --data-urlencode 'fields[builds]=version,uploadedDate,processingState' --data-urlencode 'limit=10' \
+            'https://api.appstoreconnect.apple.com/v1/builds' -o "$BUILD"
+          COUNT=$(jq '.data | length' "$BUILD")
+          if [[ "$COUNT" -gt 0 ]]; then
+            STATE=$(jq -r '.data[0].attributes.processingState' "$BUILD")
+            UPLOADED=$(jq -r '.data[0].attributes.uploadedDate' "$BUILD")
+            echo "TestFlight Build 0.1.0 (1): processingState=$STATE uploadedDate=$UPLOADED." >> "$GITHUB_STEP_SUMMARY"
+            [[ "$STATE" != FAILED && "$STATE" != INVALID ]]
+          else
+            echo 'Build 1 package upload succeeded but Build resource is not visible yet; Apple processing remains pending.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "Lifetime Pro price configuration verified at Germany €$TARGET_PRICE. No review submission performed." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove App Store Connect key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
