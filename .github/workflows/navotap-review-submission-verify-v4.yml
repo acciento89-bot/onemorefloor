@@ -1,0 +1,86 @@
+name: NavoTap Review Submission Verify v4
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/navotap-review-submission-verify-v4.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: macos-26
+    env:
+      BUNDLE_ID: com.kamilunavo.onemoretap
+    steps:
+      - name: Prepare ASC key
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Match five draft items to five live IAPs
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v)=Base64.urlsafe_encode64(v,padding:false)
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'})); input="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+          auth=(-H "Authorization: Bearer $JWT")
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode "filter[bundleId]=$BUNDLE_ID" https://api.appstoreconnect.apple.com/v1/apps -o "$RUNNER_TEMP/apps.json"
+          APP_ID=$(jq -r '.data[0].id' "$RUNNER_TEMP/apps.json")
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode 'limit=200' "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/reviewSubmissions" -o "$RUNNER_TEMP/subs.json"
+          SUB_ID=$(jq -r '[.data[]|select((.attributes.submittedDate//"")=="")][0].id // .data[0].id' "$RUNNER_TEMP/subs.json")
+          STATE=$(jq -r --arg id "$SUB_ID" '.data[]|select(.id==$id)|.attributes.state' "$RUNNER_TEMP/subs.json")
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode 'limit=200' "https://api.appstoreconnect.apple.com/v1/reviewSubmissions/$SUB_ID/items" -o "$RUNNER_TEMP/items.json"
+          ITEM_COUNT=$(jq '.data|length' "$RUNNER_TEMP/items.json")
+          READY_COUNT=$(jq '[.data[]|select(.attributes.state=="READY_FOR_REVIEW")]|length' "$RUNNER_TEMP/items.json")
+          test "$ITEM_COUNT" -eq 5; test "$READY_COUNT" -eq 5
+
+          : > "$RUNNER_TEMP/tails.txt"
+          jq -r '.data[].id' "$RUNNER_TEMP/items.json" | while read -r RID; do
+            PAD=$RID; case $((${#PAD}%4)) in 2) PAD="${PAD}==";; 3) PAD="${PAD}=";; esac
+            DEC=$(printf '%s' "$PAD" | tr '_-' '/+' | base64 --decode 2>/dev/null || true)
+            TAIL=$(printf '%s' "$DEC" | awk -F'|' '{print $NF}')
+            echo "REVIEW_ITEM=$DEC"
+            [ -n "$TAIL" ] && echo "$TAIL" >> "$RUNNER_TEMP/tails.txt"
+          done
+
+          curl --fail-with-body --silent --show-error --get "${auth[@]}" --data-urlencode 'limit=200' "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/inAppPurchasesV2" -o "$RUNNER_TEMP/iaps.json"
+          echo '=== LIVE IAPS ==='
+          jq -r '.data[]|"IAP | ID=\(.id) | PRODUCT=\(.attributes.productId) | STATE=\(.attributes.state)"' "$RUNNER_TEMP/iaps.json"
+          MATCHES=0
+          : > "$RUNNER_TEMP/products.txt"
+          while read -r UUID; do
+            PID=$(jq -r --arg id "$UUID" '.data[]|select(.id==$id)|.attributes.productId // empty' "$RUNNER_TEMP/iaps.json")
+            if [ -n "$PID" ]; then echo "$PID" | tee -a "$RUNNER_TEMP/products.txt"; MATCHES=$((MATCHES+1)); fi
+          done < "$RUNNER_TEMP/tails.txt"
+          echo "DIRECT_MATCHES=$MATCHES"
+          if [ "$MATCHES" -eq 5 ]; then
+            grep -qx 'com.kamilunavo.onemoretap.removeads' "$RUNNER_TEMP/products.txt"
+            grep -qx 'om.kamilunavo.onemoretap.theme.fire' "$RUNNER_TEMP/products.txt"
+            grep -qx 'com.kamilunavo.onemoretap.theme.galaxy' "$RUNNER_TEMP/products.txt"
+            grep -qx 'com.kamilunavo.onemoretap.theme.retro' "$RUNNER_TEMP/products.txt"
+            grep -qx 'com.kamilunavo.onemoretap.theme.all' "$RUNNER_TEMP/products.txt"
+          fi
+          echo "SUMMARY | SUBMISSION=$STATE | ITEMS=$ITEM_COUNT | READY=$READY_COUNT | LIVE_IAP_MATCHES=$MATCHES"
+
+      - name: Remove ASC key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
