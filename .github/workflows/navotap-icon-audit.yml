@@ -1,0 +1,163 @@
+name: NavoTap App Icon Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/navotap-icon-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit-icon:
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      SOURCE_REF: '20c4b53084c09ddf835960109c0b7755bf9eb787'
+    steps:
+      - name: Checkout locked NavoTap source
+        uses: actions/checkout@v5
+        with:
+          repository: acciento89-bot/onemoretap
+          ref: ${{ env.SOURCE_REF }}
+          path: navotap
+
+      - name: Select Xcode 26.2
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Inspect source AppIcon file
+        working-directory: navotap
+        run: |
+          set -euo pipefail
+          ICON='OneMoreTap/Assets.xcassets/AppIcon.appiconset/AppIcon.png'
+          test -s "$ICON"
+          echo '=== SOURCE ICON FILE ==='
+          ls -lh "$ICON"
+          file "$ICON"
+          sips -g pixelWidth -g pixelHeight -g hasAlpha -g format "$ICON"
+          shasum -a 256 "$ICON"
+          cat OneMoreTap/Assets.xcassets/AppIcon.appiconset/Contents.json
+
+      - name: Write pixel audit helper
+        run: |
+          cat > "$RUNNER_TEMP/icon_audit.swift" <<'SWIFT'
+          import AppKit
+          import Foundation
+
+          guard CommandLine.arguments.count >= 2 else {
+              fputs("usage: icon_audit <png>\n", stderr)
+              exit(2)
+          }
+          let path = CommandLine.arguments[1]
+          guard let image = NSImage(contentsOfFile: path),
+                let tiff = image.tiffRepresentation,
+                let bitmap = NSBitmapImageRep(data: tiff) else {
+              fputs("cannot decode image: \(path)\n", stderr)
+              exit(3)
+          }
+
+          let w = bitmap.pixelsWide
+          let h = bitmap.pixelsHigh
+          let step = max(1, min(w, h) / 256)
+          var n = 0
+          var sumR = 0.0, sumG = 0.0, sumB = 0.0, sumL = 0.0
+          var minL = 1.0, maxL = 0.0
+          var nearBlack = 0, nearWhite = 0, colorful = 0
+          var minX = w, minY = h, maxX = -1, maxY = -1
+          var quantized = Set<Int>()
+
+          for y in stride(from: 0, to: h, by: step) {
+              for x in stride(from: 0, to: w, by: step) {
+                  guard let c0 = bitmap.colorAt(x: x, y: y),
+                        let c = c0.usingColorSpace(.deviceRGB) else { continue }
+                  let r = Double(c.redComponent), g = Double(c.greenComponent), b = Double(c.blueComponent)
+                  let l = 0.2126*r + 0.7152*g + 0.0722*b
+                  n += 1
+                  sumR += r; sumG += g; sumB += b; sumL += l
+                  minL = min(minL, l); maxL = max(maxL, l)
+                  if l < 0.03 { nearBlack += 1 }
+                  if l > 0.97 { nearWhite += 1 }
+                  if max(r,g,b) - min(r,g,b) > 0.08 { colorful += 1 }
+                  if l > 0.05 {
+                      minX = min(minX, x); minY = min(minY, y); maxX = max(maxX, x); maxY = max(maxY, y)
+                  }
+                  let qr = Int(r * 15.0), qg = Int(g * 15.0), qb = Int(b * 15.0)
+                  quantized.insert((qr << 8) | (qg << 4) | qb)
+              }
+          }
+
+          let d = max(1.0, Double(n))
+          func pct(_ v: Int) -> String { String(format: "%.2f", 100.0 * Double(v) / d) }
+          print("ICON_AUDIT path=\(path)")
+          print("SIZE \(w)x\(h) samples=\(n) step=\(step)")
+          print(String(format: "AVG_RGB %.4f %.4f %.4f AVG_LUMA %.4f MIN_LUMA %.4f MAX_LUMA %.4f", sumR/d, sumG/d, sumB/d, sumL/d, minL, maxL))
+          print("NEAR_BLACK_PCT \(pct(nearBlack))")
+          print("NEAR_WHITE_PCT \(pct(nearWhite))")
+          print("COLORFUL_PCT \(pct(colorful))")
+          print("QUANTIZED_COLOR_COUNT \(quantized.count)")
+          if maxX >= 0 { print("NON_DARK_BOUNDS \(minX),\(minY)-\(maxX),\(maxY)") }
+          let visuallyBlack = (Double(nearBlack) / d > 0.90) || (sumL / d < 0.04 && maxL < 0.20)
+          print("VISUALLY_BLACK \(visuallyBlack ? "YES" : "NO")")
+          if visuallyBlack { exit(10) }
+          SWIFT
+
+      - name: Pixel-audit source AppIcon
+        working-directory: navotap
+        continue-on-error: true
+        id: source_audit
+        run: |
+          set -o pipefail
+          swift "$RUNNER_TEMP/icon_audit.swift" OneMoreTap/Assets.xcassets/AppIcon.appiconset/AppIcon.png | tee "$RUNNER_TEMP/source-icon-audit.txt"
+
+      - name: Build unsigned Release archive
+        working-directory: navotap
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/NavoTapIconAudit.xcarchive"
+          xcodebuild \
+            -project OneMoreTap.xcodeproj \
+            -scheme NavoTap \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/NavoTapIconAudit.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            archive
+
+      - name: Inspect archived icon renditions
+        continue-on-error: true
+        id: archive_audit
+        run: |
+          set -uo pipefail
+          APP="$RUNNER_TEMP/NavoTapIconAudit.xcarchive/Products/Applications/NavoTap.app"
+          echo '=== ARCHIVED APP ICON METADATA ==='
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIcons' "$APP/Info.plist" || true
+          find "$APP" -maxdepth 1 -type f \( -name 'AppIcon*.png' -o -name '*Icon*.png' \) -print | sort | tee "$RUNNER_TEMP/archive-icon-files.txt"
+          COUNT=0
+          FAIL=0
+          while read -r ICON; do
+            [ -n "$ICON" ] || continue
+            COUNT=$((COUNT+1))
+            echo "--- $ICON ---"
+            sips -g pixelWidth -g pixelHeight -g hasAlpha -g format "$ICON" || FAIL=1
+            swift "$RUNNER_TEMP/icon_audit.swift" "$ICON" || FAIL=1
+          done < "$RUNNER_TEMP/archive-icon-files.txt"
+          echo "ARCHIVED_ICON_FILE_COUNT=$COUNT"
+          if [ "$COUNT" -eq 0 ]; then
+            echo '::error title=App Icon::No compiled AppIcon PNG was found in the archived app bundle.'
+            FAIL=1
+          fi
+          exit "$FAIL"
+
+      - name: Final icon gate
+        run: |
+          echo "SOURCE_AUDIT=${{ steps.source_audit.outcome }}"
+          echo "ARCHIVE_AUDIT=${{ steps.archive_audit.outcome }}"
+          if [ '${{ steps.source_audit.outcome }}' != 'success' ] || [ '${{ steps.archive_audit.outcome }}' != 'success' ]; then
+            echo '::error title=NavoTap release blocker::App icon audit failed. Do not submit this build.'
+            exit 1
+          fi
+          echo '✓ NavoTap source and archived app icon passed visual-blackness, dimensions and alpha checks.'
