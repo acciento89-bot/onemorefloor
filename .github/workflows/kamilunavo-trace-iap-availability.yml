@@ -1,0 +1,79 @@
+name: Kamilunavo Trace IAP Availability
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/kamilunavo-trace-iap-availability.yml'
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: 'de.kamilunavo.trace'
+  PRODUCT_ID: 'de.kamilunavo.trace.pro.lifetime'
+
+jobs:
+  availability:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set or verify worldwide IAP availability
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
+          JWT=$(ASC_KEY_PATH="$KEY" ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v, padding: false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join; puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          H="Authorization: Bearer $JWT"
+
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'fields[apps]=name,bundleId' 'https://api.appstoreconnect.apple.com/v1/apps' -o "$RUNNER_TEMP/app.json"
+          APP_ID=$(jq -r '.data[0].id // empty' "$RUNNER_TEMP/app.json"); test -n "$APP_ID"
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode "filter[productId]=$PRODUCT_ID" --data-urlencode 'fields[inAppPurchases]=productId,inAppPurchaseType,state' "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/inAppPurchasesV2" -o "$RUNNER_TEMP/iap.json"
+          IAP_ID=$(jq -r '.data[0].id // empty' "$RUNNER_TEMP/iap.json"); test -n "$IAP_ID"
+
+          LINK="$RUNNER_TEMP/link.json"
+          HTTP=$(curl --silent --show-error -H "$H" -o "$LINK" -w '%{http_code}' "https://api.appstoreconnect.apple.com/v2/inAppPurchases/$IAP_ID/relationships/inAppPurchaseAvailability")
+          if [[ "$HTTP" == 200 ]]; then
+            AVAIL_ID=$(jq -r '.data.id // empty' "$LINK")
+          elif [[ "$HTTP" == 404 ]]; then
+            AVAIL_ID=''
+          else
+            cat "$LINK" | jq -r '.errors[]? | "\(.status) \(.code): \(.title) — \(.detail)"'; exit 1
+          fi
+
+          TERR="$RUNNER_TEMP/territories.json"
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode 'fields[territories]=currency' --data-urlencode 'limit=200' 'https://api.appstoreconnect.apple.com/v1/territories' -o "$TERR"
+          TOTAL=$(jq '.data | length' "$TERR")
+          [[ "$TOTAL" -ge 170 ]]
+
+          if [[ -z "$AVAIL_ID" ]]; then
+            BODY="$RUNNER_TEMP/availability-create.json"
+            jq --arg iap "$IAP_ID" '{data:{type:"inAppPurchaseAvailabilities",attributes:{availableInNewTerritories:true},relationships:{availableTerritories:{data:[.data[]|{type:"territories",id:.id}]},inAppPurchase:{data:{type:"inAppPurchases",id:$iap}}}}}' "$TERR" > "$BODY"
+            RESP="$RUNNER_TEMP/availability-response.json"
+            HTTP=$(curl --silent --show-error -H "$H" -H 'Content-Type: application/json' -X POST -d @"$BODY" -o "$RESP" -w '%{http_code}' 'https://api.appstoreconnect.apple.com/v1/inAppPurchaseAvailabilities')
+            [[ "$HTTP" == 201 ]] || { echo "Availability create HTTP $HTTP"; cat "$RESP" | jq -r '.errors[]? | "\(.status) \(.code): \(.title) — \(.detail)"'; exit 1; }
+            AVAIL_ID=$(jq -r '.data.id' "$RESP")
+            echo "Created Lifetime Pro availability for $TOTAL current territories and future territories." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          REL="$RUNNER_TEMP/available-territories.json"
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode 'limit=200' "https://api.appstoreconnect.apple.com/v1/inAppPurchaseAvailabilities/$AVAIL_ID/relationships/availableTerritories" -o "$REL"
+          COUNT=$(jq '.data | length' "$REL")
+          INFO="$RUNNER_TEMP/availability.json"
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode 'fields[inAppPurchaseAvailabilities]=availableInNewTerritories' "https://api.appstoreconnect.apple.com/v1/inAppPurchaseAvailabilities/$AVAIL_ID" -o "$INFO"
+          FUTURE=$(jq -r '.data.attributes.availableInNewTerritories' "$INFO")
+          [[ "$COUNT" == "$TOTAL" ]]
+          [[ "$FUTURE" == true ]]
+          echo "Lifetime Pro availability verified: $COUNT/$TOTAL current territories; availableInNewTerritories=$FUTURE." >> "$GITHUB_STEP_SUMMARY"
+          rm -f "$KEY"
