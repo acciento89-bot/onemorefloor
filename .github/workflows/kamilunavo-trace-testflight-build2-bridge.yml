@@ -16,24 +16,16 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TEAM_ID: 'TKG684N5GL'
   BUNDLE_ID: 'de.kamilunavo.trace'
   BUILD_NUMBER: '2'
-  SOURCE_REF: '62a79d823a6f719fb9b511d329d997aa31dea170'
+  MARKETING_VERSION: '0.1.0'
 
 jobs:
-  upload-kamilunavo-trace:
-    runs-on: macos-26
-    timeout-minutes: 45
+  verify-processing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
-      - name: Checkout exact Kamilunavo Trace source
-        uses: actions/checkout@v5
-        with:
-          repository: acciento89-bot/appideenchatgpt
-          ref: ${{ env.SOURCE_REF }}
-          path: appideenchatgpt
-
-      - name: Verify exact Build 2 source and protected ASC secrets
+      - name: Verify Build 2 processing state in App Store Connect
         shell: bash
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -41,162 +33,56 @@ jobs:
           ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
         run: |
           set -euo pipefail
-          cd appideenchatgpt
-          test "$(git rev-parse HEAD)" = "$SOURCE_REF"
-          test -n "$ASC_ISSUER_ID"
-          test -n "$ASC_KEY_ID"
-          test -n "$ASC_PRIVATE_KEY_B64"
-          test "$(awk -F'= ' '/CURRENT_PROJECT_VERSION = [0-9]+;/{gsub(/;/,"",$2); print $2; exit}' apps/002-evidaro/prototype/EvidaroPrototype.xcodeproj/project.pbxproj)" = "$BUILD_NUMBER"
-          grep -q 'let seedDemoData = false' apps/002-evidaro/prototype/EvidaroPrototype/EvidaroPrototypeApp.swift
-          echo "Exact Trace source $SOURCE_REF / build $BUILD_NUMBER verified." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Run Trace release preflights
-        working-directory: appideenchatgpt
-        run: |
-          set -euo pipefail
-          python3 apps/002-evidaro/ci/preflight.py
-          python3 apps/002-evidaro/ci/release_preflight.py
-          python3 apps/002-evidaro/ci/public_identity_preflight.py
-
-      - name: Prepare App Store Connect API key
-        shell: bash
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
-        run: |
-          set -euo pipefail
-          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
-          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
-          chmod 600 "$KEY_PATH"
-          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
-          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
-
-      - name: Verify App Store Connect app record and Build 2 is new
-        shell: bash
-        env:
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-        run: |
-          set -euo pipefail
-          JWT=$(ruby <<'RUBY'
+          test -n "$ASC_ISSUER_ID" -a -n "$ASC_KEY_ID" -a -n "$ASC_PRIVATE_KEY_B64"
+          KEY="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
+          chmod 600 "$KEY"
+          JWT=$(ASC_KEY_PATH="$KEY" ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ruby <<'RUBY'
           require 'openssl'; require 'base64'; require 'json'
-          def b64url(v); Base64.urlsafe_encode64(v, padding: false); end
-          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
-          now = Time.now.to_i
-          h = b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
-          p = b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'}))
-          s = "#{h}.#{p}"
-          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new, s))
-          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
-          puts "#{s}.#{b64url(raw)}"
+          def b(v); Base64.urlsafe_encode64(v, padding: false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'}))
+          s="#{h}.#{p}"; seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s))
+          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
           RUBY
           )
-          AUTH="Authorization: Bearer $JWT"
-          APP="$RUNNER_TEMP/trace-app.json"
-          curl --fail --silent --show-error --get -H "$AUTH" \
+          H="Authorization: Bearer $JWT"
+          curl --fail --silent --show-error --get -H "$H" \
             --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
             --data-urlencode 'fields[apps]=name,bundleId' \
-            'https://api.appstoreconnect.apple.com/v1/apps' -o "$APP"
-          test "$(jq '.data | length' "$APP")" = 1
-          APP_ID=$(jq -r '.data[0].id' "$APP")
-          BUILDS="$RUNNER_TEMP/trace-build2.json"
-          curl --fail --silent --show-error --get -H "$AUTH" \
-            --data-urlencode "filter[app]=$APP_ID" \
-            --data-urlencode "filter[version]=$BUILD_NUMBER" \
-            --data-urlencode 'filter[preReleaseVersion.version]=0.1.0' \
-            --data-urlencode 'fields[builds]=version,processingState,uploadedDate' \
-            'https://api.appstoreconnect.apple.com/v1/builds' -o "$BUILDS"
-          COUNT=$(jq '.data | length' "$BUILDS")
-          [[ "$COUNT" == 0 ]] || { echo "Build 2 already exists in App Store Connect; refusing duplicate upload."; jq -r '.data[] | .attributes' "$BUILDS"; exit 1; }
-          echo "App Store Connect record found; Build 2 is not present yet." >> "$GITHUB_STEP_SUMMARY"
+            'https://api.appstoreconnect.apple.com/v1/apps' -o "$RUNNER_TEMP/app.json"
+          APP_ID=$(jq -r '.data[0].id // empty' "$RUNNER_TEMP/app.json")
+          test -n "$APP_ID"
 
-      - name: Create unsigned Trace Build 2 archive
-        working-directory: appideenchatgpt/apps/002-evidaro/prototype
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf "$RUNNER_TEMP/KamilunavoTraceBuild2.xcarchive"
-          xcodebuild \
-            -project EvidaroPrototype.xcodeproj \
-            -scheme EvidaroPrototype \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/KamilunavoTraceBuild2.xcarchive" \
-            DEVELOPMENT_TEAM="$TEAM_ID" \
-            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
-            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            archive
-          test -f "$RUNNER_TEMP/KamilunavoTraceBuild2.xcarchive/Info.plist"
-          APP="$RUNNER_TEMP/KamilunavoTraceBuild2.xcarchive/Products/Applications/EvidaroPrototype.app"
-          test -d "$APP"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -qx "$BUILD_NUMBER"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -qx "$BUNDLE_ID"
-
-      - name: Create App Store Connect export options
-        shell: bash
-        run: |
-          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict>
-            <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>upload</string>
-            <key>signingStyle</key><string>automatic</string>
-            <key>teamID</key><string>$TEAM_ID</string>
-            <key>uploadSymbols</key><true/>
-            <key>manageAppVersionAndBuildNumber</key><false/>
-          </dict></plist>
-          PLIST
-
-      - name: Upload Kamilunavo Trace Build 2 to TestFlight
-        id: upload
-        continue-on-error: true
-        shell: bash
-        env:
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-        run: |
-          set -uo pipefail
-          set +e
-          xcodebuild \
-            -exportArchive \
-            -archivePath "$RUNNER_TEMP/KamilunavoTraceBuild2.xcarchive" \
-            -exportPath "$RUNNER_TEMP/KamilunavoTraceBuild2Export" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$ASC_KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            2>&1 | tee "$RUNNER_TEMP/trace-build2-export.log"
-          STATUS=${PIPESTATUS[0]}
-          set -e
-          mkdir -p diagnostics
-          cp "$RUNNER_TEMP/trace-build2-export.log" diagnostics/TestFlight-build2-export.log
-          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Upload diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: kamilunavo-trace-build2-bridge-diagnostics
-          path: diagnostics/
-          if-no-files-found: warn
-          retention-days: 7
-
-      - name: Fail if Build 2 upload failed
-        if: steps.upload.outputs.status != '0'
-        run: |
-          echo "Kamilunavo Trace Build 2 TestFlight upload failed with exit code ${{ steps.upload.outputs.status }}."
+          FINAL_STATE=''
+          for attempt in $(seq 1 30); do
+            OUT="$RUNNER_TEMP/build2.json"
+            curl --fail --silent --show-error --get -H "$H" \
+              --data-urlencode "filter[app]=$APP_ID" \
+              --data-urlencode "filter[version]=$BUILD_NUMBER" \
+              --data-urlencode "filter[preReleaseVersion.version]=$MARKETING_VERSION" \
+              --data-urlencode 'fields[builds]=version,uploadedDate,processingState,usesNonExemptEncryption' \
+              --data-urlencode 'sort=-uploadedDate' \
+              --data-urlencode 'limit=10' \
+              'https://api.appstoreconnect.apple.com/v1/builds' -o "$OUT"
+            COUNT=$(jq '.data | length' "$OUT")
+            if [[ "$COUNT" -gt 0 ]]; then
+              FINAL_STATE=$(jq -r '.data[0].attributes.processingState' "$OUT")
+              UPLOADED=$(jq -r '.data[0].attributes.uploadedDate' "$OUT")
+              echo "Build $MARKETING_VERSION ($BUILD_NUMBER) attempt $attempt: processingState=$FINAL_STATE uploadedDate=$UPLOADED"
+              [[ "$FINAL_STATE" != 'FAILED' && "$FINAL_STATE" != 'INVALID' ]] || exit 1
+              if [[ "$FINAL_STATE" == 'VALID' ]]; then
+                echo "Kamilunavo Trace $MARKETING_VERSION ($BUILD_NUMBER) is VALID in App Store Connect/TestFlight." >> "$GITHUB_STEP_SUMMARY"
+                rm -f "$KEY"
+                exit 0
+              fi
+            else
+              echo "Build $MARKETING_VERSION ($BUILD_NUMBER) not exposed yet (attempt $attempt)."
+            fi
+            sleep 10
+          done
+          echo "Build 2 did not reach VALID within this verification window; last state=${FINAL_STATE:-not-visible}."
+          rm -f "$KEY"
           exit 1
-
-      - name: Mark successful Build 2 upload
-        if: steps.upload.outputs.status == '0'
-        run: echo 'Kamilunavo Trace 0.1.0 (2) was handed to App Store Connect/TestFlight successfully.' >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Remove App Store Connect key
-        if: always()
-        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
