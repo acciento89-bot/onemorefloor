@@ -1,0 +1,205 @@
+name: Kamilunavo Trace TestFlight Build 5 Bridge
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/kamilunavo-trace-testflight-build5-bridge.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kamilunavo-trace-build5-bridge-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TEAM_ID: 'TKG684N5GL'
+  BUNDLE_ID: 'de.kamilunavo.trace'
+  BUILD_NUMBER: '5'
+  SOURCE_REF: '128da643cb8b5320546242ba511118d18a2edb07'
+
+jobs:
+  upload-kamilunavo-trace:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact Kamilunavo Trace source
+        uses: actions/checkout@v5
+        with:
+          repository: acciento89-bot/appideenchatgpt
+          ref: ${{ env.SOURCE_REF }}
+          path: appideenchatgpt
+
+      - name: Verify exact Build 5 source and protected ASC secrets
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          cd appideenchatgpt
+          test "$(git rev-parse HEAD)" = "$SOURCE_REF"
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+          test "$(awk -F'= ' '/CURRENT_PROJECT_VERSION = [0-9]+;/{gsub(/;/,"",$2); print $2; exit}' apps/002-evidaro/prototype/EvidaroPrototype.xcodeproj/project.pbxproj)" = "$BUILD_NUMBER"
+          grep -q 'let seedDemoData = false' apps/002-evidaro/prototype/EvidaroPrototype/EvidaroPrototypeApp.swift
+          grep -q '"KAMILUNAVO TRACE"' apps/002-evidaro/prototype/EvidaroPrototype/EvidencePackExporter.swift
+          ! grep -q 'drawText("EVIDARO"' apps/002-evidaro/prototype/EvidaroPrototype/EvidencePackExporter.swift
+          ! grep -q 'NSString(string: "EVIDARO •' apps/002-evidaro/prototype/EvidaroPrototype/EvidencePackExporter.swift
+          ! grep -q 'let footer = "Evidaro •' apps/002-evidaro/prototype/EvidaroPrototype/EvidencePackExporter.swift
+          echo "Exact Trace source $SOURCE_REF / build $BUILD_NUMBER verified." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run Trace release preflights
+        working-directory: appideenchatgpt
+        run: |
+          set -euo pipefail
+          python3 apps/002-evidaro/ci/preflight.py
+          python3 apps/002-evidaro/ci/release_preflight.py
+          python3 apps/002-evidaro/ci/public_identity_preflight.py
+
+      - name: Prepare App Store Connect API key
+        shell: bash
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Verify App Store Connect app record and Build 5 is new
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v); Base64.urlsafe_encode64(v, padding: false); end
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          h = b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p = b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'}))
+          s = "#{h}.#{p}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new, s))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{s}.#{b64url(raw)}"
+          RUBY
+          )
+          AUTH="Authorization: Bearer $JWT"
+          APP="$RUNNER_TEMP/trace-app.json"
+          curl --fail --silent --show-error --get -H "$AUTH" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
+            --data-urlencode 'fields[apps]=name,bundleId' \
+            'https://api.appstoreconnect.apple.com/v1/apps' -o "$APP"
+          test "$(jq '.data | length' "$APP")" = 1
+          APP_ID=$(jq -r '.data[0].id' "$APP")
+          BUILDS="$RUNNER_TEMP/trace-build5.json"
+          curl --fail --silent --show-error --get -H "$AUTH" \
+            --data-urlencode "filter[app]=$APP_ID" \
+            --data-urlencode "filter[version]=$BUILD_NUMBER" \
+            --data-urlencode 'filter[preReleaseVersion.version]=0.1.0' \
+            --data-urlencode 'fields[builds]=version,processingState,uploadedDate' \
+            'https://api.appstoreconnect.apple.com/v1/builds' -o "$BUILDS"
+          COUNT=$(jq '.data | length' "$BUILDS")
+          [[ "$COUNT" == 0 ]] || { echo "Build 5 already exists in App Store Connect; refusing duplicate upload."; jq -r '.data[] | .attributes' "$BUILDS"; exit 1; }
+          echo "App Store Connect record found; Build 5 is not present yet." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create unsigned Trace Build 5 archive
+        working-directory: appideenchatgpt/apps/002-evidaro/prototype
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/KamilunavoTraceBuild5.xcarchive"
+          xcodebuild \
+            -project EvidaroPrototype.xcodeproj \
+            -scheme EvidaroPrototype \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/KamilunavoTraceBuild5.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive
+          test -f "$RUNNER_TEMP/KamilunavoTraceBuild5.xcarchive/Info.plist"
+          APP="$RUNNER_TEMP/KamilunavoTraceBuild5.xcarchive/Products/Applications/EvidaroPrototype.app"
+          test -d "$APP"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -qx "$BUILD_NUMBER"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -qx "$BUNDLE_ID"
+
+      - name: Create App Store Connect export options
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+
+      - name: Upload Kamilunavo Trace Build 5 to TestFlight
+        id: upload
+        continue-on-error: true
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -uo pipefail
+          set +e
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/KamilunavoTraceBuild5.xcarchive" \
+            -exportPath "$RUNNER_TEMP/KamilunavoTraceBuild5Export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            2>&1 | tee "$RUNNER_TEMP/trace-build5-export.log"
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          mkdir -p diagnostics
+          cp "$RUNNER_TEMP/trace-build5-export.log" diagnostics/TestFlight-build5-export.log
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kamilunavo-trace-build5-bridge-diagnostics
+          path: diagnostics/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Fail if Build 5 upload failed
+        if: steps.upload.outputs.status != '0'
+        run: |
+          echo "Kamilunavo Trace Build 5 TestFlight upload failed with exit code ${{ steps.upload.outputs.status }}."
+          exit 1
+
+      - name: Mark successful Build 5 upload
+        if: steps.upload.outputs.status == '0'
+        run: echo 'Kamilunavo Trace 0.1.0 (5) was handed to App Store Connect/TestFlight successfully.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove App Store Connect key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
