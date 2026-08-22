@@ -1,0 +1,160 @@
+name: Kamilunavo Trace Final Review Resume
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/kamilunavo-trace-final-review-resume.yml'
+
+permissions:
+  contents: read
+
+env:
+  APP_ID: '6803765449'
+  APP_STORE_VERSION_ID: 'a895fc57-7ee4-40e6-9f19-2881323068ea'
+  IAP_VERSION_ID: '8b715a31-6526-41bf-a7eb-226a629a5715'
+
+jobs:
+  final-review-resume:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
+          chmod 600 "$KEY"; export ASC_KEY_PATH="$KEY"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'}))
+          s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s))
+          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Resolve review package and live release state
+        run: |
+          set -euo pipefail
+          BASE='https://api.appstoreconnect.apple.com'
+          SUBS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          RID=$(jq -r '.data[] | select(.attributes.state=="READY_FOR_REVIEW") | .id' <<<"$SUBS" | head -1)
+          if [[ -z "$RID" ]]; then
+            RID=$(jq -r '.data[] | select(.attributes.state=="WAITING_FOR_REVIEW" or .attributes.state=="IN_REVIEW") | .id' <<<"$SUBS" | head -1)
+          fi
+          test -n "$RID"
+          echo "REVIEW_SUBMISSION_ID=$RID" >> "$GITHUB_ENV"
+
+          V=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/appStoreVersions/$APP_STORE_VERSION_ID")
+          I=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/inAppPurchaseVersions/$IAP_VERSION_ID")
+          B=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/appStoreVersions/$APP_STORE_VERSION_ID/build")
+          echo "TRACE_REVIEW_ID=$RID"
+          echo "TRACE_APP_STATE=$(jq -r '.data.attributes.appVersionState // .data.attributes.appStoreState // empty' <<<"$V")"
+          echo "TRACE_IAP_STATE=$(jq -r '.data.attributes.state // empty' <<<"$I")"
+          echo "TRACE_BUILD=$(jq -c '{id:.data.id,build:.data.attributes.version,processingState:.data.attributes.processingState}' <<<"$B")"
+          test "$(jq -r '.data.attributes.processingState' <<<"$B")" = 'VALID'
+          echo "TRACE_BUILD_NUMBER=$(jq -r '.data.attributes.version' <<<"$B")" >> "$GITHUB_ENV"
+
+      - name: Ensure App Store version is in review package
+        run: |
+          set -euo pipefail
+          BASE='https://api.appstoreconnect.apple.com'
+          RID="$REVIEW_SUBMISSION_ID"
+          BODY=$(jq -n --arg rid "$RID" --arg vid "$APP_STORE_VERSION_ID" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$rid}},appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}')
+          CODE=$(curl -sS -o "$RUNNER_TEMP/app-item.json" -w '%{http_code}' -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v1/reviewSubmissionItems")
+          echo "TRACE_APP_ITEM_HTTP=$CODE"
+          if [[ "$CODE" == '201' ]]; then
+            echo 'TRACE_APP_ITEM=ADDED'
+          elif [[ "$CODE" == '409' ]] && grep -q 'already added to this reviewSubmission' "$RUNNER_TEMP/app-item.json"; then
+            echo 'TRACE_APP_ITEM=ALREADY_PRESENT'
+          else
+            jq -c '.errors[]? | {status,code,title,detail,meta}' "$RUNNER_TEMP/app-item.json" || cat "$RUNNER_TEMP/app-item.json"
+            exit 41
+          fi
+
+      - name: Ensure Lifetime Pro is in same review package
+        run: |
+          set -euo pipefail
+          BASE='https://api.appstoreconnect.apple.com'
+          RID="$REVIEW_SUBMISSION_ID"
+          I=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/inAppPurchaseVersions/$IAP_VERSION_ID")
+          ISTATE=$(jq -r '.data.attributes.state // empty' <<<"$I")
+          echo "TRACE_IAP_STATE_BEFORE=$ISTATE"
+          case "$ISTATE" in
+            WAITING_FOR_REVIEW|IN_REVIEW|APPROVED|ACCEPTED)
+              echo "TRACE_IAP_ITEM=ALREADY_SUBMITTED_OR_APPROVED"
+              exit 0
+              ;;
+          esac
+
+          BODY=$(jq -n --arg rid "$RID" --arg iid "$IAP_VERSION_ID" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$rid}},inAppPurchaseVersion:{data:{type:"inAppPurchaseVersions",id:$iid}}}}}')
+          CODE=$(curl -sS -o "$RUNNER_TEMP/iap-item.json" -w '%{http_code}' -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v1/reviewSubmissionItems")
+          echo "TRACE_IAP_ITEM_HTTP=$CODE"
+          if [[ "$CODE" == '201' ]]; then
+            echo 'TRACE_IAP_ITEM=ADDED'
+          elif [[ "$CODE" == '409' ]] && grep -q 'already added to this reviewSubmission' "$RUNNER_TEMP/iap-item.json"; then
+            echo 'TRACE_IAP_ITEM=ALREADY_PRESENT'
+          else
+            jq -c '.errors[]? | {status,code,title,detail,meta}' "$RUNNER_TEMP/iap-item.json" || cat "$RUNNER_TEMP/iap-item.json"
+            exit 42
+          fi
+
+      - name: Submit complete package to Apple App Review
+        run: |
+          set -euo pipefail
+          BASE='https://api.appstoreconnect.apple.com'
+          RID="$REVIEW_SUBMISSION_ID"
+          CURRENT=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$RID")
+          STATE=$(jq -r '.data.attributes.state // empty' <<<"$CURRENT")
+          echo "TRACE_REVIEW_STATE_BEFORE_SUBMIT=$STATE"
+
+          if [[ "$STATE" == 'READY_FOR_REVIEW' ]]; then
+            BODY=$(jq -n --arg id "$RID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
+            OK='false'
+            for attempt in {1..6}; do
+              CODE=$(curl -sS -o "$RUNNER_TEMP/submit.json" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v1/reviewSubmissions/$RID")
+              echo "TRACE_SUBMIT_HTTP=$CODE attempt=$attempt"
+              if [[ "$CODE" == '200' || "$CODE" == '204' ]]; then OK='true'; break; fi
+              jq -c '.errors[]? | {status,code,title,detail,meta}' "$RUNNER_TEMP/submit.json" || true
+              sleep 3
+            done
+            test "$OK" = 'true'
+          fi
+
+          FINAL=''
+          for i in {1..45}; do
+            R=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$RID")
+            FINAL=$(jq -r '.data.attributes.state // empty' <<<"$R")
+            echo "TRACE_APPLE_REVIEW_STATE=$FINAL"
+            case "$FINAL" in WAITING_FOR_REVIEW|IN_REVIEW|COMPLETE) break ;; esac
+            sleep 4
+          done
+          case "$FINAL" in WAITING_FOR_REVIEW|IN_REVIEW|COMPLETE) ;; *) exit 52 ;; esac
+
+          V=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/appStoreVersions/$APP_STORE_VERSION_ID")
+          I=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/inAppPurchaseVersions/$IAP_VERSION_ID")
+          VSTATE=$(jq -r '.data.attributes.appVersionState // .data.attributes.appStoreState // empty' <<<"$V")
+          ISTATE=$(jq -r '.data.attributes.state // empty' <<<"$I")
+          echo "TRACE_FINAL_APP_VERSION_STATE=$VSTATE"
+          echo "TRACE_FINAL_IAP_VERSION_STATE=$ISTATE"
+          echo "TRACE_FINAL_REVIEW_SUBMISSION_STATE=$FINAL"
+          echo "### Kamilunavo Trace 1.0 submitted to App Review ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Build: **$TRACE_BUILD_NUMBER**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- App: **$VSTATE**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Lifetime Pro: **$ISTATE**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Review submission: **$FINAL**" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cleanup key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
