@@ -1,0 +1,109 @@
+name: v1.74 Branding Icon Candidate
+
+on:
+  push:
+    branches:
+      - agent/v1.74-branding-identity
+    paths:
+      - 'scripts/v101_branding_icon_capture.gd'
+      - '.github/workflows/v101-branding-icon-candidate.yml'
+  pull_request:
+    paths:
+      - 'scripts/v101_branding_icon_capture.gd'
+      - '.github/workflows/v101-branding-icon-candidate.yml'
+      - 'project.godot'
+      - 'assets/branding/**'
+
+permissions:
+  contents: read
+
+env:
+  GODOT_TAG: '4.7.1-stable'
+
+jobs:
+  branding-icon-candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_TAG}_linux.x86_64" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Import production assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee v174-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Shader error|Failed to load script|Failed loading resource" v174-import.log; then
+            echo "Godot reported v1.74 import errors"
+            exit 1
+          fi
+
+      - name: Render 3D production icon candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/v174_branding
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./godot \
+            --path . \
+            --rendering-method gl_compatibility \
+            --rendering-driver opengl3 \
+            --audio-driver Dummy \
+            --script res://scripts/v101_branding_icon_capture.gd \
+            --quit-after 720 2>&1 | tee v174-icon.log
+          grep -q "v1.74 branding icon visual capture passed" v174-icon.log
+          grep -q "V174_BRANDING_ICON:accepted-hero-wanderer-r1.3:1024x1024:opaque" v174-icon.log
+          test -s artifacts/v174_branding/app_icon_v174_1024.png
+          test -s artifacts/v174_branding/app_icon_v174_180.png
+          test -s artifacts/v174_branding/app_icon_v174_60.png
+
+      - name: Validate PNG dimensions and opacity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+          expected = {
+              'app_icon_v174_1024.png': (1024, 1024),
+              'app_icon_v174_180.png': (180, 180),
+              'app_icon_v174_60.png': (60, 60),
+          }
+          root = Path('artifacts/v174_branding')
+          for name, size in expected.items():
+              data = (root / name).read_bytes()
+              assert data[:8] == b'\x89PNG\r\n\x1a\n', name
+              w, h = struct.unpack('>II', data[16:24])
+              assert (w, h) == size, (name, w, h)
+              assert data[25] == 2, (name, 'unexpected color type', data[25])
+              print(f'V174_ICON_FILE:{name}:{w}x{h}:opaque-rgb')
+          PY
+
+      - name: Upload v1.74 icon evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v174-branding-icon-candidate
+          path: artifacts/v174_branding/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v174-branding-icon-failure
+          path: |
+            v174-import.log
+            v174-icon.log
+          if-no-files-found: ignore
+          retention-days: 14
