@@ -9,8 +9,334 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: trace-1-0-build10-submit-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TRACE_REPO: 'https://github.com/acciento89-bot/appideenchatgpt.git'
+  TRACE_SHA: '2e2d51a26b8c07cd4555deed8f1b1466af184e83'
+  TEAM_ID: 'TKG684N5GL'
+  BUNDLE_ID: 'de.kamilunavo.trace'
+  BUILD_NUMBER: '10'
+  MARKETING_VERSION: '1.0'
+  APP_ID: '6803765449'
+  APP_STORE_VERSION_ID: 'a895fc57-7ee4-40e6-9f19-2881323068ea'
+  INFO_ID: '4d8e959a-99c5-4ba5-ad95-b294748cf2c8'
+  DE_INFO_LOC_ID: 'edaa4558-5a43-4f3c-8af4-211685835177'
+  DE_VLOC_ID: '70a7114f-1aa1-43fe-9f53-826a7acbda5c'
+  PRODUCT_ID: 'de.kamilunavo.trace.pro.lifetime'
+
 jobs:
-  register:
-    runs-on: ubuntu-latest
+  release-and-submit:
+    runs-on: macos-26
+    timeout-minutes: 45
     steps:
-      - run: echo TRACE_BUILD10_SUBMIT_BRIDGE_REGISTERED
+      - name: Prepare App Store Connect API key
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
+          chmod 600 "$KEY"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY"
+          echo "ASC_KEY_PATH=$KEY" >> "$GITHUB_ENV"
+
+          export ASC_KEY_PATH="$KEY"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Checkout locked Trace source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none "$TRACE_REPO" "$RUNNER_TEMP/trace-source"
+          cd "$RUNNER_TEMP/trace-source"
+          git fetch origin "$TRACE_SHA"
+          git checkout --detach "$TRACE_SHA"
+          test "$(git rev-parse HEAD)" = "$TRACE_SHA"
+          echo "TRACE_DIR=$RUNNER_TEMP/trace-source" >> "$GITHUB_ENV"
+
+      - name: Run Trace release preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$TRACE_DIR"
+          python3 apps/002-evidaro/ci/preflight.py
+
+      - name: Build unsigned Release and verify 1.0 (10)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$TRACE_DIR/apps/002-evidaro/prototype"
+          rm -rf "$RUNNER_TEMP/TraceDerivedData"
+          xcodebuild \
+            -project EvidaroPrototype.xcodeproj \
+            -scheme EvidaroPrototype \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/TraceDerivedData" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            MARKETING_VERSION="$MARKETING_VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+          APP=$(find "$RUNNER_TEMP/TraceDerivedData/Build/Products/Release-iphoneos" -maxdepth 1 -name '*.app' -type d -print -quit)
+          test -n "$APP" -a -d "$APP"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" = "$BUNDLE_ID"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")" = "$MARKETING_VERSION"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")" = "$BUILD_NUMBER"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist")" = 'Kamilunavo Trace'
+          echo 'Unsigned release verifies as Kamilunavo Trace 1.0 (10).'
+
+      - name: Create exact Release archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$TRACE_DIR/apps/002-evidaro/prototype"
+          rm -rf "$RUNNER_TEMP/EvidaroPrototype.xcarchive"
+          xcodebuild \
+            -project EvidaroPrototype.xcodeproj \
+            -scheme EvidaroPrototype \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/EvidaroPrototype.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            MARKETING_VERSION="$MARKETING_VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive
+          APP="$RUNNER_TEMP/EvidaroPrototype.xcarchive/Products/Applications/EvidaroPrototype.app"
+          test -d "$APP"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")" = '1.0'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")" = '10'
+          ICON="$APP/AppIcon60x60@2x.png"
+          test -s "$ICON"
+          sips -g pixelWidth -g pixelHeight "$ICON" | grep -q '120'
+          echo 'Archive verified: 1.0 (10), release icon present.'
+
+      - name: Upload Build 10 to App Store Connect
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/EvidaroPrototype.xcarchive" \
+            -exportPath "$RUNNER_TEMP/TraceBuild10Export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            2>&1 | tee "$RUNNER_TEMP/trace-build10-upload.log"
+          grep -Eiq 'Upload succeeded|Uploaded package is processing|upload.*success' "$RUNNER_TEMP/trace-build10-upload.log"
+
+      - name: Refresh App Store Connect token
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          export ASC_KEY_PATH
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Wait until Apple validates Trace 1.0 (10)
+        shell: bash
+        run: |
+          set -euo pipefail
+          AUTH="Authorization: Bearer $ASC_TOKEN"
+          for ATTEMPT in $(seq 1 36); do
+            OUT="$RUNNER_TEMP/build10.json"
+            curl --fail --silent --show-error --get -H "$AUTH" \
+              --data-urlencode "filter[app]=$APP_ID" \
+              --data-urlencode "filter[version]=$BUILD_NUMBER" \
+              --data-urlencode "filter[preReleaseVersion.version]=$MARKETING_VERSION" \
+              --data-urlencode 'fields[builds]=version,processingState,uploadedDate,usesNonExemptEncryption' \
+              'https://api.appstoreconnect.apple.com/v1/builds' -o "$OUT"
+            if [[ "$(jq '.data|length' "$OUT")" -gt 0 ]]; then
+              STATE=$(jq -r '.data[0].attributes.processingState' "$OUT")
+              echo "Build 10 processing attempt $ATTEMPT: $STATE"
+              if [[ "$STATE" == 'VALID' ]]; then
+                BID=$(jq -r '.data[0].id' "$OUT")
+                test -n "$BID"
+                echo "BUILD10_ID=$BID" >> "$GITHUB_ENV"
+                exit 0
+              fi
+              [[ "$STATE" != 'FAILED' && "$STATE" != 'INVALID' ]]
+            fi
+            sleep 20
+          done
+          echo 'Build 10 did not become VALID in time.' >&2
+          exit 1
+
+      - name: Attach Build 10 to App Store version 1.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          BODY=$(jq -n --arg id "$BUILD10_ID" '{data:{type:"builds",id:$id}}')
+          curl --fail-with-body -sS -X PATCH \
+            -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
+            -d "$BODY" \
+            "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${APP_STORE_VERSION_ID}/relationships/build" >/dev/null
+          CHECK=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${APP_STORE_VERSION_ID}/build")
+          test "$(jq -r '.data.id' <<<"$CHECK")" = "$BUILD10_ID"
+          test "$(jq -r '.data.attributes.version' <<<"$CHECK")" = '10'
+
+      - name: Final metadata and product gate before submission
+        shell: bash
+        run: |
+          set -euo pipefail
+          api(){ curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com$1"; }
+          APP=$(api "/v1/apps/${APP_ID}?fields%5Bapps%5D=bundleId,contentRightsDeclaration")
+          INFO=$(api "/v1/appInfos/${INFO_ID}?include=primaryCategory")
+          ILOC=$(api "/v1/appInfoLocalizations/${DE_INFO_LOC_ID}")
+          VER=$(api "/v1/appStoreVersions/${APP_STORE_VERSION_ID}")
+          VLOC=$(api "/v1/appStoreVersionLocalizations/${DE_VLOC_ID}")
+          REVIEW=$(api "/v1/appStoreVersions/${APP_STORE_VERSION_ID}/appStoreReviewDetail")
+          IAP=$(api "/v1/apps/${APP_ID}/inAppPurchasesV2?filter%5BproductId%5D=${PRODUCT_ID}&limit=10")
+          SHOTS=$(api "/v1/appStoreVersionLocalizations/${DE_VLOC_ID}/appScreenshotSets?include=appScreenshots&limit=50&limit%5BappScreenshots%5D=50")
+          AGE=$(api "/v1/appInfos/${INFO_ID}/ageRatingDeclaration")
+          test "$(jq -r '.data.attributes.contentRightsDeclaration' <<<"$APP")" = 'USES_THIRD_PARTY_CONTENT'
+          test "$(jq -r '.included[]? | select(.type=="appCategories") | .id' <<<"$INFO" | head -1)" = 'PRODUCTIVITY'
+          test -n "$(jq -r '.data.attributes.privacyPolicyUrl // empty' <<<"$ILOC")"
+          test -n "$(jq -r '.data.attributes.description // empty' <<<"$VLOC")"
+          test -n "$(jq -r '.data.attributes.keywords // empty' <<<"$VLOC")"
+          test -n "$(jq -r '.data.attributes.supportUrl // empty' <<<"$VLOC")"
+          test -n "$(jq -r '.data.attributes.copyright // empty' <<<"$VER")"
+          test -n "$(jq -r '.data.attributes.contactFirstName // empty' <<<"$REVIEW")"
+          test -n "$(jq -r '.data.attributes.contactEmail // empty' <<<"$REVIEW")"
+          test "$(jq -r '.data[0].attributes.state // empty' <<<"$IAP")" = 'READY_TO_SUBMIT'
+          test "$(jq '[.included[]? | select(.type=="appScreenshots")] | length' <<<"$SHOTS")" -gt 0
+          test "$(jq -r '.data.attributes.unrestrictedWebAccess' <<<"$AGE")" = 'false'
+          IAP_ID=$(jq -r '.data[0].id' <<<"$IAP")
+          echo "IAP_ID=$IAP_ID" >> "$GITHUB_ENV"
+
+      - name: Resolve Lifetime Pro review version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v2/inAppPurchases/${IAP_ID}/versions?limit=50")
+          IAP_VERSION_ID=$(jq -r '[.data[] | select(.attributes.state=="PREPARE_FOR_SUBMISSION" or .attributes.state=="READY_FOR_REVIEW")][0].id // empty' <<<"$VERS")
+          echo "IAP_VERSION_ID=$IAP_VERSION_ID" >> "$GITHUB_ENV"
+          echo "Lifetime Pro review version: ${IAP_VERSION_ID:-legacy/first-IAP path}"
+
+      - name: Create review submission and add Trace 1.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXIST=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/reviewSubmissions?filter%5Bapp%5D=${APP_ID}&limit=50")
+          ACTIVE=$(jq -r '.data[]? | select(.attributes.state=="READY_FOR_REVIEW") | .id' <<<"$EXIST" | head -1)
+          if [[ -n "$ACTIVE" ]]; then
+            RID="$ACTIVE"
+          else
+            CREATE=$(jq -n --arg app "$APP_ID" '{data:{type:"reviewSubmissions",attributes:{platform:"IOS"},relationships:{app:{data:{type:"apps",id:$app}}}}}')
+            RESP=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$CREATE" 'https://api.appstoreconnect.apple.com/v1/reviewSubmissions')
+            RID=$(jq -r '.data.id' <<<"$RESP")
+          fi
+          test -n "$RID"
+          echo "REVIEW_SUBMISSION_ID=$RID" >> "$GITHUB_ENV"
+
+          ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/reviewSubmissions/${RID}/items?include=appStoreVersion,inAppPurchaseVersion&limit=50")
+          HAS_APP=$(jq -r --arg v "$APP_STORE_VERSION_ID" '[.included[]? | select(.type=="appStoreVersions" and .id==$v)] | length' <<<"$ITEMS")
+          if [[ "$HAS_APP" == '0' ]]; then
+            ITEM=$(jq -n --arg rid "$RID" --arg vid "$APP_STORE_VERSION_ID" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$rid}},appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}')
+            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$ITEM" 'https://api.appstoreconnect.apple.com/v1/reviewSubmissionItems' >/dev/null
+          fi
+
+      - name: Add Lifetime Pro to same review submission
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${IAP_VERSION_ID:-}" ]]; then
+            ITEM=$(jq -n --arg rid "$REVIEW_SUBMISSION_ID" --arg iid "$IAP_VERSION_ID" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$rid}},inAppPurchaseVersion:{data:{type:"inAppPurchaseVersions",id:$iid}}}}}')
+            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$ITEM" 'https://api.appstoreconnect.apple.com/v1/reviewSubmissionItems' >/dev/null
+            echo 'Lifetime Pro added through current review-submission API.'
+          else
+            echo 'No v2 IAP review version exposed; attempting legacy IAP submission while app submission is staged.'
+            LEGACY=$(jq -n --arg iid "$IAP_ID" '{data:{type:"inAppPurchaseSubmissions",relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}}}}}')
+            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$LEGACY" 'https://api.appstoreconnect.apple.com/v1/inAppPurchaseSubmissions' >/dev/null
+          fi
+
+      - name: Submit Kamilunavo Trace for App Review
+        shell: bash
+        run: |
+          set -euo pipefail
+          BODY=$(jq -n --arg id "$REVIEW_SUBMISSION_ID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "https://api.appstoreconnect.apple.com/v1/reviewSubmissions/${REVIEW_SUBMISSION_ID}" >/dev/null
+
+      - name: Verify final Apple review state
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 8
+          SUB=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/reviewSubmissions/${REVIEW_SUBMISSION_ID}?include=items")
+          VER=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${APP_STORE_VERSION_ID}")
+          IAP=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/apps/${APP_ID}/inAppPurchasesV2?filter%5BproductId%5D=${PRODUCT_ID}&limit=10")
+          S=$(jq -r '.data.attributes.state // empty' <<<"$SUB")
+          VS=$(jq -r '.data.attributes.appVersionState // .data.attributes.appStoreState // empty' <<<"$VER")
+          IS=$(jq -r '.data[0].attributes.state // empty' <<<"$IAP")
+          echo "TRACE_REVIEW_SUBMISSION_ID=$REVIEW_SUBMISSION_ID"
+          echo "TRACE_REVIEW_SUBMISSION_STATE=$S"
+          echo "TRACE_APP_VERSION_STATE=$VS"
+          echo "TRACE_LIFETIME_PRO_STATE=$IS"
+          [[ "$S" == 'WAITING_FOR_REVIEW' || "$S" == 'IN_REVIEW' ]]
+          [[ "$VS" == 'WAITING_FOR_REVIEW' || "$VS" == 'IN_REVIEW' || "$VS" == 'READY_FOR_REVIEW' ]]
+          {
+            echo '## Kamilunavo Trace final submission'
+            echo '- Public App Store version: 1.0'
+            echo '- Uploaded/attached build: 10'
+            echo "- Review submission ID: $REVIEW_SUBMISSION_ID"
+            echo "- Submission state: $S"
+            echo "- App version state: $VS"
+            echo "- Lifetime Pro state: $IS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove App Store Connect key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
