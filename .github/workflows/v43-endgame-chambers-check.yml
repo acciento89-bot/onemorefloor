@@ -48,6 +48,7 @@ jobs:
     timeout-minutes: 8
     env:
       REVIEW_SUBMISSION_ID: 3b4e487e-d776-471e-abff-0fae824a72cd
+      VERSION_ID: e7a061e3-bd05-453c-a911-00e1e8cb4f76
     steps:
       - name: Prepare App Store Connect token
         env:
@@ -73,15 +74,32 @@ jobs:
           )
           echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
 
-      - name: Inspect and submit review package
+      - name: Attach app version and submit review package
         run: |
           set -euo pipefail
           SID="$REVIEW_SUBMISSION_ID"
           BASE='https://api.appstoreconnect.apple.com'
-          R=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$SID")
-          echo "Before submit: $(jq -r '.data.attributes.state // "unknown"' <<<"$R")"
-          ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$SID/items?include=appStoreVersion,subscriptionVersion,subscriptionGroupVersion&limit=50")
-          echo "Review item count: $(jq '.data | length' <<<"$ITEMS")"
+
+          R=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$SID?include=appStoreVersionForReview")
+          current=$(jq -r '.data.relationships.appStoreVersionForReview.data.id // empty' <<<"$R")
+          echo "Before submit: state=$(jq -r '.data.attributes.state // "unknown"' <<<"$R") appVersion=${current:-none}"
+
+          if [[ "$current" != "$VERSION_ID" ]]; then
+            LINK=$(jq -n --arg sid "$SID" --arg vid "$VERSION_ID" '{data:{type:"reviewSubmissions",id:$sid,relationships:{appStoreVersionForReview:{data:{type:"appStoreVersions",id:$vid}}}}}')
+            OUT="$RUNNER_TEMP/link.json"
+            CODE=$(curl -sS -o "$OUT" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$LINK" "$BASE/v1/reviewSubmissions/$SID")
+            if [[ "$CODE" -lt 200 || "$CODE" -ge 300 ]]; then
+              echo "Apple app-version link HTTP $CODE" >&2
+              cat "$OUT" >&2
+              exit 1
+            fi
+          fi
+
+          R=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$SID?include=appStoreVersionForReview")
+          linked=$(jq -r '.data.relationships.appStoreVersionForReview.data.id // empty' <<<"$R")
+          test "$linked" = "$VERSION_ID"
+          ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$SID/items?include=subscriptionVersion,subscriptionGroupVersion&limit=50")
+          echo "Review item count: $(jq '.data | length' <<<"$ITEMS") + app version"
           jq -r '.included[]? | "included: \(.type) \(.id) state=\(.attributes.state // "n/a")"' <<<"$ITEMS" || true
 
           BODY=$(jq -n --arg id "$SID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
@@ -105,7 +123,7 @@ jobs:
           done
           case "$state" in
             WAITING_FOR_REVIEW|IN_REVIEW|COMPLETE)
-              echo "✅ Family Life OS submitted: $state" >> "$GITHUB_STEP_SUMMARY"
+              echo "✅ Family Life OS 1.0 + Family Pro submitted to Apple: $state" >> "$GITHUB_STEP_SUMMARY"
               ;;
             *)
               echo "Unexpected submission state: $state" >&2
@@ -115,4 +133,4 @@ jobs:
 
       - name: Remove key
         if: always()
-        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8 "$RUNNER_TEMP/submit.json"
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8 "$RUNNER_TEMP/link.json" "$RUNNER_TEMP/submit.json"
