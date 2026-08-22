@@ -54,9 +54,11 @@ jobs:
           test "$(jq -r '.data.attributes.versionString' <<<"$V")" = '1.0'
 
           B=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/builds/$BUILD_ID")
+          BUILD_NUMBER=$(jq -r '.data.attributes.version // empty' <<<"$B")
           echo "TRACE_BUILD=$(jq -c '{id:.data.id,build:.data.attributes.version,processingState:.data.attributes.processingState}' <<<"$B")"
-          test "$(jq -r '.data.attributes.version' <<<"$B")" = '10'
+          test -n "$BUILD_NUMBER"
           test "$(jq -r '.data.attributes.processingState' <<<"$B")" = 'VALID'
+          echo "TRACE_BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
 
           I=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/inAppPurchaseVersions/$IAP_VERSION_ID")
           echo "TRACE_IAP_VERSION_BEFORE=$(jq -c '{id:.data.id,version:.data.attributes.version,state:.data.attributes.state}' <<<"$I")"
@@ -193,7 +195,7 @@ jobs:
           echo "TRACE_FINAL_IAP_VERSION_STATE=$ISTATE"
           echo "TRACE_FINAL_REVIEW_SUBMISSION_STATE=$FINAL"
           echo "### Kamilunavo Trace 1.0 final submitted ✅" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Build: **10**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Build: **$TRACE_BUILD_NUMBER**" >> "$GITHUB_STEP_SUMMARY"
           echo "- App price (DE): **Free**" >> "$GITHUB_STEP_SUMMARY"
           echo "- Lifetime Pro: **$ISTATE**" >> "$GITHUB_STEP_SUMMARY"
           echo "- App version: **$VSTATE**" >> "$GITHUB_STEP_SUMMARY"
