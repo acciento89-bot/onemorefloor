@@ -1,4 +1,4 @@
-name: Kamilunavo Trace App Store Metadata Finalizer
+name: Kamilunavo Trace App Store Submit
 
 on:
   pull_request:
@@ -18,9 +18,9 @@ env:
   PRODUCT_ID: 'de.kamilunavo.trace.pro.lifetime'
 
 jobs:
-  audit:
+  submit:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Prepare App Store Connect token
         env:
@@ -45,73 +45,105 @@ jobs:
           echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
           echo "ASC_KEY_PATH=$KEY" >> "$GITHUB_ENV"
 
-      - name: Final Trace submission audit read only
+      - name: Final pre-submit gate
         run: |
           set -euo pipefail
           api(){ curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com$1"; }
+          APP=$(api "/v1/apps/${APP_ID}?fields%5Bapps%5D=bundleId,contentRightsDeclaration")
+          INFO=$(api "/v1/appInfos/${INFO_ID}?include=primaryCategory")
           VER=$(api "/v1/appStoreVersions/${VERSION_ID}")
-          BUILD=$(api "/v1/builds/${BUILD_ID}?fields%5Bbuilds%5D=version,processingState,usesNonExemptEncryption,preReleaseVersion,appStoreVersion")
-          PRE=$(api "/v1/builds/${BUILD_ID}/preReleaseVersion")
-          ASV=$(api "/v1/builds/${BUILD_ID}/appStoreVersion")
-          INFO=$(api "/v1/appInfos/${INFO_ID}")
-          AGE=$(api "/v1/appInfos/${INFO_ID}/ageRatingDeclaration")
+          BUILD=$(api "/v1/builds/${BUILD_ID}?fields%5Bbuilds%5D=version,processingState,usesNonExemptEncryption")
+          VLOC=$(api "/v1/appStoreVersionLocalizations/${DE_VLOC_ID}")
+          REVIEW=$(api "/v1/appStoreVersions/${VERSION_ID}/appStoreReviewDetail")
           IAP=$(api "/v1/apps/${APP_ID}/inAppPurchasesV2?filter%5BproductId%5D=${PRODUCT_ID}&limit=10")
           SHOTS=$(api "/v1/appStoreVersionLocalizations/${DE_VLOC_ID}/appScreenshotSets?include=appScreenshots&limit=50&limit%5BappScreenshots%5D=50")
-          REVIEWS=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v1/reviewSubmissions?filter%5Bapp%5D=${APP_ID}&limit=50" || true)
+          AGE=$(api "/v1/appInfos/${INFO_ID}/ageRatingDeclaration")
+          CURRENT=$(api "/v1/reviewSubmissions?filter%5Bapp%5D=${APP_ID}&limit=50")
 
-          STORE_VERSION=$(jq -r '.data.attributes.versionString' <<<"$VER")
-          BUILD_NUM=$(jq -r '.data.attributes.version' <<<"$BUILD")
-          PROCESSING=$(jq -r '.data.attributes.processingState' <<<"$BUILD")
-          ENCRYPTION=$(jq -r '.data.attributes.usesNonExemptEncryption' <<<"$BUILD")
-          BINARY_VERSION=$(jq -r '.data.attributes.version // empty' <<<"$PRE")
-          ATTACHED_STORE_VERSION=$(jq -r '.data.attributes.versionString // empty' <<<"$ASV")
-          INFO_STATE=$(jq -r '.data.attributes.appStoreState // .data.attributes.state // empty' <<<"$INFO")
-          IAP_STATE=$(jq -r '.data[0].attributes.state // empty' <<<"$IAP")
-          SHOT_COUNT=$(jq '[.included[]? | select(.type=="appScreenshots")] | length' <<<"$SHOTS")
-          SETS=$(jq -c '[.data[] | {displayType:.attributes.screenshotDisplayType,count:(.relationships.appScreenshots.data|length)}]' <<<"$SHOTS")
-          REVIEW_STATES=$(jq -c '[.data[]? | {id,state:.attributes.state,submittedDate:.attributes.submittedDate}]' <<<"$REVIEWS" 2>/dev/null || echo '[]')
-          APP_RATING=$(jq -r '.data.attributes.appStoreAgeRating // empty' <<<"$INFO")
-          AGE_WEB=$(jq -r '.data.attributes.unrestrictedWebAccess' <<<"$AGE")
-          AGE_GAMBLING=$(jq -r '.data.attributes.gambling' <<<"$AGE")
+          test "$(jq -r '.data.attributes.bundleId' <<<"$APP")" = 'de.kamilunavo.trace'
+          test "$(jq -r '.data.attributes.contentRightsDeclaration' <<<"$APP")" = 'USES_THIRD_PARTY_CONTENT'
+          test "$(jq -r '.included[]? | select(.type=="appCategories") | .id' <<<"$INFO" | head -n1)" = 'PRODUCTIVITY'
+          test "$(jq -r '.data.attributes.versionString' <<<"$VER")" = '1.0'
+          test "$(jq -r '.data.attributes.version' <<<"$BUILD")" = '9'
+          test "$(jq -r '.data.attributes.processingState' <<<"$BUILD")" = 'VALID'
+          test "$(jq -r '.data.attributes.usesNonExemptEncryption' <<<"$BUILD")" = 'false'
+          test -n "$(jq -r '.data.attributes.description // empty' <<<"$VLOC")"
+          test -n "$(jq -r '.data.attributes.keywords // empty' <<<"$VLOC")"
+          test -n "$(jq -r '.data.attributes.supportUrl // empty' <<<"$VLOC")"
+          test -n "$(jq -r '.data.attributes.copyright // empty' <<<"$VER")"
+          test -n "$(jq -r '.data.attributes.contactFirstName // empty' <<<"$REVIEW")"
+          test -n "$(jq -r '.data.attributes.contactEmail // empty' <<<"$REVIEW")"
+          test "$(jq -r '.data[0].attributes.state // empty' <<<"$IAP")" = 'READY_TO_SUBMIT'
+          test "$(jq '[.included[]? | select(.type=="appScreenshots")] | length' <<<"$SHOTS")" -gt 0
+          test "$(jq -r '.data.attributes.unrestrictedWebAccess' <<<"$AGE")" = 'false'
+          test "$(jq -r '.data.attributes.gambling' <<<"$AGE")" = 'false'
+          ACTIVE=$(jq '[.data[]? | select(.attributes.state=="READY_FOR_REVIEW" or .attributes.state=="WAITING_FOR_REVIEW" or .attributes.state=="IN_REVIEW")] | length' <<<"$CURRENT")
+          test "$ACTIVE" = '0'
 
-          echo "TRACE_STORE_VERSION=$STORE_VERSION"
-          echo "TRACE_BINARY_MARKETING_VERSION=$BINARY_VERSION"
-          echo "TRACE_BUILD_NUMBER=$BUILD_NUM"
-          echo "TRACE_BUILD_PROCESSING=$PROCESSING"
-          echo "TRACE_USES_NON_EXEMPT_ENCRYPTION=$ENCRYPTION"
-          echo "TRACE_ATTACHED_STORE_VERSION=$ATTACHED_STORE_VERSION"
-          echo "TRACE_INFO_STATE=$INFO_STATE"
-          echo "TRACE_APP_STORE_AGE_RATING=${APP_RATING:-pending-calculation}"
-          echo "TRACE_AGE_WEB=$AGE_WEB"
-          echo "TRACE_AGE_GAMBLING=$AGE_GAMBLING"
-          echo "TRACE_SCREENSHOT_COUNT=$SHOT_COUNT"
-          echo "TRACE_SCREENSHOT_SETS=$SETS"
-          echo "TRACE_IAP_STATE=$IAP_STATE"
-          echo "TRACE_REVIEW_SUBMISSIONS=$REVIEW_STATES"
+          IAP_ID=$(jq -r '.data[0].id' <<<"$IAP")
+          test -n "$IAP_ID"
+          echo "IAP_ID=$IAP_ID" >> "$GITHUB_ENV"
 
-          test "$BUILD_NUM" = '9'
-          test "$PROCESSING" = 'VALID'
-          test "$ENCRYPTION" = 'false'
-          test "$IAP_STATE" = 'READY_TO_SUBMIT'
-          test "$SHOT_COUNT" -gt 0
-          test "$AGE_WEB" = 'false'
-          test "$AGE_GAMBLING" = 'false'
+      - name: Resolve Lifetime Pro review version
+        run: |
+          set -euo pipefail
+          RESP=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v2/inAppPurchases/${IAP_ID}/versions?limit=50")
+          IAP_VERSION_ID=$(jq -r '[.data[] | select(.attributes.state=="PREPARE_FOR_SUBMISSION" or .attributes.state=="READY_FOR_REVIEW")][0].id // empty' <<<"$RESP")
+          if [[ -n "$IAP_VERSION_ID" ]]; then
+            echo "IAP_VERSION_ID=$IAP_VERSION_ID" >> "$GITHUB_ENV"
+            echo "TRACE_IAP_REVIEW_VERSION=$IAP_VERSION_ID"
+          else
+            echo "IAP_VERSION_ID=" >> "$GITHUB_ENV"
+            echo 'TRACE_IAP_REVIEW_VERSION=legacy-metadata-no-v2-version'
+          fi
 
+      - name: Create App Review submission and add app version
+        run: |
+          set -euo pipefail
+          CREATE=$(jq -n --arg app "$APP_ID" '{data:{type:"reviewSubmissions",attributes:{platform:"IOS"},relationships:{app:{data:{type:"apps",id:$app}}}}}')
+          RESP=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$CREATE" 'https://api.appstoreconnect.apple.com/v1/reviewSubmissions')
+          RID=$(jq -r '.data.id // empty' <<<"$RESP")
+          test -n "$RID"
+          echo "REVIEW_SUBMISSION_ID=$RID" >> "$GITHUB_ENV"
+
+          ITEM=$(jq -n --arg rid "$RID" --arg vid "$VERSION_ID" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$rid}},appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}')
+          curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$ITEM" 'https://api.appstoreconnect.apple.com/v1/reviewSubmissionItems' >/dev/null
+
+      - name: Add Lifetime Pro to same submission when API review version exists
+        if: env.IAP_VERSION_ID != ''
+        run: |
+          set -euo pipefail
+          ITEM=$(jq -n --arg rid "$REVIEW_SUBMISSION_ID" --arg iid "$IAP_VERSION_ID" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$rid}},inAppPurchaseVersion:{data:{type:"inAppPurchaseVersions",id:$iid}}}}}')
+          curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$ITEM" 'https://api.appstoreconnect.apple.com/v1/reviewSubmissionItems' >/dev/null
+
+      - name: Submit for Review
+        run: |
+          set -euo pipefail
+          BODY=$(jq -n --arg id "$REVIEW_SUBMISSION_ID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "https://api.appstoreconnect.apple.com/v1/reviewSubmissions/${REVIEW_SUBMISSION_ID}" >/dev/null
+
+      - name: Read back submitted state
+        run: |
+          set -euo pipefail
+          sleep 5
+          SUB=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v1/reviewSubmissions/${REVIEW_SUBMISSION_ID}?include=items")
+          VER=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${VERSION_ID}")
+          STATE=$(jq -r '.data.attributes.state // empty' <<<"$SUB")
+          VSTATE=$(jq -r '.data.attributes.appVersionState // .data.attributes.appStoreState // empty' <<<"$VER")
+          ITEMS=$(jq -c '[.included[]? | select(.type=="reviewSubmissionItems") | {id,state:.attributes.state}]' <<<"$SUB")
+          echo "TRACE_REVIEW_SUBMISSION_ID=$REVIEW_SUBMISSION_ID"
+          echo "TRACE_REVIEW_SUBMISSION_STATE=$STATE"
+          echo "TRACE_APP_VERSION_STATE=$VSTATE"
+          echo "TRACE_REVIEW_ITEMS=$ITEMS"
+          test "$STATE" = 'WAITING_FOR_REVIEW' -o "$STATE" = 'IN_REVIEW'
           {
-            echo '## Trace final read-only submission audit'
-            echo "- App Store version: $STORE_VERSION"
-            echo "- Binary marketing version: $BINARY_VERSION"
-            echo "- Build number: $BUILD_NUM"
-            echo "- Build processing: $PROCESSING"
-            echo "- Uses non-exempt encryption: $ENCRYPTION"
-            echo "- Build attached App Store version: $ATTACHED_STORE_VERSION"
-            echo "- App info state: $INFO_STATE"
-            echo "- Calculated App Store age rating: ${APP_RATING:-pending-calculation}"
-            echo "- Screenshot count: $SHOT_COUNT"
-            echo "- Screenshot sets: $SETS"
-            echo "- Lifetime Pro: $IAP_STATE"
-            echo "- Review submissions: $REVIEW_STATES"
-            echo '- No mutation performed.'
+            echo '## Kamilunavo Trace submitted to App Review'
+            echo "- Review submission: $REVIEW_SUBMISSION_ID"
+            echo "- Submission state: $STATE"
+            echo "- App version state: $VSTATE"
+            echo '- App Store version: 1.0'
+            echo '- Build: 9'
+            echo "- Lifetime Pro review version included: ${IAP_VERSION_ID:-legacy metadata path}"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Cleanup protected key
