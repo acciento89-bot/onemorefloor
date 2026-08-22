@@ -77,14 +77,13 @@ jobs:
 
           ensure_iap() {
             local sku="$1" ref="$2" note="$3"
-            local existing
+            local existing body response
             existing=$(jq -r --arg sku "$sku" '.data[]? | select(.attributes.productId==$sku) | .id' <<<"$PRODUCTS" | head -1)
             if [[ -n "$existing" ]]; then
               echo "$existing"
               return
             fi
-            local body response
-            body=$(jq -n --arg app "$ASC_APP_ID" --arg sku "$sku" --arg ref "$ref" --arg note "$note" '{data:{type:"inAppPurchases",attributes:{name:$ref,productId:$sku,inAppPurchaseType:"NON_CONSUMABLE",reviewNote:$note,availableInAllTerritories:true},relationships:{app:{data:{type:"apps",id:$app}}}}}')
+            body=$(jq -n --arg app "$ASC_APP_ID" --arg sku "$sku" --arg ref "$ref" --arg note "$note" '{data:{type:"inAppPurchases",attributes:{name:$ref,productId:$sku,inAppPurchaseType:"NON_CONSUMABLE",reviewNote:$note},relationships:{app:{data:{type:"apps",id:$app}}}}}')
             response=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
               "$API/v2/inAppPurchases" -d "$body")
             jq -r '.data.id' <<<"$response"
@@ -97,6 +96,28 @@ jobs:
           echo "NEON_ID=$NEON_ID" >> "$GITHUB_ENV"
           echo "GOLD_ID=$GOLD_ID" >> "$GITHUB_ENV"
           echo "AURORA_ID=$AURORA_ID" >> "$GITHUB_ENV"
+
+      - name: Configure worldwide availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.appstoreconnect.apple.com'
+          TERRITORIES=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/territories?limit=200")
+          TERRITORY_DATA=$(jq '[.data[] | {type:"territories",id:.id}]' <<<"$TERRITORIES")
+          test "$(jq 'length' <<<"$TERRITORY_DATA")" -gt 0
+
+          ensure_availability() {
+            local iid="$1" current body code
+            code=$(curl -sS -o "$RUNNER_TEMP/availability.json" -w '%{http_code}' -H "Authorization: Bearer $ASC_TOKEN" \
+              "$API/v2/inAppPurchases/$iid/inAppPurchaseAvailability")
+            if [[ "$code" == 200 ]]; then return 0; fi
+            body=$(jq -n --arg iid "$iid" --argjson territories "$TERRITORY_DATA" '{data:{type:"inAppPurchaseAvailabilities",attributes:{availableInNewTerritories:true},relationships:{availableTerritories:{data:$territories},inAppPurchase:{data:{type:"inAppPurchases",id:$iid}}}}}')
+            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
+              "$API/v1/inAppPurchaseAvailabilities" -d "$body" >/dev/null
+          }
+          ensure_availability "$NEON_ID"
+          ensure_availability "$GOLD_ID"
+          ensure_availability "$AURORA_ID"
 
       - name: Add English and German metadata
         shell: bash
@@ -129,21 +150,13 @@ jobs:
           ensure_price() {
             local iid="$1"
             local current points price_point price_ref body
-            set +e
             current=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/inAppPurchasePriceSchedules/$iid/manualPrices?limit=5")
-            if jq -e '.data | length > 0' >/dev/null 2>&1 <<<"$current"; then
-              set -e
-              return 0
-            fi
-            set -e
+            if jq -e '.data | length > 0' >/dev/null 2>&1 <<<"$current"; then return 0; fi
             points=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" \
               --data-urlencode "filter[territory]=$BASE_TERRITORY" --data-urlencode 'limit=8000' \
               "$API/v2/inAppPurchases/$iid/pricePoints")
             price_point=$(jq -r --arg price "$TARGET_PRICE" '.data[]? | select(.attributes.customerPrice==$price) | .id' <<<"$points" | head -1)
-            if [[ -z "$price_point" ]]; then
-              echo "Could not find $TARGET_PRICE price point for $iid in $BASE_TERRITORY"
-              exit 1
-            fi
+            test -n "$price_point"
             price_ref='${price1}'
             body=$(jq -n --arg iid "$iid" --arg ppid "$price_point" --arg ref "$price_ref" --arg territory "$BASE_TERRITORY" '{data:{type:"inAppPurchasePriceSchedules",relationships:{inAppPurchase:{data:{type:"inAppPurchases",id:$iid}},baseTerritory:{data:{type:"territories",id:$territory}},manualPrices:{data:[{type:"inAppPurchasePrices",id:$ref}]}}},included:[{type:"inAppPurchasePrices",id:$ref,attributes:{startDate:null},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}},inAppPurchasePricePoint:{data:{type:"inAppPurchasePricePoints",id:$ppid}}}}]}')
             curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
@@ -171,11 +184,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          set -euo pipefail
           U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           BODY=$(jq -n --arg u "$U" '{state:"success",description:"Three 99.9% premium IAPs configured",target_url:$u,context:"99-9/premium-iap"}')
-          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
 
       - name: Publish failure status
         if: failure()
@@ -183,11 +194,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          set -euo pipefail
           U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           BODY=$(jq -n --arg u "$U" '{state:"failure",description:"Premium IAP setup failed; inspect workflow",target_url:$u,context:"99-9/premium-iap"}')
-          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
 
       - name: Remove key
         if: always()
