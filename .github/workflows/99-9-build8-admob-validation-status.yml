@@ -3,7 +3,7 @@ name: 99.9 Build 8 AdMob Validation Status
 on:
   workflow_run:
     workflows: ['99.9 Build 8 AdMob Validation']
-    types: [completed]
+    types: [requested, in_progress, completed]
 
 permissions:
   contents: read
@@ -16,13 +16,17 @@ jobs:
       - name: Publish validation status
         env:
           GH_TOKEN: ${{ github.token }}
+          ACTION: ${{ github.event.action }}
           RESULT: ${{ github.event.workflow_run.conclusion }}
           TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
           TARGET_URL: ${{ github.event.workflow_run.html_url }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$RESULT" == success ]]; then
+          if [[ "$ACTION" != completed ]]; then
+            STATE=pending
+            DESC='99.9 Build 8 AdMob iOS/Android validation running'
+          elif [[ "$RESULT" == success ]]; then
             STATE=success
             DESC='99.9 Build 8 AdMob iOS/Android validation passed'
           else
