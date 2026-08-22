@@ -1,0 +1,53 @@
+name: Kamilunavo Trace TestFlight Build 8 Bridge
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/kamilunavo-trace-testflight-build8-bridge.yml'
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_REF: '74bb5139c81ce6ff611fc81e218f009033a2854b'
+
+jobs:
+  upload-kamilunavo-trace:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: acciento89-bot/appideenchatgpt
+          ref: ${{ env.SOURCE_REF }}
+          path: trace
+      - name: Build exact Trace archive only
+        working-directory: trace/apps/002-evidaro/prototype
+        run: |
+          xcodebuild -project EvidaroPrototype.xcodeproj -scheme EvidaroPrototype -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Trace.xcarchive" PRODUCT_BUNDLE_IDENTIFIER=de.kamilunavo.trace CURRENT_PROJECT_VERSION=8 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" archive
+      - name: Normalize source and compiled icons
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p icon-forensics
+          SRC='trace/apps/002-evidaro/prototype/EvidaroPrototype/Assets.xcassets/AppIcon.appiconset/KamilunavoTrace-AppIcon-1024.png'
+          APP="$RUNNER_TEMP/Trace.xcarchive/Products/Applications/EvidaroPrototype.app"
+          COMPILED="$APP/AppIcon60x60@2x.png"
+          echo '--- SOURCE METADATA ---'
+          sips -g pixelWidth -g pixelHeight -g format -g space -g hasAlpha "$SRC" || true
+          echo '--- COMPILED METADATA ---'
+          sips -g pixelWidth -g pixelHeight -g format -g space -g hasAlpha "$COMPILED" || true
+          cp "$SRC" icon-forensics/source.png
+          cp "$COMPILED" icon-forensics/compiled.png
+          sips -s format jpeg "$SRC" --out icon-forensics/source.jpg
+          sips -s format jpeg "$COMPILED" --out icon-forensics/compiled.jpg
+          echo '--- ICON PLIST ---'
+          plutil -p "$APP/Info.plist" | grep -A30 -E 'CFBundleIcons|CFBundleIcon' || true
+          shasum -a 256 icon-forensics/*
+      - name: Upload icon forensics
+        uses: actions/upload-artifact@v4
+        with:
+          name: trace-appicon-forensics
+          path: icon-forensics/
+          if-no-files-found: error
+          retention-days: 7
