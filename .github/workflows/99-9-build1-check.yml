@@ -1,0 +1,93 @@
+name: 99.9 Build 1 App Store Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-build1-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+env:
+  BUNDLE_ID: de.kamilunavo.ninenine
+  BUILD_NUMBER: '1'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          export ASC_KEY_PATH="$KEY_PATH"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Find Build 1
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.appstoreconnect.apple.com'
+          APPS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'limit=10' "$API/v1/apps")
+          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS")
+          test -n "$APP_ID"
+          BUILDS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" \
+            --data-urlencode "filter[app]=$APP_ID" --data-urlencode "filter[version]=$BUILD_NUMBER" \
+            --data-urlencode 'sort=-uploadedDate' --data-urlencode 'limit=10' "$API/v1/builds")
+          BID=$(jq -r '.data[0].id // empty' <<<"$BUILDS")
+          STATE=$(jq -r '.data[0].attributes.processingState // empty' <<<"$BUILDS")
+          UPLOADED=$(jq -r '.data[0].attributes.uploadedDate // empty' <<<"$BUILDS")
+          if [[ -z "$BID" ]]; then
+            echo 'found=false' >> "$GITHUB_OUTPUT"
+            echo 'state=NOT_VISIBLE_YET' >> "$GITHUB_OUTPUT"
+          else
+            echo 'found=true' >> "$GITHUB_OUTPUT"
+            echo "state=${STATE:-UNKNOWN}" >> "$GITHUB_OUTPUT"
+            echo "build_id=$BID" >> "$GITHUB_OUTPUT"
+            echo "uploaded=$UPLOADED" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOUND: ${{ steps.build.outputs.found }}
+          STATE: ${{ steps.build.outputs.state }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if [[ "$FOUND" == true ]]; then
+            BODY=$(jq -n --arg d "Build 1 visible in ASC: ${STATE}" --arg u "$U" '{state:"success",description:$d,target_url:$u,context:"99-9/build1-check"}')
+          else
+            BODY=$(jq -n --arg u "$U" '{state:"pending",description:"Upload accepted; Build 1 not visible in ASC yet",target_url:$u,context:"99-9/build1-check"}')
+          fi
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
+          echo "Build found: $FOUND; processing state: $STATE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
