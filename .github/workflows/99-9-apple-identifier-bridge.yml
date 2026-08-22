@@ -73,15 +73,28 @@ jobs:
         run: |
           set -euo pipefail
           API='https://api.appstoreconnect.apple.com'
-          EXIST=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" \
+          EXIST_FILE="$RUNNER_TEMP/bundle-list.json"
+          LIST_HTTP=$(curl -sS -o "$EXIST_FILE" -w '%{http_code}' -G -H "Authorization: Bearer $ASC_TOKEN" \
             --data-urlencode "filter[identifier]=$BUNDLE_ID" --data-urlencode 'limit=10' "$API/v1/bundleIds")
-          BID=$(jq -r '.data[0].id // empty' <<<"$EXIST")
+          if [[ "$LIST_HTTP" != 200 ]]; then
+            echo "Apple bundleIds list failed: HTTP $LIST_HTTP"
+            jq . "$EXIST_FILE" 2>/dev/null || cat "$EXIST_FILE"
+            exit 1
+          fi
+          BID=$(jq -r '.data[0].id // empty' "$EXIST_FILE")
           if [[ -z "$BID" ]]; then
             BODY=$(jq -n --arg identifier "$BUNDLE_ID" --arg name "$BUNDLE_NAME" \
               '{data:{type:"bundleIds",attributes:{identifier:$identifier,name:$name,platform:"IOS"}}}')
-            CREATED=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
+            CREATE_FILE="$RUNNER_TEMP/bundle-create.json"
+            CREATE_HTTP=$(curl -sS -o "$CREATE_FILE" -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
               -d "$BODY" "$API/v1/bundleIds")
-            BID=$(jq -r '.data.id // empty' <<<"$CREATED")
+            if [[ "$CREATE_HTTP" != 201 ]]; then
+              echo "Apple bundleIds create failed: HTTP $CREATE_HTTP"
+              jq . "$CREATE_FILE" 2>/dev/null || cat "$CREATE_FILE"
+              exit 1
+            fi
+            BID=$(jq -r '.data.id // empty' "$CREATE_FILE")
             test -n "$BID"
             echo "created=true" >> "$GITHUB_OUTPUT"
           else
@@ -96,9 +109,15 @@ jobs:
         run: |
           set -euo pipefail
           API='https://api.appstoreconnect.apple.com'
-          APPS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" \
+          APP_FILE="$RUNNER_TEMP/apps.json"
+          APP_HTTP=$(curl -sS -o "$APP_FILE" -w '%{http_code}' -G -H "Authorization: Bearer $ASC_TOKEN" \
             --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'limit=10' "$API/v1/apps")
-          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS")
+          if [[ "$APP_HTTP" != 200 ]]; then
+            echo "Apple apps lookup failed: HTTP $APP_HTTP"
+            jq . "$APP_FILE" 2>/dev/null || cat "$APP_FILE"
+            exit 1
+          fi
+          APP_ID=$(jq -r '.data[0].id // empty' "$APP_FILE")
           if [[ -n "$APP_ID" ]]; then
             echo 'exists=true' >> "$GITHUB_OUTPUT"
             echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
