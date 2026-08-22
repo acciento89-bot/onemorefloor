@@ -1,0 +1,34 @@
+name: 99.9 Build 8 AdMob Validation Status
+
+on:
+  workflow_run:
+    workflows: ['99.9 Build 8 AdMob Validation']
+    types: [completed]
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish validation status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ github.event.workflow_run.conclusion }}
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+          TARGET_URL: ${{ github.event.workflow_run.html_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$RESULT" == success ]]; then
+            STATE=success
+            DESC='99.9 Build 8 AdMob iOS/Android validation passed'
+          else
+            STATE=failure
+            DESC="99.9 Build 8 AdMob validation: $RESULT"
+          fi
+          BODY=$(jq -n --arg s "$STATE" --arg d "$DESC" --arg u "$TARGET_URL" '{state:$s,description:$d,target_url:$u,context:"99-9/build8-admob-validation"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" -d "$BODY" >/dev/null
