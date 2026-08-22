@@ -8,70 +8,42 @@ on:
 
 permissions:
   contents: read
+  actions: read
+
+concurrency:
+  group: family-life-os-asc-review-screenshot
+  cancel-in-progress: true
 
 env:
-  APP_SOURCE_REF: 4422145fd6403c261255b2b0c2d0e3626691a2df
-  BUNDLE_ID: de.kamilunavo.familyprototype
-  MONTHLY_ID: de.kamilunavo.family.familypro.monthly
-  ANNUAL_ID: de.kamilunavo.family.familypro.annual
+  MONTHLY_PRODUCT: de.kamilunavo.family.familypro.monthly
+  MONTHLY_SID: '6804035272'
+  ANNUAL_PRODUCT: de.kamilunavo.family.familypro.annual
+  ANNUAL_SID: '6804035327'
 
 jobs:
-  capture-and-upload:
+  upload:
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
-      - name: Checkout Family Life OS release source
-        uses: actions/checkout@v5
-        with:
-          repository: acciento89-bot/appideenchatgpt
-          ref: ${{ env.APP_SOURCE_REF }}
-          path: appideenchatgpt
-
-      - name: Build real SwiftUI review surface for Simulator
-        working-directory: appideenchatgpt/apps/011-family-life-os/prototype
-        shell: bash
-        run: |
-          set -euo pipefail
-          xcodebuild \
-            -project FamilyLifePrototype.xcodeproj \
-            -scheme FamilyLifePrototype \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "$RUNNER_TEMP/FamilyReviewDerivedData" \
-            CODE_SIGNING_ALLOWED=NO \
-            build
-          APP=$(find "$RUNNER_TEMP/FamilyReviewDerivedData/Build/Products/Debug-iphonesimulator" -maxdepth 1 -name 'FamilyLifePrototype.app' -type d -print -quit)
-          test -n "$APP" -a -d "$APP"
-          echo "REVIEW_APP=$APP" >> "$GITHUB_ENV"
-
-      - name: Capture Family Pro review screenshot
-        shell: bash
-        run: |
-          set -euo pipefail
-          UDID=$(xcrun simctl list devices available -j | jq -r '[.devices[][] | select(.name | startswith("iPhone"))][0].udid // empty')
-          test -n "$UDID"
-          xcrun simctl boot "$UDID" >/dev/null 2>&1 || true
-          xcrun simctl bootstatus "$UDID" -b
-          xcrun simctl install "$UDID" "$REVIEW_APP"
-          xcrun simctl launch "$UDID" "$BUNDLE_ID" -familyProReviewScreenshot
-          sleep 4
-          mkdir -p review
-          xcrun simctl io "$UDID" screenshot review/family-pro-review.png
-          test -s review/family-pro-review.png
-          WIDTH=$(sips -g pixelWidth review/family-pro-review.png 2>/dev/null | awk '/pixelWidth/ {print $2}')
-          HEIGHT=$(sips -g pixelHeight review/family-pro-review.png 2>/dev/null | awk '/pixelHeight/ {print $2}')
-          echo "Captured real Family Pro SwiftUI screen: ${WIDTH}x${HEIGHT}" >> "$GITHUB_STEP_SUMMARY"
-          test "$WIDTH" -ge 1000
-          test "$HEIGHT" -ge 1800
-
-      - name: Upload captured screenshot artifact
-        uses: actions/upload-artifact@v4
+      - name: Reuse verified Family Pro review screenshot
+        uses: actions/download-artifact@v4
         with:
           name: family-pro-review-screenshot
-          path: review/family-pro-review.png
-          if-no-files-found: error
-          retention-days: 7
+          path: review
+          repository: acciento89-bot/onemorefloor
+          run-id: 32532251259
+          github-token: ${{ github.token }}
+
+      - name: Validate review screenshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE=review/family-pro-review.png
+          test -s "$IMAGE"
+          WIDTH=$(sips -g pixelWidth "$IMAGE" | awk '/pixelWidth/ {print $2}')
+          HEIGHT=$(sips -g pixelHeight "$IMAGE" | awk '/pixelHeight/ {print $2}')
+          test "$WIDTH" = '1206'
+          test "$HEIGHT" = '2622'
 
       - name: Stage App Store Connect key
         shell: bash
@@ -101,168 +73,115 @@ jobs:
           require 'openssl'
           require 'base64'
           require 'json'
-          def b64url(value)
-            Base64.urlsafe_encode64(value, padding: false)
-          end
+          def b64url(v); Base64.urlsafe_encode64(v, padding: false); end
           key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
           now = Time.now.to_i
-          header = b64url(JSON.generate({ alg: 'ES256', kid: ENV.fetch('ASC_KEY_ID'), typ: 'JWT' }))
-          payload = b64url(JSON.generate({ iss: ENV.fetch('ASC_ISSUER_ID'), iat: now, exp: now + 900, aud: 'appstoreconnect-v1' }))
-          signing_input = "#{header}.#{payload}"
-          der = key.sign(OpenSSL::Digest::SHA256.new, signing_input)
-          sequence = OpenSSL::ASN1.decode(der)
-          raw = sequence.value.map { |integer| [integer.value.to_i.to_s(16).rjust(64, '0')].pack('H*') }.join
-          puts "#{signing_input}.#{b64url(raw)}"
+          h = b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p = b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'}))
+          input = "#{h}.#{p}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new, input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{input}.#{b64url(raw)}"
           RUBY
           )
           echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
 
-      - name: Attach review screenshot to both Family Pro subscriptions
+      - name: Upload review screenshot to Monthly and Annual
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p asc-diagnostics
-          echo "attach:start" > asc-diagnostics/stage.txt
           IMAGE=review/family-pro-review.png
           FILE_NAME=$(basename "$IMAGE")
           FILE_SIZE=$(stat -f '%z' "$IMAGE")
           CHECKSUM=$(md5 -q "$IMAGE")
 
-          asc_get() {
-            curl --silent --show-error --fail \
-              -H "Authorization: Bearer $ASC_TOKEN" \
-              -H 'Accept: application/json' \
-              "https://api.appstoreconnect.apple.com$1"
-          }
-
-          APP_JSON=$(asc_get "/v1/apps?filter%5BbundleId%5D=${BUNDLE_ID}")
-          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APP_JSON")
-          test -n "$APP_ID"
-          echo "app:$APP_ID" >> asc-diagnostics/stage.txt
-          GROUPS=$(asc_get "/v1/apps/${APP_ID}/subscriptionGroups?include=subscriptions&limit%5Bsubscriptions%5D=50&fields%5Bsubscriptions%5D=name,productId,state")
-
-          for PRODUCT_ID in "$MONTHLY_ID" "$ANNUAL_ID"; do
+          for ROW in "$MONTHLY_PRODUCT|$MONTHLY_SID" "$ANNUAL_PRODUCT|$ANNUAL_SID"; do
+            PRODUCT_ID=${ROW%%|*}
+            SID=${ROW##*|}
             SAFE=$(echo "$PRODUCT_ID" | tr '.' '-')
-            echo "product:$PRODUCT_ID" >> asc-diagnostics/stage.txt
-            SID=$(jq -r --arg p "$PRODUCT_ID" '.included[]? | select(.type == "subscriptions" and .attributes.productId == $p) | .id' <<<"$GROUPS" | head -1)
-            test -n "$SID"
-            echo "subscription:$SID" >> asc-diagnostics/stage.txt
+            echo "product=$PRODUCT_ID sid=$SID" >> asc-diagnostics/stage.txt
 
-            EXISTING_HTTP=$(curl --silent --show-error \
-              -w '%{http_code}' \
-              -H "Authorization: Bearer $ASC_TOKEN" \
-              -H 'Accept: application/json' \
+            EXISTING_HTTP=$(curl --silent --show-error -w '%{http_code}' \
+              -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' \
               "https://api.appstoreconnect.apple.com/v1/subscriptions/${SID}/appStoreReviewScreenshot" \
               -o "asc-diagnostics/${SAFE}-existing.json")
-            echo "existing-http:$EXISTING_HTTP" >> asc-diagnostics/stage.txt
-            if [[ "$EXISTING_HTTP" != '200' && "$EXISTING_HTTP" != '404' ]]; then
-              exit 1
-            fi
-            EXISTING_ID=''
+            echo "existing=$EXISTING_HTTP" >> asc-diagnostics/stage.txt
+            [[ "$EXISTING_HTTP" == '200' || "$EXISTING_HTTP" == '404' ]]
+
             if [[ "$EXISTING_HTTP" == '200' ]]; then
               EXISTING_ID=$(jq -r '.data.id // empty' "asc-diagnostics/${SAFE}-existing.json")
-            fi
-            if [[ -n "$EXISTING_ID" ]]; then
               EXISTING_STATE=$(jq -r '.data.attributes.assetDeliveryState.state // empty' "asc-diagnostics/${SAFE}-existing.json")
-              if [[ "$EXISTING_STATE" == 'COMPLETE' || -z "$EXISTING_STATE" ]]; then
-                echo "$PRODUCT_ID already has review screenshot $EXISTING_ID; keeping it." >> "$GITHUB_STEP_SUMMARY"
+              if [[ -n "$EXISTING_ID" && "$EXISTING_STATE" == 'COMPLETE' ]]; then
+                echo "$PRODUCT_ID already has COMPLETE screenshot $EXISTING_ID" >> "$GITHUB_STEP_SUMMARY"
                 continue
               fi
-              DELETE_HTTP=$(curl --silent --show-error -w '%{http_code}' \
-                -H "Authorization: Bearer $ASC_TOKEN" \
-                -X DELETE \
-                "https://api.appstoreconnect.apple.com/v1/subscriptionAppStoreReviewScreenshots/${EXISTING_ID}" \
-                -o /dev/null)
-              echo "delete-http:$DELETE_HTTP" >> asc-diagnostics/stage.txt
-              [[ "$DELETE_HTTP" == '204' ]]
+              if [[ -n "$EXISTING_ID" ]]; then
+                DELETE_HTTP=$(curl --silent --show-error -w '%{http_code}' \
+                  -H "Authorization: Bearer $ASC_TOKEN" -X DELETE \
+                  "https://api.appstoreconnect.apple.com/v1/subscriptionAppStoreReviewScreenshots/${EXISTING_ID}" -o /dev/null)
+                echo "delete=$DELETE_HTTP" >> asc-diagnostics/stage.txt
+                [[ "$DELETE_HTTP" == '204' ]]
+              fi
             fi
 
-            CREATE_BODY=$(jq -n \
-              --arg fileName "$FILE_NAME" \
-              --argjson fileSize "$FILE_SIZE" \
-              --arg sid "$SID" \
-              '{data:{type:"subscriptionAppStoreReviewScreenshots",attributes:{fileName:$fileName,fileSize:$fileSize},relationships:{subscription:{data:{type:"subscriptions",id:$sid}}}}}')
+            CREATE_BODY=$(jq -n --arg fn "$FILE_NAME" --argjson fs "$FILE_SIZE" --arg sid "$SID" \
+              '{data:{type:"subscriptionAppStoreReviewScreenshots",attributes:{fileName:$fn,fileSize:$fs},relationships:{subscription:{data:{type:"subscriptions",id:$sid}}}}}')
             printf '%s\n' "$CREATE_BODY" > "asc-diagnostics/${SAFE}-reservation-request.json"
-
-            HTTP_CODE=$(curl --silent --show-error \
-              -w '%{http_code}' \
-              -H "Authorization: Bearer $ASC_TOKEN" \
-              -H 'Accept: application/json' \
-              -H 'Content-Type: application/json' \
-              -X POST \
-              -d "$CREATE_BODY" \
+            CREATE_HTTP=$(curl --silent --show-error -w '%{http_code}' \
+              -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' -H 'Content-Type: application/json' \
+              -X POST -d "$CREATE_BODY" \
               'https://api.appstoreconnect.apple.com/v1/subscriptionAppStoreReviewScreenshots' \
               -o "asc-diagnostics/${SAFE}-reservation.json")
-            echo "$HTTP_CODE" > "asc-diagnostics/${SAFE}-reservation.status"
-            echo "reservation-http:$HTTP_CODE" >> asc-diagnostics/stage.txt
-            if [[ "$HTTP_CODE" != '201' && "$HTTP_CODE" != '200' ]]; then
-              exit 1
-            fi
+            echo "$CREATE_HTTP" > "asc-diagnostics/${SAFE}-reservation.status"
+            [[ "$CREATE_HTTP" == '201' || "$CREATE_HTTP" == '200' ]]
 
             RID=$(jq -r '.data.id // empty' "asc-diagnostics/${SAFE}-reservation.json")
             test -n "$RID"
-            OP_COUNT=$(jq '.data.attributes.uploadOperations | length' "asc-diagnostics/${SAFE}-reservation.json")
-            test "$OP_COUNT" -gt 0
-            echo "reservation:$RID ops:$OP_COUNT" >> asc-diagnostics/stage.txt
+            OPS=$(jq '.data.attributes.uploadOperations | length' "asc-diagnostics/${SAFE}-reservation.json")
+            test "$OPS" -gt 0
 
-            for INDEX in $(seq 0 $((OP_COUNT - 1))); do
-              OP=$(jq -c ".data.attributes.uploadOperations[$INDEX]" "asc-diagnostics/${SAFE}-reservation.json")
-              METHOD=$(jq -r '.method' <<<"$OP")
-              URL=$(jq -r '.url' <<<"$OP")
-              OFFSET=$(jq -r '.offset' <<<"$OP")
-              LENGTH=$(jq -r '.length' <<<"$OP")
-              jq -n --arg method "$METHOD" --argjson offset "$OFFSET" --argjson length "$LENGTH" --argjson headers "$(jq '[.requestHeaders[]?.name]' <<<"$OP")" '{method:$method,offset:$offset,length:$length,headerNames:$headers}' > "asc-diagnostics/${SAFE}-upload-${INDEX}-meta.json"
-              PART="$RUNNER_TEMP/upload-part-$INDEX.bin"
+            for I in $(seq 0 $((OPS-1))); do
+              METHOD=$(jq -r ".data.attributes.uploadOperations[$I].method" "asc-diagnostics/${SAFE}-reservation.json")
+              URL=$(jq -r ".data.attributes.uploadOperations[$I].url" "asc-diagnostics/${SAFE}-reservation.json")
+              OFFSET=$(jq -r ".data.attributes.uploadOperations[$I].offset" "asc-diagnostics/${SAFE}-reservation.json")
+              LENGTH=$(jq -r ".data.attributes.uploadOperations[$I].length" "asc-diagnostics/${SAFE}-reservation.json")
+              PART="$RUNNER_TEMP/${SAFE}-${I}.bin"
               dd if="$IMAGE" of="$PART" bs=1 skip="$OFFSET" count="$LENGTH" status=none
               HEADER_ARGS=()
-              while IFS=$'\t' read -r HNAME HVALUE; do
-                [[ -n "$HNAME" ]] && HEADER_ARGS+=( -H "$HNAME: $HVALUE" )
-              done < <(jq -r '.requestHeaders[]? | [.name,.value] | @tsv' <<<"$OP")
-              UPLOAD_HTTP=$(curl --silent --show-error \
-                -w '%{http_code}' \
-                -X "$METHOD" \
-                "${HEADER_ARGS[@]}" \
-                --data-binary "@$PART" \
-                "$URL" \
-                -o "asc-diagnostics/${SAFE}-upload-${INDEX}-response.txt")
-              echo "$UPLOAD_HTTP" > "asc-diagnostics/${SAFE}-upload-${INDEX}.status"
-              echo "upload-$INDEX-http:$UPLOAD_HTTP" >> asc-diagnostics/stage.txt
-              [[ "$UPLOAD_HTTP" =~ ^2[0-9][0-9]$ ]]
+              while IFS=$'\t' read -r N V; do HEADER_ARGS+=( -H "$N: $V" ); done < <(
+                jq -r ".data.attributes.uploadOperations[$I].requestHeaders[]? | [.name,.value] | @tsv" "asc-diagnostics/${SAFE}-reservation.json")
+              UP_HTTP=$(curl --silent --show-error -w '%{http_code}' -X "$METHOD" "${HEADER_ARGS[@]}" --data-binary "@$PART" "$URL" -o /dev/null)
+              echo "upload[$I]=$UP_HTTP" >> asc-diagnostics/stage.txt
+              [[ "$UP_HTTP" =~ ^2[0-9][0-9]$ ]]
             done
 
-            COMMIT_BODY=$(jq -n \
-              --arg rid "$RID" \
-              --arg checksum "$CHECKSUM" \
-              '{data:{type:"subscriptionAppStoreReviewScreenshots",id:$rid,attributes:{uploaded:true,sourceFileChecksum:$checksum}}}')
-            printf '%s\n' "$COMMIT_BODY" > "asc-diagnostics/${SAFE}-commit-request.json"
-            HTTP_CODE=$(curl --silent --show-error \
-              -w '%{http_code}' \
-              -H "Authorization: Bearer $ASC_TOKEN" \
-              -H 'Accept: application/json' \
-              -H 'Content-Type: application/json' \
-              -X PATCH \
-              -d "$COMMIT_BODY" \
+            COMMIT_BODY=$(jq -n --arg id "$RID" --arg sum "$CHECKSUM" \
+              '{data:{type:"subscriptionAppStoreReviewScreenshots",id:$id,attributes:{uploaded:true,sourceFileChecksum:$sum}}}')
+            COMMIT_HTTP=$(curl --silent --show-error -w '%{http_code}' \
+              -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' -H 'Content-Type: application/json' \
+              -X PATCH -d "$COMMIT_BODY" \
               "https://api.appstoreconnect.apple.com/v1/subscriptionAppStoreReviewScreenshots/${RID}" \
               -o "asc-diagnostics/${SAFE}-commit.json")
-            echo "$HTTP_CODE" > "asc-diagnostics/${SAFE}-commit.status"
-            echo "commit-http:$HTTP_CODE" >> asc-diagnostics/stage.txt
-            [[ "$HTTP_CODE" == '200' ]]
+            echo "$COMMIT_HTTP" > "asc-diagnostics/${SAFE}-commit.status"
+            [[ "$COMMIT_HTTP" == '200' ]]
 
-            FINAL_STATE=''
-            for ATTEMPT in $(seq 1 30); do
-              CURRENT=$(asc_get "/v1/subscriptionAppStoreReviewScreenshots/${RID}")
-              FINAL_STATE=$(jq -r '.data.attributes.assetDeliveryState.state // empty' <<<"$CURRENT")
-              printf '%s\n' "$CURRENT" | jq '{data:{id:.data.id,type:.data.type,attributes:{assetDeliveryState:.data.attributes.assetDeliveryState}}}' > "asc-diagnostics/${SAFE}-poll.json"
-              echo "poll-$ATTEMPT:$FINAL_STATE" >> asc-diagnostics/stage.txt
-              if [[ "$FINAL_STATE" == 'COMPLETE' ]]; then break; fi
-              if [[ "$FINAL_STATE" == 'FAILED' ]]; then exit 1; fi
+            FINAL=''
+            for TRY in $(seq 1 40); do
+              curl --silent --show-error --fail -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' \
+                "https://api.appstoreconnect.apple.com/v1/subscriptionAppStoreReviewScreenshots/${RID}" \
+                -o "asc-diagnostics/${SAFE}-poll.json"
+              FINAL=$(jq -r '.data.attributes.assetDeliveryState.state // empty' "asc-diagnostics/${SAFE}-poll.json")
+              echo "poll[$TRY]=$FINAL" >> asc-diagnostics/stage.txt
+              [[ "$FINAL" == 'COMPLETE' ]] && break
+              [[ "$FINAL" == 'FAILED' ]] && exit 1
               sleep 3
             done
-            test "$FINAL_STATE" = 'COMPLETE'
-            echo "$PRODUCT_ID review screenshot uploaded and processed: $RID" >> "$GITHUB_STEP_SUMMARY"
+            [[ "$FINAL" == 'COMPLETE' ]]
+            echo "$PRODUCT_ID review screenshot COMPLETE ($RID)" >> "$GITHUB_STEP_SUMMARY"
           done
 
-      - name: Upload App Store Connect diagnostics
+      - name: Upload ASC diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -271,17 +190,16 @@ jobs:
           if-no-files-found: warn
           retention-days: 1
 
-      - name: Re-audit Family Pro states
+      - name: Verify subscription states
         shell: bash
         run: |
           set -euo pipefail
-          APP_JSON=$(curl --silent --show-error --fail -H "Authorization: Bearer $ASC_TOKEN" 'https://api.appstoreconnect.apple.com/v1/apps?filter%5BbundleId%5D=de.kamilunavo.familyprototype')
-          APP_ID=$(jq -r '.data[0].id' <<<"$APP_JSON")
-          GROUPS=$(curl --silent --show-error --fail -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/apps/${APP_ID}/subscriptionGroups?include=subscriptions&limit%5Bsubscriptions%5D=50&fields%5Bsubscriptions%5D=name,productId,state")
-          for PRODUCT_ID in "$MONTHLY_ID" "$ANNUAL_ID"; do
-            STATE=$(jq -r --arg p "$PRODUCT_ID" '.included[]? | select(.attributes.productId == $p) | .attributes.state' <<<"$GROUPS")
-            echo "$PRODUCT_ID state after screenshot upload: $STATE" >> "$GITHUB_STEP_SUMMARY"
-            test -n "$STATE"
+          for ROW in "$MONTHLY_PRODUCT|$MONTHLY_SID" "$ANNUAL_PRODUCT|$ANNUAL_SID"; do
+            PRODUCT=${ROW%%|*}; SID=${ROW##*|}
+            SHOT=$(curl --silent --show-error --fail -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/subscriptions/${SID}/appStoreReviewScreenshot")
+            STATE=$(jq -r '.data.attributes.assetDeliveryState.state // empty' <<<"$SHOT")
+            test "$STATE" = 'COMPLETE'
+            echo "$PRODUCT screenshot verified COMPLETE" >> "$GITHUB_STEP_SUMMARY"
           done
 
       - name: Remove App Store Connect key
