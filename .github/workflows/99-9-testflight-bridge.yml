@@ -11,7 +11,7 @@ on:
       build:
         description: 'App Store Connect build number'
         required: false
-        default: '5'
+        default: '8'
 
 permissions:
   contents: read
@@ -19,7 +19,7 @@ permissions:
 
 env:
   SOURCE_REPO: acciento89-bot/99-9
-  SOURCE_REF: main
+  SOURCE_REF: f075306e63d63ff3dc4beebac8adabd27c6010cb
   GODOT_VERSION: '4.7.2'
   GODOT_TAG: '4.7.2-stable'
   TEAM_ID: 'TKG684N5GL'
@@ -84,7 +84,7 @@ jobs:
         shell: bash
         run: |
           U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          BODY=$(jq -n --arg u "$U" '{state:"pending",description:"Building and uploading 99.9% to TestFlight",target_url:$u,context:"99-9/testflight-bridge"}')
+          BODY=$(jq -n --arg u "$U" '{state:"pending",description:"Building and uploading 99.9% Build 8 to TestFlight",target_url:$u,context:"99-9/testflight-bridge"}')
           curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
 
@@ -98,6 +98,16 @@ jobs:
           path: source
           persist-credentials: false
 
+      - name: Verify locked Build 8 source
+        if: steps.creds.outputs.ready == 'true'
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTUAL=$(git rev-parse HEAD)
+          test "$ACTUAL" = "$SOURCE_REF"
+          echo "Locked 99.9 source: $ACTUAL"
+
       - name: Resolve build number
         if: steps.creds.outputs.ready == 'true'
         shell: bash
@@ -105,18 +115,20 @@ jobs:
           REQUESTED_BUILD: ${{ inputs.build }}
         run: |
           set -euo pipefail
-          BUILD="${REQUESTED_BUILD:-5}"
+          BUILD="${REQUESTED_BUILD:-8}"
           [[ "$BUILD" =~ ^[0-9]+$ ]]
           echo "EFFECTIVE_BUILD=$BUILD" >> "$GITHUB_ENV"
+          export BUILD
           python3 - <<'PY'
           import os, re
           from pathlib import Path
           p=Path('source/export_presets.cfg')
           text=p.read_text()
-          build=os.environ.get('EFFECTIVE_BUILD') or os.environ.get('REQUESTED_BUILD') or '5'
+          build=os.environ['BUILD']
           text,count=re.subn(r'application/version="[0-9]+"',f'application/version="{build}"',text,count=1)
           if count != 1: raise SystemExit('Could not set iOS build number')
           p.write_text(text)
+          print(f'iOS build number set to {build}')
           PY
 
       - name: Prepare App Store Connect API key
@@ -187,7 +199,16 @@ jobs:
           cp -R "$RUNNER_TEMP/templates/templates/." "$T/"
           test -f "$T/ios.zip"
 
-      - name: Import project, export Xcode project and embed GodotIap
+      - name: Install AdMob iOS native template
+        if: steps.creds.outputs.ready == 'true'
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/ci_install_admob.sh ios
+          test -f addons/admob/ios/bin/ads/poing_godot_admob_ads.gd
+
+      - name: Import project, export Xcode project and verify IAP plus AdMob
         if: steps.creds.outputs.ready == 'true'
         shell: bash
         run: |
@@ -202,6 +223,9 @@ jobs:
           chmod +x addons/godot-iap/scripts/fix_ios_embed.sh
           IOS_EXPORT_DIR="$PWD/build/ios" ./addons/godot-iap/scripts/fix_ios_embed.sh
           grep -q 'GodotIap.framework' build/ios/NineNine.xcodeproj/project.pbxproj
+          grep -R -q 'ca-app-pub-3940256099942544~1458002511' build/ios
+          grep -R -q 'GoogleMobileAds' build/ios
+          echo 'GodotIap + AdMob demo App ID + GoogleMobileAds verified in iOS export'
           echo "XCODE_PROJECT=$PWD/build/ios/NineNine.xcodeproj" >> "$GITHUB_ENV"
 
       - name: Resolve generated Xcode scheme
@@ -219,7 +243,7 @@ jobs:
           test -n "$SCHEME"
           echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
 
-      - name: Create unsigned release archive with embedded IAP framework
+      - name: Create unsigned Build 8 release archive
         if: steps.creds.outputs.ready == 'true'
         shell: bash
         run: |
@@ -257,7 +281,7 @@ jobs:
           </dict></plist>
           PLIST
 
-      - name: Upload build to TestFlight
+      - name: Upload Build 8 to TestFlight
         id: upload
         if: steps.creds.outputs.ready == 'true'
         continue-on-error: true
@@ -296,7 +320,7 @@ jobs:
             DESC="99.9% ${APP_VERSION} (${EFFECTIVE_BUILD}) uploaded to TestFlight"
           else
             STATE=failure
-            DESC='99.9% TestFlight upload failed; inspect workflow log'
+            DESC='99.9% Build 8 TestFlight upload failed; inspect workflow log'
           fi
           BODY=$(jq -n --arg s "$STATE" --arg d "$DESC" --arg u "$U" '{state:$s,description:$d,target_url:$u,context:"99-9/testflight-bridge"}')
           curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
