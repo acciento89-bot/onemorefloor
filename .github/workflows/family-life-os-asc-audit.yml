@@ -1,0 +1,171 @@
+name: Family Life OS ASC Metadata Audit
+
+on:
+  push:
+    branches:
+      - agent/family-life-os-testflight-bridge
+    paths:
+      - '.github/workflows/family-life-os-asc-audit.yml'
+
+permissions:
+  contents: write
+
+env:
+  BUNDLE_ID: de.kamilunavo.familyprototype
+  MONTHLY_ID: de.kamilunavo.family.familypro.monthly
+  ANNUAL_ID: de.kamilunavo.family.familypro.annual
+
+jobs:
+  audit:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Checkout bridge
+        uses: actions/checkout@v5
+        with:
+          ref: agent/family-life-os-testflight-bridge
+          fetch-depth: 0
+
+      - name: Verify App Store Connect secrets
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+
+      - name: Prepare App Store Connect API key and token
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'
+          require 'base64'
+          require 'json'
+          def b64url(value)
+            Base64.urlsafe_encode64(value, padding: false)
+          end
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          header = b64url(JSON.generate({ alg: 'ES256', kid: ENV.fetch('ASC_KEY_ID'), typ: 'JWT' }))
+          payload = b64url(JSON.generate({ iss: ENV.fetch('ASC_ISSUER_ID'), iat: now, exp: now + 900, aud: 'appstoreconnect-v1' }))
+          signing_input = "#{header}.#{payload}"
+          der = key.sign(OpenSSL::Digest::SHA256.new, signing_input)
+          sequence = OpenSSL::ASN1.decode(der)
+          raw = sequence.value.map do |integer|
+            hex = integer.value.to_i.to_s(16).rjust(64, '0')
+            [hex].pack('H*')
+          end.join
+          puts "#{signing_input}.#{b64url(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Query Family Pro metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          api() {
+            curl -fsSL \
+              -H "Authorization: Bearer $ASC_TOKEN" \
+              -H 'Accept: application/json' \
+              "https://api.appstoreconnect.apple.com$1"
+          }
+
+          APP_JSON=$(api "/v1/apps?filter%5BbundleId%5D=${BUNDLE_ID}")
+          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APP_JSON")
+          test -n "$APP_ID"
+
+          GROUPS_JSON=$(api "/v1/apps/${APP_ID}/subscriptionGroups?include=subscriptions&limit%5Bsubscriptions%5D=50&fields%5Bsubscriptions%5D=name,productId,state,subscriptionPeriod,reviewNote,appStoreReviewScreenshot")
+
+          mkdir -p bridge
+          REPORT=bridge/family-life-os-asc-audit.md
+          {
+            echo '# Family Life OS — App Store Connect subscription audit'
+            echo
+            echo "Generated: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            echo "Bundle ID: \`$BUNDLE_ID\`"
+            echo "App resource ID: \`$APP_ID\`"
+            echo
+          } > "$REPORT"
+
+          found=0
+          for PRODUCT_ID in "$MONTHLY_ID" "$ANNUAL_ID"; do
+            SUB=$(jq -c --arg p "$PRODUCT_ID" '.included[]? | select(.type == "subscriptions" and .attributes.productId == $p)' <<<"$GROUPS_JSON" | head -1)
+            if [[ -z "$SUB" ]]; then
+              {
+                echo "## $PRODUCT_ID"
+                echo
+                echo '- subscription resource: **NOT FOUND**'
+                echo
+              } >> "$REPORT"
+              continue
+            fi
+
+            found=$((found+1))
+            SID=$(jq -r '.id' <<<"$SUB")
+            STATE=$(jq -r '.attributes.state // "UNKNOWN"' <<<"$SUB")
+            NAME=$(jq -r '.attributes.name // ""' <<<"$SUB")
+            PERIOD=$(jq -r '.attributes.subscriptionPeriod // ""' <<<"$SUB")
+            NOTE=$(jq -r '.attributes.reviewNote // ""' <<<"$SUB")
+
+            LOC=$(api "/v1/subscriptions/${SID}/subscriptionLocalizations?limit=50" || printf '{"data":[]}')
+            SCREEN=$(api "/v1/subscriptions/${SID}/appStoreReviewScreenshot" || printf '{}')
+            PRICES=$(api "/v1/subscriptions/${SID}/prices?limit=5" || printf '{"data":[]}')
+
+            LOC_COUNT=$(jq -r '.data | length' <<<"$LOC" 2>/dev/null || echo 0)
+            LOC_SUMMARY=$(jq -r '[.data[]? | ((.attributes.locale // "?") + ": " + (.attributes.name // "") + " / " + (.attributes.description // ""))] | join(" | ")' <<<"$LOC" 2>/dev/null || true)
+            SCREEN_ID=$(jq -r '.data.id // empty' <<<"$SCREEN" 2>/dev/null || true)
+            SCREEN_FILE=$(jq -r '.data.attributes.fileName // empty' <<<"$SCREEN" 2>/dev/null || true)
+            SCREEN_STATE=$(jq -r '.data.attributes.assetDeliveryState.state // .data.attributes.assetDeliveryState // empty' <<<"$SCREEN" 2>/dev/null || true)
+            PRICE_COUNT=$(jq -r '.data | length' <<<"$PRICES" 2>/dev/null || echo 0)
+
+            {
+              echo "## $PRODUCT_ID"
+              echo
+              echo "- resource ID: \`$SID\`"
+              echo "- reference name: \`$NAME\`"
+              echo "- Apple state: **$STATE**"
+              echo "- subscription period: \`$PERIOD\`"
+              echo "- review note present: $([[ -n "$NOTE" ]] && echo yes || echo no)"
+              echo "- localizations: $LOC_COUNT"
+              echo "- localization detail: ${LOC_SUMMARY:-none}"
+              echo "- review screenshot: $([[ -n "$SCREEN_ID" ]] && echo "present — id \`$SCREEN_ID\`, file \`${SCREEN_FILE:-unknown}\`, state \`${SCREEN_STATE:-unknown}\`" || echo '**MISSING**')"
+              echo "- price records returned: $PRICE_COUNT"
+              echo
+            } >> "$REPORT"
+          done
+
+          test "$found" -eq 2
+
+      - name: Commit audit report
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add bridge/family-life-os-asc-audit.md
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m 'Record Family Pro App Store Connect audit'
+          git push origin HEAD:agent/family-life-os-testflight-bridge
+
+      - name: Remove App Store Connect key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8

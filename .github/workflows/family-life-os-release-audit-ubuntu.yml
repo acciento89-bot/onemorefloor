@@ -1,0 +1,121 @@
+name: Family Life OS Release Audit Ubuntu
+
+on:
+  push:
+    branches: [agent/family-life-os-testflight-bridge]
+    paths:
+      - '.github/workflows/family-life-os-release-audit-ubuntu.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+env:
+  BUNDLE_ID: de.kamilunavo.familyprototype
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Publish pending status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TARGET_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          PAYLOAD=$(jq -n --arg target_url "$TARGET_URL" '{state:"pending",target_url:$target_url,description:"Family Life OS release audit running",context:"family-life-os/release-audit-ubuntu"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$PAYLOAD" >/dev/null
+
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v); Base64.urlsafe_encode64(v, padding: false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p=b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'})); input="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input))
+          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Audit App Store Connect
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+          get() { curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com$1" -o "$2"; }
+          maybe() { code=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' -w '%{http_code}' "https://api.appstoreconnect.apple.com$1" -o "$2" || true); [[ "$code" == 2* ]] || printf '{"data":null}' > "$2"; }
+          get "/v1/apps?filter%5BbundleId%5D=${BUNDLE_ID}" audit/app.json
+          APP_ID=$(jq -r '.data[0].id // empty' audit/app.json); test -n "$APP_ID"
+          get "/v1/apps/${APP_ID}/appInfos?limit=50" audit/infos.json
+          INFO_ID=$(jq -r '.data[0].id // empty' audit/infos.json)
+          if [[ -n "$INFO_ID" ]]; then get "/v1/appInfos/${INFO_ID}/appInfoLocalizations?limit=50" audit/info-locs.json; else printf '{"data":[]}' > audit/info-locs.json; fi
+          get "/v1/apps/${APP_ID}/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50" audit/versions.json
+          VERSION_ID=$(jq -r '[.data[]? | select((.attributes.appVersionState // .attributes.appStoreState // "") == "PREPARE_FOR_SUBMISSION")] | last | .id // empty' audit/versions.json)
+          [[ -n "$VERSION_ID" ]] || VERSION_ID=$(jq -r '.data | last | .id // empty' audit/versions.json)
+          if [[ -n "$VERSION_ID" ]]; then
+            get "/v1/appStoreVersions/${VERSION_ID}" audit/version.json
+            get "/v1/appStoreVersions/${VERSION_ID}/appStoreVersionLocalizations?limit=50" audit/version-locs.json
+            maybe "/v1/appStoreVersions/${VERSION_ID}/appStoreReviewDetail" audit/review.json
+            maybe "/v1/appStoreVersions/${VERSION_ID}/build" audit/associated-build.json
+          else
+            printf '{"data":null}' > audit/version.json; printf '{"data":[]}' > audit/version-locs.json; printf '{"data":null}' > audit/review.json; printf '{"data":null}' > audit/associated-build.json
+          fi
+          get "/v1/builds?filter%5Bapp%5D=${APP_ID}&sort=-uploadedDate&limit=20" audit/builds.json
+          get "/v1/apps/${APP_ID}/subscriptionGroups?include=subscriptions&limit%5Bsubscriptions%5D=50" audit/subscriptions.json
+          {
+            echo '## Family Life OS release audit'
+            echo "- appID: $APP_ID"
+            echo "- app: $(jq -r '.data[0].attributes.name // "?"' audit/app.json)"
+            echo "- primaryLocale: $(jq -r '.data[0].attributes.primaryLocale // "?"' audit/app.json)"
+            echo '### App info localizations'
+            jq -r '.data[]? | "- id=\(.id) locale=\(.attributes.locale // "?") name=\(.attributes.name // "") subtitle=\(.attributes.subtitle // "") privacy=\(.attributes.privacyPolicyUrl // "MISSING") choices=\(.attributes.privacyChoicesUrl // "MISSING")"' audit/info-locs.json
+            echo '### Versions'
+            jq -r '.data[]? | "- id=\(.id) version=\(.attributes.versionString // "?") state=\(.attributes.appVersionState // .attributes.appStoreState // "?")"' audit/versions.json
+            echo "### Selected version $VERSION_ID"
+            jq -r 'if .data then "- version=\(.data.attributes.versionString // "?") state=\(.data.attributes.appVersionState // .data.attributes.appStoreState // "?") copyright=\(.data.attributes.copyright // "MISSING") releaseType=\(.data.attributes.releaseType // "MISSING") usesIdfa=\(.data.attributes.usesIdfa // false)" else "- MISSING" end' audit/version.json
+            echo "- associatedBuild=$(jq -r '.data.attributes.version // "MISSING"' audit/associated-build.json)"
+            echo '### Version localizations'
+            jq -r '.data[]? | "- id=\(.id) locale=\(.attributes.locale // "?") description=\(if (.attributes.description // "") == "" then "MISSING" else "present" end) keywords=\(.attributes.keywords // "MISSING") support=\(.attributes.supportUrl // "MISSING") marketing=\(.attributes.marketingUrl // "MISSING") promo=\(if (.attributes.promotionalText // "") == "" then "empty" else "present" end)"' audit/version-locs.json
+            echo '### Review'
+            if jq -e '.data.id' audit/review.json >/dev/null 2>&1; then jq -r '"- id=\(.data.id) contact=\(.data.attributes.contactFirstName // "") \(.data.attributes.contactLastName // "") phone=\(if (.data.attributes.contactPhone // "") == "" then "MISSING" else "present" end) email=\(.data.attributes.contactEmail // "MISSING") demoRequired=\(.data.attributes.demoAccountRequired // false) demoName=\(if (.data.attributes.demoAccountName // "") == "" then "MISSING" else "present" end) demoPassword=\(if (.data.attributes.demoAccountPassword // "") == "" then "MISSING" else "present" end) notes=\(if (.data.attributes.notes // "") == "" then "MISSING" else "present" end)"' audit/review.json; else echo '- MISSING'; fi
+            echo '### Builds'
+            jq -r '.data[]? | "- id=\(.id) build=\(.attributes.version // "?") state=\(.attributes.processingState // "?") uploaded=\(.attributes.uploadedDate // "?")"' audit/builds.json
+            echo '### Subscriptions'
+            jq -r '.included[]? | select(.type=="subscriptions") | "- \(.attributes.productId // "?") state=\(.attributes.state // "?") period=\(.attributes.subscriptionPeriod // "?")"' audit/subscriptions.json
+          } | tee "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: family-life-os-release-audit-ubuntu
+          path: audit/
+          retention-days: 3
+
+      - name: Publish final status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TARGET_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if [[ "${{ job.status }}" == "success" ]]; then STATE=success; DESC='Family Life OS release audit passed'; else STATE=failure; DESC='Family Life OS release audit failed'; fi
+          PAYLOAD=$(jq -n --arg state "$STATE" --arg target_url "$TARGET_URL" --arg description "$DESC" '{state:$state,target_url:$target_url,description:$description,context:"family-life-os/release-audit-ubuntu"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$PAYLOAD" >/dev/null
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
