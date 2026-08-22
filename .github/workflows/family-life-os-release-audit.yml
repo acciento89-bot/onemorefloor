@@ -27,17 +27,15 @@ jobs:
         run: |
           set -euo pipefail
           TARGET_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          PAYLOAD=$(jq -n --arg target_url "$TARGET_URL" '{state:"pending",target_url:$target_url,description:"Family Life OS App Store release audit running",context:"family-life-os/release-metadata-audit"}')
+          PAYLOAD=$(jq -n --arg target_url "$TARGET_URL" '{state:"pending",target_url:$target_url,description:"Family Life OS release metadata audit running",context:"family-life-os/release-metadata-audit"}')
           curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$PAYLOAD" >/dev/null
 
-      - name: Checkout bridge
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
         with:
           ref: agent/family-life-os-testflight-bridge
           fetch-depth: 0
 
       - name: Prepare App Store Connect token
-        shell: bash
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -62,108 +60,104 @@ jobs:
           )
           echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
 
-      - name: Audit release metadata
-        shell: bash
+      - name: Query release metadata
         run: |
           set -euo pipefail
+          mkdir -p audit
           api() {
-            curl --fail-with-body --silent --show-error -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com$1"
+            curl --fail-with-body --silent --show-error -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com$1" -o "$2"
           }
-          maybe_api() {
-            curl --silent --show-error -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com$1" || true
+          optional_api() {
+            code=$(curl --silent --show-error -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' -w '%{http_code}' "https://api.appstoreconnect.apple.com$1" -o "$2" || true)
+            if [[ "$code" != 2* ]]; then printf '{"data":null}' > "$2"; fi
           }
 
-          APP=$(api "/v1/apps?filter%5BbundleId%5D=${BUNDLE_ID}&fields%5Bapps%5D=name,bundleId,sku,primaryLocale,isOrEverWasMadeForKids")
-          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APP"); test -n "$APP_ID"
-          APP_NAME=$(jq -r '.data[0].attributes.name // ""' <<<"$APP")
-          PRIMARY_LOCALE=$(jq -r '.data[0].attributes.primaryLocale // ""' <<<"$APP")
-          KIDS=$(jq -r '.data[0].attributes.isOrEverWasMadeForKids // false' <<<"$APP")
-
-          INFOS=$(api "/v1/apps/${APP_ID}/appInfos?limit=50&fields%5BappInfos%5D=appStoreState,state,appStoreAgeRating")
-          INFO_ID=$(jq -r '.data[0].id // empty' <<<"$INFOS")
-          INFO_STATE=$(jq -r '.data[0].attributes.state // .data[0].attributes.appStoreState // "UNKNOWN"' <<<"$INFOS")
-          INFO_AGE=$(jq -r '.data[0].attributes.appStoreAgeRating // "UNKNOWN"' <<<"$INFOS")
-          LOCS='{"data":[]}'
+          api "/v1/apps?filter%5BbundleId%5D=${BUNDLE_ID}" audit/app.json
+          APP_ID=$(jq -r '.data[0].id // empty' audit/app.json); test -n "$APP_ID"
+          api "/v1/apps/${APP_ID}/appInfos?limit=50" audit/app-infos.json
+          INFO_ID=$(jq -r '.data[0].id // empty' audit/app-infos.json)
           if [[ -n "$INFO_ID" ]]; then
-            LOCS=$(api "/v1/appInfos/${INFO_ID}/appInfoLocalizations?limit=50&fields%5BappInfoLocalizations%5D=locale,name,subtitle,privacyPolicyUrl,privacyChoicesUrl")
+            api "/v1/appInfos/${INFO_ID}/appInfoLocalizations?limit=50" audit/app-info-localizations.json
+            optional_api "/v1/appInfos/${INFO_ID}/ageRatingDeclaration" audit/age-rating.json
+          else
+            printf '{"data":[]}' > audit/app-info-localizations.json
+            printf '{"data":null}' > audit/age-rating.json
           fi
 
-          VERSIONS=$(api "/v1/apps/${APP_ID}/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50&fields%5BappStoreVersions%5D=platform,versionString,appStoreState,appVersionState,copyright,reviewType,releaseType,usesIdfa,createdDate")
-          VERSION_ID=$(jq -r '[.data[]? | select((.attributes.appVersionState // .attributes.appStoreState // "") | test("PREPARE_FOR_SUBMISSION|DEVELOPER_REJECTED|METADATA_REJECTED|REJECTED"))] | sort_by(.attributes.createdDate // "") | last | .id // empty' <<<"$VERSIONS")
-          if [[ -z "$VERSION_ID" ]]; then VERSION_ID=$(jq -r '.data | sort_by(.attributes.createdDate // "") | last | .id // empty' <<<"$VERSIONS"); fi
-
-          VERSION_LOCS='{"data":[]}'; REVIEW='{}'; BUILD='{}'; VERSION_STRING=''; VERSION_STATE=''
+          api "/v1/apps/${APP_ID}/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50" audit/versions.json
+          VERSION_ID=$(jq -r '[.data[]? | select((.attributes.appVersionState // .attributes.appStoreState // "") | test("PREPARE_FOR_SUBMISSION|DEVELOPER_REJECTED|METADATA_REJECTED|REJECTED"))] | sort_by(.attributes.createdDate // "") | last | .id // empty' audit/versions.json)
+          if [[ -z "$VERSION_ID" ]]; then VERSION_ID=$(jq -r '.data | sort_by(.attributes.createdDate // "") | last | .id // empty' audit/versions.json); fi
           if [[ -n "$VERSION_ID" ]]; then
-            VERSION_DETAIL=$(api "/v1/appStoreVersions/${VERSION_ID}?fields%5BappStoreVersions%5D=platform,versionString,appStoreState,appVersionState,copyright,reviewType,releaseType,usesIdfa,createdDate")
-            VERSION_STRING=$(jq -r '.data.attributes.versionString // ""' <<<"$VERSION_DETAIL")
-            VERSION_STATE=$(jq -r '.data.attributes.appVersionState // .data.attributes.appStoreState // ""' <<<"$VERSION_DETAIL")
-            VERSION_LOCS=$(api "/v1/appStoreVersions/${VERSION_ID}/appStoreVersionLocalizations?limit=50&fields%5BappStoreVersionLocalizations%5D=description,locale,keywords,marketingUrl,promotionalText,supportUrl,whatsNew")
-            REVIEW=$(maybe_api "/v1/appStoreVersions/${VERSION_ID}/appStoreReviewDetail?fields%5BappStoreReviewDetails%5D=contactFirstName,contactLastName,contactPhone,contactEmail,demoAccountName,demoAccountPassword,demoAccountRequired,notes")
-            BUILD=$(maybe_api "/v1/appStoreVersions/${VERSION_ID}/build?fields%5Bbuilds%5D=version,uploadedDate,processingState,usesNonExemptEncryption")
+            api "/v1/appStoreVersions/${VERSION_ID}" audit/version.json
+            api "/v1/appStoreVersions/${VERSION_ID}/appStoreVersionLocalizations?limit=50" audit/version-localizations.json
+            optional_api "/v1/appStoreVersions/${VERSION_ID}/appStoreReviewDetail" audit/review.json
+            optional_api "/v1/appStoreVersions/${VERSION_ID}/build" audit/associated-build.json
+          else
+            printf '{"data":null}' > audit/version.json
+            printf '{"data":[]}' > audit/version-localizations.json
+            printf '{"data":null}' > audit/review.json
+            printf '{"data":null}' > audit/associated-build.json
           fi
 
-          BUILDS=$(api "/v1/builds?filter%5Bapp%5D=${APP_ID}&sort=-uploadedDate&limit=15&fields%5Bbuilds%5D=version,uploadedDate,processingState,usesNonExemptEncryption,minOsVersion")
-          GROUPS=$(api "/v1/apps/${APP_ID}/subscriptionGroups?include=subscriptions&limit%5Bsubscriptions%5D=50&fields%5Bsubscriptions%5D=name,productId,state,subscriptionPeriod,reviewNote")
+          api "/v1/builds?filter%5Bapp%5D=${APP_ID}&sort=-uploadedDate&limit=20" audit/builds.json
+          api "/v1/apps/${APP_ID}/subscriptionGroups?include=subscriptions&limit%5Bsubscriptions%5D=50" audit/subscriptions.json
 
-          mkdir -p bridge
-          REPORT=bridge/family-life-os-release-audit.md
+          REPORT=audit/release-audit.md
           {
             echo '# Family Life OS — App Store release audit'
             echo
             echo "Generated: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
             echo
             echo '## App'
-            echo "- name: **${APP_NAME}**"
+            echo "- name: **$(jq -r '.data[0].attributes.name // "MISSING"' audit/app.json)**"
             echo "- bundle: \`${BUNDLE_ID}\`"
-            echo "- app resource: \`${APP_ID}\`"
-            echo "- primary locale: \`${PRIMARY_LOCALE}\`"
-            echo "- made for kids flag: \`${KIDS}\`"
-            echo "- app info state: \`${INFO_STATE}\`"
-            echo "- app age rating: \`${INFO_AGE}\`"
+            echo "- primary locale: \`$(jq -r '.data[0].attributes.primaryLocale // "MISSING"' audit/app.json)\`"
+            echo "- made for kids: \`$(jq -r '.data[0].attributes.isOrEverWasMadeForKids // false' audit/app.json)\`"
             echo
-            echo '## App Info localizations / privacy URLs'
-            if [[ $(jq '.data | length' <<<"$LOCS") -eq 0 ]]; then echo '- **MISSING**'; else jq -r '.data[]? | "- \(.attributes.locale): name=\(.attributes.name // "") | subtitle=\(.attributes.subtitle // "") | privacy=\(.attributes.privacyPolicyUrl // "MISSING") | choices=\(.attributes.privacyChoicesUrl // "MISSING")"' <<<"$LOCS"; fi
+            echo '## App info / privacy URLs'
+            if [[ $(jq '.data | length' audit/app-info-localizations.json) -eq 0 ]]; then echo '- **MISSING**'; else jq -r '.data[]? | "- \(.attributes.locale): name=\(.attributes.name // "") | subtitle=\(.attributes.subtitle // "") | privacy=\(.attributes.privacyPolicyUrl // "MISSING") | choices=\(.attributes.privacyChoicesUrl // "MISSING")"' audit/app-info-localizations.json; fi
             echo
-            echo '## App Store versions'
-            jq -r '.data[]? | "- \(.attributes.versionString // "?") — \(.attributes.appVersionState // .attributes.appStoreState // "?") — id \(.id) — \(.attributes.createdDate // "")"' <<<"$VERSIONS"
+            echo '## Versions'
+            jq -r '.data[]? | "- \(.attributes.versionString // "?"): \(.attributes.appVersionState // .attributes.appStoreState // "?") — id \(.id)"' audit/versions.json
             echo
             echo '## Selected editable/latest version'
             echo "- id: \`${VERSION_ID:-MISSING}\`"
-            echo "- version: \`${VERSION_STRING:-MISSING}\`"
-            echo "- state: \`${VERSION_STATE:-MISSING}\`"
-            echo "- associated build: \`$(jq -r '.data.attributes.version // "MISSING"' <<<"$BUILD" 2>/dev/null || echo MISSING)\`"
+            echo "- version: \`$(jq -r '.data.attributes.versionString // "MISSING"' audit/version.json)\`"
+            echo "- state: \`$(jq -r '.data.attributes.appVersionState // .data.attributes.appStoreState // "MISSING"' audit/version.json)\`"
+            echo "- associated build: \`$(jq -r '.data.attributes.version // "MISSING"' audit/associated-build.json)\`"
+            echo "- uses IDFA: \`$(jq -r '.data.attributes.usesIdfa // false' audit/version.json)\`"
             echo
             echo '### Version localizations'
-            if [[ $(jq '.data | length' <<<"$VERSION_LOCS") -eq 0 ]]; then echo '- **MISSING**'; else jq -r '.data[]? | "- \(.attributes.locale): description=\(if (.attributes.description // "") == "" then "MISSING" else "present" end) | keywords=\(.attributes.keywords // "MISSING") | support=\(.attributes.supportUrl // "MISSING") | marketing=\(.attributes.marketingUrl // "MISSING") | promo=\(if (.attributes.promotionalText // "") == "" then "empty" else "present" end)"' <<<"$VERSION_LOCS"; fi
+            if [[ $(jq '.data | length' audit/version-localizations.json) -eq 0 ]]; then echo '- **MISSING**'; else jq -r '.data[]? | "- \(.attributes.locale): description=\(if (.attributes.description // "") == "" then "MISSING" else "present" end) | keywords=\(.attributes.keywords // "MISSING") | support=\(.attributes.supportUrl // "MISSING") | marketing=\(.attributes.marketingUrl // "MISSING") | promo=\(if (.attributes.promotionalText // "") == "" then "empty" else "present" end)"' audit/version-localizations.json; fi
             echo
             echo '### App Review information'
-            if jq -e '.data.id' >/dev/null 2>&1 <<<"$REVIEW"; then
-              echo "- contact: $(jq -r '[.data.attributes.contactFirstName,.data.attributes.contactLastName] | map(select(. != null and . != "")) | join(" ")' <<<"$REVIEW")"
-              echo "- phone present: $(jq -r 'if (.data.attributes.contactPhone // "") == "" then "no" else "yes" end' <<<"$REVIEW")"
-              echo "- email: $(jq -r '.data.attributes.contactEmail // "MISSING"' <<<"$REVIEW")"
-              echo "- demo account required: $(jq -r '.data.attributes.demoAccountRequired // false' <<<"$REVIEW")"
-              echo "- demo account name present: $(jq -r 'if (.data.attributes.demoAccountName // "") == "" then "no" else "yes" end' <<<"$REVIEW")"
-              echo "- demo password present: $(jq -r 'if (.data.attributes.demoAccountPassword // "") == "" then "no" else "yes" end' <<<"$REVIEW")"
-              echo "- notes present: $(jq -r 'if (.data.attributes.notes // "") == "" then "no" else "yes" end' <<<"$REVIEW")"
+            if jq -e '.data.id' audit/review.json >/dev/null 2>&1; then
+              echo "- contact: $(jq -r '[.data.attributes.contactFirstName,.data.attributes.contactLastName] | map(select(. != null and . != "")) | join(" ")' audit/review.json)"
+              echo "- phone present: $(jq -r 'if (.data.attributes.contactPhone // "") == "" then "no" else "yes" end' audit/review.json)"
+              echo "- email: $(jq -r '.data.attributes.contactEmail // "MISSING"' audit/review.json)"
+              echo "- demo account required: $(jq -r '.data.attributes.demoAccountRequired // false' audit/review.json)"
+              echo "- demo username present: $(jq -r 'if (.data.attributes.demoAccountName // "") == "" then "no" else "yes" end' audit/review.json)"
+              echo "- demo password present: $(jq -r 'if (.data.attributes.demoAccountPassword // "") == "" then "no" else "yes" end' audit/review.json)"
+              echo "- notes present: $(jq -r 'if (.data.attributes.notes // "") == "" then "no" else "yes" end' audit/review.json)"
             else
               echo '- **MISSING**'
             fi
             echo
             echo '## Latest builds'
-            jq -r '.data[]? | "- build \(.attributes.version): \(.attributes.processingState // "?") uploaded \(.attributes.uploadedDate // "?") encryption=\(.attributes.usesNonExemptEncryption // "?") minOS=\(.attributes.minOsVersion // "?")"' <<<"$BUILDS"
+            jq -r '.data[]? | "- build \(.attributes.version): \(.attributes.processingState // "?") — shortVersion=\(.attributes.version // "?") — uploaded \(.attributes.uploadedDate // "?")"' audit/builds.json
             echo
-            echo '## Family Pro subscriptions'
+            echo '## Family Pro'
             for p in "$MONTHLY_ID" "$ANNUAL_ID"; do
-              line=$(jq -r --arg p "$p" '.included[]? | select(.type=="subscriptions" and .attributes.productId==$p) | "- \(.attributes.productId): \(.attributes.state // "?") / \(.attributes.subscriptionPeriod // "?") / reviewNote=\(if (.attributes.reviewNote // "") == "" then "missing" else "present" end)"' <<<"$GROUPS" | head -1)
-              if [[ -n "$line" ]]; then echo "$line"; else echo "- $p: **NOT FOUND**"; fi
+              result=$(jq -r --arg p "$p" '.included[]? | select(.type=="subscriptions" and .attributes.productId==$p) | "- \(.attributes.productId): \(.attributes.state // "?") / \(.attributes.subscriptionPeriod // "?") / reviewNote=\(if (.attributes.reviewNote // "") == "" then "missing" else "present" end)"' audit/subscriptions.json | head -1)
+              if [[ -n "$result" ]]; then echo "$result"; else echo "- $p: **NOT FOUND**"; fi
             done
           } > "$REPORT"
           cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit audit report
-        shell: bash
         run: |
           set -euo pipefail
+          cp audit/release-audit.md bridge/family-life-os-release-audit.md
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add bridge/family-life-os-release-audit.md
@@ -178,7 +172,7 @@ jobs:
         run: |
           set -euo pipefail
           TARGET_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          if [[ "${{ job.status }}" == "success" ]]; then STATE=success; DESC='Family Life OS App Store release audit passed'; else STATE=failure; DESC='Family Life OS App Store release audit failed'; fi
+          if [[ "${{ job.status }}" == "success" ]]; then STATE=success; DESC='Family Life OS release metadata audit passed'; else STATE=failure; DESC='Family Life OS release metadata audit failed'; fi
           PAYLOAD=$(jq -n --arg state "$STATE" --arg target_url "$TARGET_URL" --arg description "$DESC" '{state:$state,target_url:$target_url,description:$description,context:"family-life-os/release-metadata-audit"}')
           curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$PAYLOAD" >/dev/null
 
