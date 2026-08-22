@@ -121,6 +121,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p asc-diagnostics
+          echo "attach:start" > asc-diagnostics/stage.txt
           IMAGE=review/family-pro-review.png
           FILE_NAME=$(basename "$IMAGE")
           FILE_SIZE=$(stat -f '%z' "$IMAGE")
@@ -136,27 +138,43 @@ jobs:
           APP_JSON=$(asc_get "/v1/apps?filter%5BbundleId%5D=${BUNDLE_ID}")
           APP_ID=$(jq -r '.data[0].id // empty' <<<"$APP_JSON")
           test -n "$APP_ID"
+          echo "app:$APP_ID" >> asc-diagnostics/stage.txt
           GROUPS=$(asc_get "/v1/apps/${APP_ID}/subscriptionGroups?include=subscriptions&limit%5Bsubscriptions%5D=50&fields%5Bsubscriptions%5D=name,productId,state")
 
           for PRODUCT_ID in "$MONTHLY_ID" "$ANNUAL_ID"; do
+            SAFE=$(echo "$PRODUCT_ID" | tr '.' '-')
+            echo "product:$PRODUCT_ID" >> asc-diagnostics/stage.txt
             SID=$(jq -r --arg p "$PRODUCT_ID" '.included[]? | select(.type == "subscriptions" and .attributes.productId == $p) | .id' <<<"$GROUPS" | head -1)
             test -n "$SID"
+            echo "subscription:$SID" >> asc-diagnostics/stage.txt
 
-            EXISTING=$(curl --silent --show-error \
+            EXISTING_HTTP=$(curl --silent --show-error \
+              -w '%{http_code}' \
               -H "Authorization: Bearer $ASC_TOKEN" \
               -H 'Accept: application/json' \
-              "https://api.appstoreconnect.apple.com/v1/subscriptions/${SID}/appStoreReviewScreenshot")
-            EXISTING_ID=$(jq -r '.data.id // empty' <<<"$EXISTING")
+              "https://api.appstoreconnect.apple.com/v1/subscriptions/${SID}/appStoreReviewScreenshot" \
+              -o "asc-diagnostics/${SAFE}-existing.json")
+            echo "existing-http:$EXISTING_HTTP" >> asc-diagnostics/stage.txt
+            if [[ "$EXISTING_HTTP" != '200' && "$EXISTING_HTTP" != '404' ]]; then
+              exit 1
+            fi
+            EXISTING_ID=''
+            if [[ "$EXISTING_HTTP" == '200' ]]; then
+              EXISTING_ID=$(jq -r '.data.id // empty' "asc-diagnostics/${SAFE}-existing.json")
+            fi
             if [[ -n "$EXISTING_ID" ]]; then
-              EXISTING_STATE=$(jq -r '.data.attributes.assetDeliveryState.state // empty' <<<"$EXISTING")
+              EXISTING_STATE=$(jq -r '.data.attributes.assetDeliveryState.state // empty' "asc-diagnostics/${SAFE}-existing.json")
               if [[ "$EXISTING_STATE" == 'COMPLETE' || -z "$EXISTING_STATE" ]]; then
                 echo "$PRODUCT_ID already has review screenshot $EXISTING_ID; keeping it." >> "$GITHUB_STEP_SUMMARY"
                 continue
               fi
-              curl --silent --show-error --fail \
+              DELETE_HTTP=$(curl --silent --show-error -w '%{http_code}' \
                 -H "Authorization: Bearer $ASC_TOKEN" \
                 -X DELETE \
-                "https://api.appstoreconnect.apple.com/v1/subscriptionAppStoreReviewScreenshots/${EXISTING_ID}" >/dev/null
+                "https://api.appstoreconnect.apple.com/v1/subscriptionAppStoreReviewScreenshots/${EXISTING_ID}" \
+                -o /dev/null)
+              echo "delete-http:$DELETE_HTTP" >> asc-diagnostics/stage.txt
+              [[ "$DELETE_HTTP" == '204' ]]
             fi
 
             CREATE_BODY=$(jq -n \
@@ -164,6 +182,7 @@ jobs:
               --argjson fileSize "$FILE_SIZE" \
               --arg sid "$SID" \
               '{data:{type:"subscriptionAppStoreReviewScreenshots",attributes:{fileName:$fileName,fileSize:$fileSize},relationships:{subscription:{data:{type:"subscriptions",id:$sid}}}}}')
+            printf '%s\n' "$CREATE_BODY" > "asc-diagnostics/${SAFE}-reservation-request.json"
 
             HTTP_CODE=$(curl --silent --show-error \
               -w '%{http_code}' \
@@ -173,44 +192,49 @@ jobs:
               -X POST \
               -d "$CREATE_BODY" \
               'https://api.appstoreconnect.apple.com/v1/subscriptionAppStoreReviewScreenshots' \
-              -o "$RUNNER_TEMP/reservation.json")
+              -o "asc-diagnostics/${SAFE}-reservation.json")
+            echo "$HTTP_CODE" > "asc-diagnostics/${SAFE}-reservation.status"
+            echo "reservation-http:$HTTP_CODE" >> asc-diagnostics/stage.txt
             if [[ "$HTTP_CODE" != '201' && "$HTTP_CODE" != '200' ]]; then
-              echo "ASC screenshot reservation failed for $PRODUCT_ID with HTTP $HTTP_CODE"
-              jq . "$RUNNER_TEMP/reservation.json" || cat "$RUNNER_TEMP/reservation.json"
               exit 1
             fi
 
-            RID=$(jq -r '.data.id // empty' "$RUNNER_TEMP/reservation.json")
+            RID=$(jq -r '.data.id // empty' "asc-diagnostics/${SAFE}-reservation.json")
             test -n "$RID"
-            OP_COUNT=$(jq '.data.attributes.uploadOperations | length' "$RUNNER_TEMP/reservation.json")
+            OP_COUNT=$(jq '.data.attributes.uploadOperations | length' "asc-diagnostics/${SAFE}-reservation.json")
             test "$OP_COUNT" -gt 0
+            echo "reservation:$RID ops:$OP_COUNT" >> asc-diagnostics/stage.txt
 
             for INDEX in $(seq 0 $((OP_COUNT - 1))); do
-              OP=$(jq -c ".data.attributes.uploadOperations[$INDEX]" "$RUNNER_TEMP/reservation.json")
+              OP=$(jq -c ".data.attributes.uploadOperations[$INDEX]" "asc-diagnostics/${SAFE}-reservation.json")
               METHOD=$(jq -r '.method' <<<"$OP")
               URL=$(jq -r '.url' <<<"$OP")
               OFFSET=$(jq -r '.offset' <<<"$OP")
               LENGTH=$(jq -r '.length' <<<"$OP")
+              jq -n --arg method "$METHOD" --argjson offset "$OFFSET" --argjson length "$LENGTH" --argjson headers "$(jq '[.requestHeaders[]?.name]' <<<"$OP")" '{method:$method,offset:$offset,length:$length,headerNames:$headers}' > "asc-diagnostics/${SAFE}-upload-${INDEX}-meta.json"
               PART="$RUNNER_TEMP/upload-part-$INDEX.bin"
               dd if="$IMAGE" of="$PART" bs=1 skip="$OFFSET" count="$LENGTH" status=none
-
               HEADER_ARGS=()
               while IFS=$'\t' read -r HNAME HVALUE; do
                 [[ -n "$HNAME" ]] && HEADER_ARGS+=( -H "$HNAME: $HVALUE" )
               done < <(jq -r '.requestHeaders[]? | [.name,.value] | @tsv' <<<"$OP")
-
-              curl --silent --show-error --fail-with-body \
+              UPLOAD_HTTP=$(curl --silent --show-error \
+                -w '%{http_code}' \
                 -X "$METHOD" \
                 "${HEADER_ARGS[@]}" \
                 --data-binary "@$PART" \
-                "$URL" >/dev/null
+                "$URL" \
+                -o "asc-diagnostics/${SAFE}-upload-${INDEX}-response.txt")
+              echo "$UPLOAD_HTTP" > "asc-diagnostics/${SAFE}-upload-${INDEX}.status"
+              echo "upload-$INDEX-http:$UPLOAD_HTTP" >> asc-diagnostics/stage.txt
+              [[ "$UPLOAD_HTTP" =~ ^2[0-9][0-9]$ ]]
             done
 
             COMMIT_BODY=$(jq -n \
               --arg rid "$RID" \
               --arg checksum "$CHECKSUM" \
               '{data:{type:"subscriptionAppStoreReviewScreenshots",id:$rid,attributes:{uploaded:true,sourceFileChecksum:$checksum}}}')
-
+            printf '%s\n' "$COMMIT_BODY" > "asc-diagnostics/${SAFE}-commit-request.json"
             HTTP_CODE=$(curl --silent --show-error \
               -w '%{http_code}' \
               -H "Authorization: Bearer $ASC_TOKEN" \
@@ -219,29 +243,33 @@ jobs:
               -X PATCH \
               -d "$COMMIT_BODY" \
               "https://api.appstoreconnect.apple.com/v1/subscriptionAppStoreReviewScreenshots/${RID}" \
-              -o "$RUNNER_TEMP/commit.json")
-            if [[ "$HTTP_CODE" != '200' ]]; then
-              echo "ASC screenshot commit failed for $PRODUCT_ID with HTTP $HTTP_CODE"
-              jq . "$RUNNER_TEMP/commit.json" || cat "$RUNNER_TEMP/commit.json"
-              exit 1
-            fi
+              -o "asc-diagnostics/${SAFE}-commit.json")
+            echo "$HTTP_CODE" > "asc-diagnostics/${SAFE}-commit.status"
+            echo "commit-http:$HTTP_CODE" >> asc-diagnostics/stage.txt
+            [[ "$HTTP_CODE" == '200' ]]
 
             FINAL_STATE=''
             for ATTEMPT in $(seq 1 30); do
               CURRENT=$(asc_get "/v1/subscriptionAppStoreReviewScreenshots/${RID}")
               FINAL_STATE=$(jq -r '.data.attributes.assetDeliveryState.state // empty' <<<"$CURRENT")
-              if [[ "$FINAL_STATE" == 'COMPLETE' ]]; then
-                break
-              fi
-              if [[ "$FINAL_STATE" == 'FAILED' ]]; then
-                echo "$CURRENT" | jq .
-                exit 1
-              fi
+              printf '%s\n' "$CURRENT" | jq '{data:{id:.data.id,type:.data.type,attributes:{assetDeliveryState:.data.attributes.assetDeliveryState}}}' > "asc-diagnostics/${SAFE}-poll.json"
+              echo "poll-$ATTEMPT:$FINAL_STATE" >> asc-diagnostics/stage.txt
+              if [[ "$FINAL_STATE" == 'COMPLETE' ]]; then break; fi
+              if [[ "$FINAL_STATE" == 'FAILED' ]]; then exit 1; fi
               sleep 3
             done
             test "$FINAL_STATE" = 'COMPLETE'
             echo "$PRODUCT_ID review screenshot uploaded and processed: $RID" >> "$GITHUB_STEP_SUMMARY"
           done
+
+      - name: Upload App Store Connect diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: family-pro-asc-upload-diagnostics
+          path: asc-diagnostics/
+          if-no-files-found: warn
+          retention-days: 1
 
       - name: Re-audit Family Pro states
         shell: bash
