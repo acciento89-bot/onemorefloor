@@ -1,0 +1,86 @@
+name: 99.9 IAP Metadata Details
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-iap-metadata-details.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+env:
+  BUNDLE_ID: de.kamilunavo.ninenine
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Prepare token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          export ASC_KEY_PATH="$KEY_PATH"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Inspect required metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.appstoreconnect.apple.com'
+          APPS=$(curl -fsSL -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[bundleId]=$BUNDLE_ID" "$API/v1/apps")
+          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS")
+          PRODUCTS=$(curl -fsSL -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/inAppPurchasesV2?limit=200")
+          while IFS=$'\t' read -r IID SKU; do
+            echo "=== $SKU ==="
+            ITEM=$(curl -fsSL -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IID")
+            jq -c '{state:.data.attributes.state,reviewNote:.data.attributes.reviewNote}' <<<"$ITEM"
+            VERSIONS=$(curl -fsSL -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IID/versions?limit=50")
+            VID=$(jq -r '.data[0].id // empty' <<<"$VERSIONS")
+            echo "VERSION=$VID"
+            if [[ -n "$VID" ]]; then
+              LOCS=$(curl -fsSL -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/inAppPurchaseVersions/$VID/localizations?limit=50")
+              echo '-- localizations --'
+              jq -c '.data[]? | {locale:.attributes.locale,name:.attributes.name,description:.attributes.description,state:.attributes.state}' <<<"$LOCS"
+              echo "LOCALIZATION_COUNT=$(jq '.data|length' <<<"$LOCS")"
+            fi
+            echo '-- review screenshot --'
+            CODE=$(curl -sS -o "$RUNNER_TEMP/screenshot.json" -w '%{http_code}' -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IID/appStoreReviewScreenshot")
+            echo "SCREENSHOT_HTTP=$CODE"
+            if [[ "$CODE" == 200 ]]; then jq -c '{id:.data.id,fileName:.data.attributes.fileName,state:.data.attributes.assetDeliveryState.state}' "$RUNNER_TEMP/screenshot.json"; else jq -c '.errors // .' "$RUNNER_TEMP/screenshot.json" || true; fi
+          done < <(jq -r '.data[]? | select(.attributes.productId | startswith("de.kamilunavo.ninenine.theme.")) | [.id,.attributes.productId] | @tsv' <<<"$PRODUCTS")
+
+      - name: Publish status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ job.status }}
+        shell: bash
+        run: |
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if [[ "$RESULT" == success ]]; then STATE=success; DESC='99.9 IAP metadata details inspected'; else STATE=failure; DESC='99.9 IAP metadata detail inspection failed'; fi
+          B=$(jq -n --arg s "$STATE" --arg d "$DESC" --arg u "$U" '{state:$s,description:$d,target_url:$u,context:"99-9/iap-metadata-details"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
