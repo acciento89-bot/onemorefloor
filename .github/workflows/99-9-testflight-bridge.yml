@@ -11,7 +11,7 @@ on:
       build:
         description: 'App Store Connect build number'
         required: false
-        default: '1'
+        default: '2'
 
 permissions:
   contents: read
@@ -105,7 +105,7 @@ jobs:
           REQUESTED_BUILD: ${{ inputs.build }}
         run: |
           set -euo pipefail
-          BUILD="${REQUESTED_BUILD:-1}"
+          BUILD="${REQUESTED_BUILD:-2}"
           [[ "$BUILD" =~ ^[0-9]+$ ]]
           echo "EFFECTIVE_BUILD=$BUILD" >> "$GITHUB_ENV"
           python3 - <<'PY'
@@ -113,7 +113,7 @@ jobs:
           from pathlib import Path
           p=Path('source/export_presets.cfg')
           text=p.read_text()
-          build=os.environ.get('EFFECTIVE_BUILD') or os.environ.get('REQUESTED_BUILD') or '1'
+          build=os.environ.get('EFFECTIVE_BUILD') or os.environ.get('REQUESTED_BUILD') or '2'
           text,count=re.subn(r'application/version="[0-9]+"',f'application/version="{build}"',text,count=1)
           if count != 1: raise SystemExit('Could not set iOS build number')
           p.write_text(text)
