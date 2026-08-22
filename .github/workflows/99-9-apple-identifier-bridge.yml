@@ -13,7 +13,7 @@ permissions:
 
 env:
   BUNDLE_ID: de.kamilunavo.ninenine
-  BUNDLE_NAME: 99.9 Percent
+  BUNDLE_NAME: Nine Nine
 
 jobs:
   register:
