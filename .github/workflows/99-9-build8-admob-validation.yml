@@ -148,3 +148,5 @@ jobs:
           unzip -l build/android/99-9.apk | grep -Ei 'GodotIap|billing' >/dev/null
           unzip -p build/android/99-9.apk AndroidManifest.xml | strings | grep -F 'ca-app-pub-3940256099942544~3347511713' >/dev/null
           unzip -p build/android/99-9.apk 'classes*.dex' | strings | grep -Em1 'com/google/android/gms/ads|MobileAds' >/dev/null
+
+# Status is published by 99-9-build8-admob-validation-status.yml.
