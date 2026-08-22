@@ -25,41 +25,29 @@ jobs:
         working-directory: trace/apps/002-evidaro/prototype
         run: |
           xcodebuild -project EvidaroPrototype.xcodeproj -scheme EvidaroPrototype -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Trace.xcarchive" PRODUCT_BUNDLE_IDENTIFIER=de.kamilunavo.trace CURRENT_PROJECT_VERSION=8 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" archive
-      - name: Inspect source and compiled icon pixels with AppKit
+      - name: Normalize source and compiled icons
         shell: bash
         run: |
-          cat > "$RUNNER_TEMP/iconstats.swift" <<'SWIFT'
-          import AppKit
-          import Foundation
-
-          func inspect(_ path: String) {
-              guard let image = NSImage(contentsOfFile: path),
-                    let tiff = image.tiffRepresentation,
-                    let rep = NSBitmapImageRep(data: tiff) else {
-                  fatalError("Cannot decode \(path)")
-              }
-              let w = rep.pixelsWide, h = rep.pixelsHigh
-              var sr = 0.0, sg = 0.0, sb = 0.0
-              var dark = 0, teal = 0, total = 0
-              for y in 0..<h {
-                  for x in 0..<w {
-                      guard let c = rep.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB) else { continue }
-                      let r = Double(c.redComponent * 255), g = Double(c.greenComponent * 255), b = Double(c.blueComponent * 255)
-                      sr += r; sg += g; sb += b; total += 1
-                      if max(r,g,b) < 40 { dark += 1 }
-                      if g > r + 20 && b > r + 20 { teal += 1 }
-                  }
-              }
-              func rgb(_ x: Int, _ y: Int) -> String {
-                  let c = rep.colorAt(x: x, y: y)!.usingColorSpace(.deviceRGB)!
-                  return "(\(Int(c.redComponent*255)),\(Int(c.greenComponent*255)),\(Int(c.blueComponent*255)))"
-              }
-              print("ICONSTAT \(path) size=\(w)x\(h) avg=(\(Int(sr/Double(total))),\(Int(sg/Double(total))),\(Int(sb/Double(total)))) dark=\(Double(dark)/Double(total)) teal=\(Double(teal)/Double(total)) center=\(rgb(w/2,h/2)) corner=\(rgb(0,0))")
-          }
-          for p in CommandLine.arguments.dropFirst() { inspect(p) }
-          SWIFT
+          set -euo pipefail
+          mkdir -p icon-forensics
           SRC='trace/apps/002-evidaro/prototype/EvidaroPrototype/Assets.xcassets/AppIcon.appiconset/KamilunavoTrace-AppIcon-1024.png'
           APP="$RUNNER_TEMP/Trace.xcarchive/Products/Applications/EvidaroPrototype.app"
-          swift "$RUNNER_TEMP/iconstats.swift" "$SRC" "$APP/AppIcon60x60@2x.png"
+          COMPILED="$APP/AppIcon60x60@2x.png"
+          echo '--- SOURCE METADATA ---'
+          sips -g pixelWidth -g pixelHeight -g format -g space -g hasAlpha "$SRC" || true
+          echo '--- COMPILED METADATA ---'
+          sips -g pixelWidth -g pixelHeight -g format -g space -g hasAlpha "$COMPILED" || true
+          cp "$SRC" icon-forensics/source.png
+          cp "$COMPILED" icon-forensics/compiled.png
+          sips -s format jpeg "$SRC" --out icon-forensics/source.jpg
+          sips -s format jpeg "$COMPILED" --out icon-forensics/compiled.jpg
           echo '--- ICON PLIST ---'
-          plutil -p "$APP/Info.plist" | grep -A25 -E 'CFBundleIcons|CFBundleIcon'
+          plutil -p "$APP/Info.plist" | grep -A30 -E 'CFBundleIcons|CFBundleIcon' || true
+          shasum -a 256 icon-forensics/*
+      - name: Upload icon forensics
+        uses: actions/upload-artifact@v4
+        with:
+          name: trace-appicon-forensics
+          path: icon-forensics/
+          if-no-files-found: error
+          retention-days: 7
