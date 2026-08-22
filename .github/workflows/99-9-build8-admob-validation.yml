@@ -107,7 +107,7 @@ jobs:
           token: ${{ secrets.NINENINE_REPO_TOKEN }}
           path: source
           persist-credentials: false
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -144,10 +144,27 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/android
-          ./godot --headless --path . --export-debug "Android Playtest" build/android/99-9.apk
-          test -s build/android/99-9.apk
-          unzip -l build/android/99-9.apk | grep -Ei 'GodotIap|billing' >/dev/null
-          unzip -p build/android/99-9.apk AndroidManifest.xml | strings | grep -F 'ca-app-pub-3940256099942544~3347511713' >/dev/null
-          unzip -p build/android/99-9.apk 'classes*.dex' | strings | grep -Em1 'com/google/android/gms/ads|MobileAds' >/dev/null
+          APK="build/android/99-9.apk"
+          ./godot --headless --path . --export-debug "Android Playtest" "$APK"
+          test -s "$APK"
+          echo "APK built: $(du -h "$APK" | cut -f1)"
+
+          APKANALYZER="$(command -v apkanalyzer || true)"
+          if [[ -z "$APKANALYZER" ]]; then
+            APKANALYZER="$ANDROID_HOME/tools/bin/apkanalyzer"
+          fi
+          test -x "$APKANALYZER"
+
+          echo '--- Manifest verification ---'
+          "$APKANALYZER" manifest print "$APK" | tee build/android/manifest.xml
+          grep -F 'ca-app-pub-3940256099942544~3347511713' build/android/manifest.xml
+          echo 'AdMob demo app ID present ✅'
+
+          echo '--- DEX dependency verification ---'
+          "$APKANALYZER" dex packages "$APK" | tee build/android/dex-packages.txt
+          grep -F 'com.google.android.gms.ads' build/android/dex-packages.txt
+          echo 'Google Mobile Ads classes present ✅'
+          grep -F 'com.android.billingclient' build/android/dex-packages.txt
+          echo 'Google Play Billing classes present ✅'
 
 # Status is published by 99-9-build8-admob-validation-status.yml.
