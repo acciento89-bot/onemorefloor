@@ -1,0 +1,65 @@
+name: 99.9 App Record Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-app-record-check.yml'
+
+permissions:
+  contents: read
+  statuses: write
+
+env:
+  BUNDLE_ID: de.kamilunavo.ninenine
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          export ASC_KEY_PATH="$KEY_PATH"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+      - name: Check app record
+        id: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          F="$RUNNER_TEMP/apps.json"
+          HTTP=$(curl -sS -o "$F" -w '%{http_code}' -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'limit=10' 'https://api.appstoreconnect.apple.com/v1/apps')
+          test "$HTTP" = 200
+          APP_ID=$(jq -r '.data[0].id // empty' "$F")
+          test -n "$APP_ID"
+          echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
+          echo "App Store Connect record found: $APP_ID" >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish success
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_ID: ${{ steps.app.outputs.app_id }}
+        run: |
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          B=$(jq -n --arg u "$U" --arg id "$APP_ID" '{state:"success",target_url:$u,description:("99.9 app record found: "+$id),context:"99-9/app-record-check"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
