@@ -1,0 +1,92 @@
+name: Family Life OS StoreKit Metadata PR
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/family-life-os-storekit-metadata-pr.yml'
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: 'de.kamilunavo.familyprototype'
+  GROUP_NAME: 'Family Pro'
+  MONTHLY_ID: 'de.kamilunavo.family.familypro.monthly'
+  ANNUAL_ID: 'de.kamilunavo.family.familypro.annual'
+
+jobs:
+  metadata:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Prepare App Store Connect credentials
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8" >> "$GITHUB_ENV"
+
+      - name: Configure German and English metadata
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v); Base64.urlsafe_encode64(v, padding: false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p=b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'})); input="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input))
+          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+          AUTH="Authorization: Bearer $JWT"; API='https://api.appstoreconnect.apple.com/v1'; TMP="$RUNNER_TEMP/asc.json"
+          post() { local ep="$1" body="$2"; local code; code=$(curl --silent --show-error -H "$AUTH" -H 'Content-Type: application/json' -X POST -d "$body" -o "$TMP" -w '%{http_code}' "$API/$ep"); if [[ "$code" != 201 ]]; then echo "POST $ep failed HTTP $code" | tee -a "$GITHUB_STEP_SUMMARY"; jq -r '.errors[]? | "- \(.code // ""): \(.detail // .title // "")"' "$TMP" | tee -a "$GITHUB_STEP_SUMMARY" || true; exit 1; fi; }
+
+          curl --fail-with-body --silent --show-error --get -H "$AUTH" --data-urlencode "filter[bundleId]=$BUNDLE_ID" "$API/apps" -o "$TMP"
+          APP_ID=$(jq -r '.data[0].id // empty' "$TMP"); test -n "$APP_ID"
+          curl --fail-with-body --silent --show-error --get -H "$AUTH" --data-urlencode "filter[referenceName]=$GROUP_NAME" --data-urlencode 'include=subscriptions,subscriptionGroupLocalizations' --data-urlencode 'fields[subscriptionGroups]=referenceName,subscriptions,subscriptionGroupLocalizations' --data-urlencode 'fields[subscriptions]=name,productId,state,subscriptionPeriod' --data-urlencode 'fields[subscriptionGroupLocalizations]=name,locale,state' "$API/apps/$APP_ID/subscriptionGroups" -o "$TMP"
+          GROUP_ID=$(jq -r '.data[0].id // empty' "$TMP"); test -n "$GROUP_ID"
+          MONTHLY=$(jq -r --arg id "$MONTHLY_ID" '.included[]? | select(.type=="subscriptions" and .attributes.productId==$id) | .id' "$TMP" | head -1)
+          ANNUAL=$(jq -r --arg id "$ANNUAL_ID" '.included[]? | select(.type=="subscriptions" and .attributes.productId==$id) | .id' "$TMP" | head -1)
+          test -n "$MONTHLY"; test -n "$ANNUAL"
+
+          ensure_group_locale() {
+            local locale="$1" display="$2"
+            curl --fail-with-body --silent --show-error --get -H "$AUTH" --data-urlencode 'fields[subscriptionGroupLocalizations]=name,locale,state' "$API/subscriptionGroups/$GROUP_ID/subscriptionGroupLocalizations" -o "$TMP"
+            if jq -e --arg l "$locale" '.data[]? | select(.attributes.locale==$l)' "$TMP" >/dev/null; then echo "Group locale exists: $locale" | tee -a "$GITHUB_STEP_SUMMARY"; return; fi
+            local body; body=$(jq -nc --arg n "$display" --arg l "$locale" --arg g "$GROUP_ID" '{data:{type:"subscriptionGroupLocalizations",attributes:{name:$n,locale:$l},relationships:{subscriptionGroup:{data:{type:"subscriptionGroups",id:$g}}}}}')
+            post 'subscriptionGroupLocalizations' "$body"; echo "Created group locale: $locale" | tee -a "$GITHUB_STEP_SUMMARY"
+          }
+
+          ensure_sub_locale() {
+            local sid="$1" locale="$2" name="$3" desc="$4"
+            curl --fail-with-body --silent --show-error --get -H "$AUTH" --data-urlencode 'fields[subscriptionLocalizations]=name,locale,description,state' "$API/subscriptions/$sid/subscriptionLocalizations" -o "$TMP"
+            if jq -e --arg l "$locale" '.data[]? | select(.attributes.locale==$l)' "$TMP" >/dev/null; then echo "Subscription locale exists: $sid / $locale" | tee -a "$GITHUB_STEP_SUMMARY"; return; fi
+            local body; body=$(jq -nc --arg n "$name" --arg l "$locale" --arg d "$desc" --arg s "$sid" '{data:{type:"subscriptionLocalizations",attributes:{name:$n,locale:$l,description:$d},relationships:{subscription:{data:{type:"subscriptions",id:$s}}}}}')
+            post 'subscriptionLocalizations' "$body"; echo "Created subscription locale: $sid / $locale" | tee -a "$GITHUB_STEP_SUMMARY"
+          }
+
+          ensure_group_locale 'de-DE' 'Family Pro'
+          ensure_group_locale 'en-US' 'Family Pro'
+          ensure_sub_locale "$MONTHLY" 'de-DE' 'Family Pro Monatlich' 'Mehr KI, Automationen, Speicher und Verlauf.'
+          ensure_sub_locale "$MONTHLY" 'en-US' 'Family Pro Monthly' 'More AI, automation, storage and history.'
+          ensure_sub_locale "$ANNUAL" 'de-DE' 'Family Pro Jährlich' 'Family Pro für ein Jahr mit Jahresrabatt.'
+          ensure_sub_locale "$ANNUAL" 'en-US' 'Family Pro Annual' 'Family Pro for one year with annual savings.'
+
+          echo 'Family Pro DE/EN localization metadata configured.' | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
