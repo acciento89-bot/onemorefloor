@@ -9,14 +9,27 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: trace-asc-finalize-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   APP_ID: '6803765449'
-  BUNDLE_ID: 'de.kamilunavo.trace'
+  INFO_ID: '4d8e959a-99c5-4ba5-ad95-b294748cf2c8'
+  DE_INFO_LOC_ID: 'edaa4558-5a43-4f3c-8af4-211685835177'
+  VERSION_ID: 'a895fc57-7ee4-40e6-9f19-2881323068ea'
+  DE_VLOC_ID: '70a7114f-1aa1-43fe-9f53-826a7acbda5c'
+  BUILD_ID: '95961211-cde4-44a8-a821-353d6b5d26ce'
+  PRODUCT_ID: 'de.kamilunavo.trace.pro.lifetime'
+  PRIVACY_URL: 'https://www.kamilunavo.com/trace/privacy'
+  SUPPORT_URL: 'https://www.kamilunavo.com/support'
+  MARKETING_URL: 'https://www.kamilunavo.com/trace'
+  COPYRIGHT_TEXT: '2026 Piotr Kaminski – Kamilunavo'
 
 jobs:
-  discover:
+  finalize:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     steps:
       - name: Prepare App Store Connect token
         env:
@@ -25,6 +38,7 @@ jobs:
           ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
         run: |
           set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
           KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
           printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
           chmod 600 "$KEY_PATH"
@@ -41,32 +55,192 @@ jobs:
           echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
           echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
 
-      - name: Discover Trace resources read-only
+      - name: Verify exact Trace records before mutation
+        run: |
+          set -euo pipefail
+          api(){ curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com$1"; }
+          test "$(jq -r '.data.attributes.bundleId' <<<"$(api "/v1/apps/${APP_ID}")")" = 'de.kamilunavo.trace'
+          test "$(jq -r '.data.attributes.versionString' <<<"$(api "/v1/appStoreVersions/${VERSION_ID}")")" = '1.0'
+          test "$(jq -r '.data.attributes.locale' <<<"$(api "/v1/appInfoLocalizations/${DE_INFO_LOC_ID}")")" = 'de-DE'
+          test "$(jq -r '.data.attributes.locale' <<<"$(api "/v1/appStoreVersionLocalizations/${DE_VLOC_ID}")")" = 'de-DE'
+          test "$(jq -r '.data.attributes.version' <<<"$(api "/v1/builds/${BUILD_ID}")")" = '9'
+
+      - name: Set content rights and primary category
+        run: |
+          set -euo pipefail
+          APP_BODY=$(jq -n --arg id "$APP_ID" '{data:{type:"apps",id:$id,attributes:{contentRightsDeclaration:"USES_THIRD_PARTY_CONTENT"}}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$APP_BODY" "https://api.appstoreconnect.apple.com/v1/apps/${APP_ID}" >/dev/null
+          INFO_BODY=$(jq -n --arg id "$INFO_ID" '{data:{type:"appInfos",id:$id,relationships:{primaryCategory:{data:{type:"appCategories",id:"PRODUCTIVITY"}}}}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$INFO_BODY" "https://api.appstoreconnect.apple.com/v1/appInfos/${INFO_ID}" >/dev/null
+
+      - name: Set privacy URL and subtitle
+        run: |
+          set -euo pipefail
+          BODY=$(jq -n --arg id "$DE_INFO_LOC_ID" --arg p "$PRIVACY_URL" '{data:{type:"appInfoLocalizations",id:$id,attributes:{subtitle:"Beweise prüfbar sichern",privacyPolicyUrl:$p}}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "https://api.appstoreconnect.apple.com/v1/appInfoLocalizations/${DE_INFO_LOC_ID}" >/dev/null
+
+      - name: Set German description keywords support and copyright
+        run: |
+          set -euo pipefail
+          DESCRIPTION=$(cat <<'EOF'
+          Kamilunavo Trace hilft dir, reale Situationen strukturiert zu dokumentieren, solange die Details noch frisch sind. Erstelle für einen Schaden, eine Wohnungsübergabe, eine Lieferung, ein Fahrzeug, einen Handwerkerfall, eine Versicherung oder einen anderen Vorgang eine klare Beweis-Zeitleiste.
+
+          Fotos, PDFs, Dateien und Notizen bleiben als lokale Originale auf deinem iPhone erreichbar. Für gespeicherte Originaldaten berechnet Trace SHA-256-Integritätswerte. Beweisdatensätze erhalten zusätzlich eigene Hashwerte und du kannst den aktuellen Stand eines Falls als Snapshot versiegeln.
+
+          Funktionen:
+          • Beweisfälle mit strukturierter Timeline anlegen
+          • Fotos direkt mit der Kamera aufnehmen
+          • Bilder, Dateien und PDFs importieren
+          • Originaldateien lokal auf dem Gerät bewahren
+          • SHA-256 für Originale und Beweisdatensätze anzeigen
+          • wiederholbare Snapshot-Siegel für den aktuellen Stand erstellen
+          • Text aus Bildern und PDFs lokal mit Apple Vision erkennen
+          • App optional mit Face ID, Touch ID oder Gerätecode schützen
+          • empfangene .evpack-Dateien offline auf interne Konsistenz prüfen
+          • mit Trace Pro PDF-Beweispakete und .evpack-Dateien exportieren
+
+          Trace ist local-first. Version 1 benötigt kein Benutzerkonto und lädt deine Beweisfälle nicht in eine Kamilunavo-Cloud. OCR wird lokal auf dem Gerät erzeugt und bleibt als abgeleitete Information getrennt von den Originaldaten.
+
+          Hashes und Snapshot-Siegel helfen dabei, spätere Änderungen zu erkennen. Kamilunavo Trace ist kein Notar, keine Rechtsberatung und garantiert weder eine unabhängige Realwelt-Zeitbestätigung noch die Anerkennung als Beweismittel durch Gericht, Versicherung, Arbeitgeber oder Behörde.
+
+          Trace Pro ist als einmaliger In-App-Kauf erhältlich. Die kostenlose Version bleibt für Erfassung, lokale Integritätsfunktionen und die Prüfung empfangener .evpack-Dateien nutzbar.
+          EOF
+          )
+          DESCRIPTION=$(sed 's/^          //' <<<"$DESCRIPTION")
+          BODY=$(jq -n --arg id "$DE_VLOC_ID" --arg d "$DESCRIPTION" --arg k 'beweise,dokumentation,schaden,miete,übergabe,versicherung,fotos,pdf,sha256,timeline' --arg p 'Originale lokal bewahren, SHA-256-Integrität prüfen, Snapshots versiegeln und nachvollziehbare PDF- oder .evpack-Beweispakete exportieren.' --arg s "$SUPPORT_URL" --arg m "$MARKETING_URL" '{data:{type:"appStoreVersionLocalizations",id:$id,attributes:{description:$d,keywords:$k,promotionalText:$p,supportUrl:$s,marketingUrl:$m}}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "https://api.appstoreconnect.apple.com/v1/appStoreVersionLocalizations/${DE_VLOC_ID}" >/dev/null
+          VER_BODY=$(jq -n --arg id "$VERSION_ID" --arg c "$COPYRIGHT_TEXT" '{data:{type:"appStoreVersions",id:$id,attributes:{copyright:$c}}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$VER_BODY" "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${VERSION_ID}" >/dev/null
+
+      - name: Complete age rating declaration from Trace v1 feature set
+        run: |
+          set -euo pipefail
+          AGE=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v1/appInfos/${INFO_ID}/ageRatingDeclaration")
+          AGE_ID=$(jq -r '.data.id // empty' <<<"$AGE")
+          test -n "$AGE_ID"
+          ATTR=$(jq -n '{advertising:false,alcoholTobaccoOrDrugUseOrReferences:"NONE",contests:"NONE",gambling:false,gamblingSimulated:"NONE",gunsOrOtherWeapons:"NONE",healthOrWellnessTopics:false,lootBox:false,medicalOrTreatmentInformation:"NONE",messagingAndChat:false,parentalControls:false,profanityOrCrudeHumor:"NONE",ageAssurance:false,sexualContentGraphicAndNudity:"NONE",sexualContentOrNudity:"NONE",socialMedia:false,socialMediaAgeRestricted:false,horrorOrFearThemes:"NONE",matureOrSuggestiveThemes:"NONE",unrestrictedWebAccess:false,userGeneratedContent:false,violenceCartoonOrFantasy:"NONE",violenceRealisticProlongedGraphicOrSadistic:"NONE",violenceRealistic:"NONE",ageRatingOverrideV2:"NONE",koreaAgeRatingOverride:"NONE"}')
+          BODY=$(jq -n --arg id "$AGE_ID" --argjson a "$ATTR" '{data:{type:"ageRatingDeclarations",id:$id,attributes:$a}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "https://api.appstoreconnect.apple.com/v1/ageRatingDeclarations/${AGE_ID}" >/dev/null
+          echo "AGE_ID=$AGE_ID" >> "$GITHUB_ENV"
+
+      - name: Resolve existing App Review contact without logging it
+        run: |
+          set -euo pipefail
+          api(){ curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com$1"; }
+          APPS=$(api '/v1/apps?limit=200')
+          CONTACT=''
+          while read -r aid; do
+            [[ -z "$aid" || "$aid" == "$APP_ID" ]] && continue
+            VERS=$(api "/v1/apps/${aid}/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50" || true)
+            while read -r vid; do
+              [[ -z "$vid" ]] && continue
+              DETAIL=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${vid}/appStoreReviewDetail" || true)
+              FIRST=$(jq -r '.data.attributes.contactFirstName // empty' <<<"$DETAIL" 2>/dev/null || true)
+              LAST=$(jq -r '.data.attributes.contactLastName // empty' <<<"$DETAIL" 2>/dev/null || true)
+              PHONE=$(jq -r '.data.attributes.contactPhone // empty' <<<"$DETAIL" 2>/dev/null || true)
+              EMAIL=$(jq -r '.data.attributes.contactEmail // empty' <<<"$DETAIL" 2>/dev/null || true)
+              if [[ -n "$FIRST" && -n "$LAST" && -n "$PHONE" && -n "$EMAIL" ]]; then
+                CONTACT=$(jq -n --arg f "$FIRST" --arg l "$LAST" --arg p "$PHONE" --arg e "$EMAIL" '{first:$f,last:$l,phone:$p,email:$e}')
+                break 2
+              fi
+            done < <(jq -r '.data[]?.id' <<<"$VERS")
+          done < <(jq -r '.data[]?.id' <<<"$APPS")
+          test -n "$CONTACT"
+          echo "CONTACT_B64=$(printf '%s' "$CONTACT" | base64 -w0)" >> "$GITHUB_ENV"
+
+      - name: Set App Review contact and review notes
+        run: |
+          set -euo pipefail
+          CONTACT=$(printf '%s' "$CONTACT_B64" | base64 -d)
+          FIRST=$(jq -r '.first' <<<"$CONTACT"); LAST=$(jq -r '.last' <<<"$CONTACT"); PHONE=$(jq -r '.phone' <<<"$CONTACT"); EMAIL=$(jq -r '.email' <<<"$CONTACT")
+          NOTES=$(cat <<'EOF'
+          Kamilunavo Trace is a local-first evidence documentation app. No account or demo login is required.
+
+          Review path:
+          1. Create a case and add a note, photo or file.
+          2. Inspect original/evidence SHA-256 values and seal a snapshot.
+          3. Use the shield action on Home to verify a received .evpack without purchasing Pro.
+          4. Open Settings > Trace Pro for the one-time Lifetime Pro purchase and Restore Purchases.
+
+          Lifetime Pro product ID: de.kamilunavo.trace.pro.lifetime.
+          Trace does not claim notarization or guaranteed legal admissibility. OCR is generated locally and treated as derived metadata.
+          EOF
+          )
+          NOTES=$(sed 's/^          //' <<<"$NOTES")
+          ATTR=$(jq -n --arg f "$FIRST" --arg l "$LAST" --arg p "$PHONE" --arg e "$EMAIL" --arg n "$NOTES" '{contactFirstName:$f,contactLastName:$l,contactPhone:$p,contactEmail:$e,demoAccountRequired:false,notes:$n}')
+          EXIST=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${VERSION_ID}/appStoreReviewDetail" || true)
+          RID=$(jq -r '.data.id // empty' <<<"$EXIST" 2>/dev/null || true)
+          if [[ -n "$RID" ]]; then
+            BODY=$(jq -n --arg id "$RID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",id:$id,attributes:$a}}')
+            curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "https://api.appstoreconnect.apple.com/v1/appStoreReviewDetails/${RID}" >/dev/null
+          else
+            BODY=$(jq -n --arg vid "$VERSION_ID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",attributes:$a,relationships:{appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}')
+            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" 'https://api.appstoreconnect.apple.com/v1/appStoreReviewDetails' >/dev/null
+          fi
+
+      - name: Read back review readiness
         run: |
           set -euo pipefail
           api(){ curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com$1"; }
           APP=$(api "/v1/apps/${APP_ID}?fields%5Bapps%5D=name,bundleId,contentRightsDeclaration")
-          echo "APP=$(jq -c '{id:.data.id,name:.data.attributes.name,bundleId:.data.attributes.bundleId,contentRightsDeclaration:.data.attributes.contentRightsDeclaration}' <<<"$APP")"
-          INFOS=$(api "/v1/apps/${APP_ID}/appInfos?limit=50")
-          echo 'APP_INFOS:'
-          jq -c '.data[] | {id,attributes}' <<<"$INFOS"
-          while read -r iid; do
-            [[ -z "$iid" ]] && continue
-            LOCS=$(api "/v1/appInfos/${iid}/appInfoLocalizations?limit=50")
-            echo "APP_INFO_LOCALIZATIONS for $iid:"
-            jq -c '.data[] | {id,locale:.attributes.locale,name:.attributes.name,subtitle:.attributes.subtitle,privacyPolicyUrl:.attributes.privacyPolicyUrl}' <<<"$LOCS"
-          done < <(jq -r '.data[]?.id' <<<"$INFOS")
-          VERSIONS=$(api "/v1/apps/${APP_ID}/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50")
-          echo 'APP_STORE_VERSIONS:'
-          jq -c '.data[] | {id,versionString:.attributes.versionString,appVersionState:.attributes.appVersionState,appStoreState:.attributes.appStoreState,copyright:.attributes.copyright}' <<<"$VERSIONS"
-          while read -r vid; do
-            [[ -z "$vid" ]] && continue
-            VLOCS=$(api "/v1/appStoreVersions/${vid}/appStoreVersionLocalizations?limit=200")
-            echo "VERSION_LOCALIZATIONS for $vid:"
-            jq -c '.data[] | {id,locale:.attributes.locale,descriptionPresent:((.attributes.description//"")|length>0),keywords:.attributes.keywords,supportUrl:.attributes.supportUrl}' <<<"$VLOCS"
-            BUILD=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${vid}/build" || true)
-            echo "BUILD for $vid: $(jq -c '{id:.data.id,version:.data.attributes.version}' <<<"$BUILD" 2>/dev/null || echo '{}')"
-          done < <(jq -r '.data[]?.id' <<<"$VERSIONS")
+          INFO=$(api "/v1/appInfos/${INFO_ID}?include=primaryCategory")
+          ILOC=$(api "/v1/appInfoLocalizations/${DE_INFO_LOC_ID}")
+          VER=$(api "/v1/appStoreVersions/${VERSION_ID}")
+          VLOC=$(api "/v1/appStoreVersionLocalizations/${DE_VLOC_ID}")
+          REVIEW=$(api "/v1/appStoreVersions/${VERSION_ID}/appStoreReviewDetail")
+          BUILD=$(api "/v1/appStoreVersions/${VERSION_ID}/build")
+          AGE=$(api "/v1/appInfos/${INFO_ID}/ageRatingDeclaration")
+          IAP=$(api "/v1/apps/${APP_ID}/inAppPurchasesV2?filter%5BproductId%5D=${PRODUCT_ID}&limit=10")
+          SHOTS=$(api "/v1/appStoreVersionLocalizations/${DE_VLOC_ID}/appScreenshotSets?include=appScreenshots&limit=50&limit%5BappScreenshots%5D=50")
+
+          RIGHTS=$(jq -r '.data.attributes.contentRightsDeclaration // empty' <<<"$APP")
+          CATEGORY=$(jq -r '.included[]? | select(.type=="appCategories") | .id' <<<"$INFO" | head -n1)
+          PRIVACY=$(jq -r '.data.attributes.privacyPolicyUrl // empty' <<<"$ILOC")
+          SUBTITLE=$(jq -r '.data.attributes.subtitle // empty' <<<"$ILOC")
+          COPYRIGHT=$(jq -r '.data.attributes.copyright // empty' <<<"$VER")
+          DESC=$(jq -r '.data.attributes.description // empty' <<<"$VLOC")
+          KEYWORDS=$(jq -r '.data.attributes.keywords // empty' <<<"$VLOC")
+          SUPPORT=$(jq -r '.data.attributes.supportUrl // empty' <<<"$VLOC")
+          FIRST=$(jq -r '.data.attributes.contactFirstName // empty' <<<"$REVIEW")
+          LAST=$(jq -r '.data.attributes.contactLastName // empty' <<<"$REVIEW")
+          PHONE=$(jq -r '.data.attributes.contactPhone // empty' <<<"$REVIEW")
+          EMAIL=$(jq -r '.data.attributes.contactEmail // empty' <<<"$REVIEW")
+          BUILD_NUM=$(jq -r '.data.attributes.version // empty' <<<"$BUILD")
+          IAP_STATE=$(jq -r '.data[0].attributes.state // empty' <<<"$IAP")
+          SCREENSHOT_COUNT=$(jq '[.included[]? | select(.type=="appScreenshots")] | length' <<<"$SHOTS")
+          AGE_GAMBLING=$(jq -r '.data.attributes.gambling' <<<"$AGE")
+          AGE_WEB=$(jq -r '.data.attributes.unrestrictedWebAccess' <<<"$AGE")
+          VERSION_STATE=$(jq -r '.data.attributes.appVersionState // .data.attributes.appStoreState // empty' <<<"$VER")
+
+          test "$RIGHTS" = 'USES_THIRD_PARTY_CONTENT'
+          test "$CATEGORY" = 'PRODUCTIVITY'
+          test "$PRIVACY" = "$PRIVACY_URL"
+          test -n "$SUBTITLE"
+          test "$COPYRIGHT" = "$COPYRIGHT_TEXT"
+          test -n "$DESC"; test -n "$KEYWORDS"; test "$SUPPORT" = "$SUPPORT_URL"
+          test -n "$FIRST"; test -n "$LAST"; test -n "$PHONE"; test -n "$EMAIL"
+          test "$BUILD_NUM" = '9'
+          test "$IAP_STATE" = 'READY_TO_SUBMIT'
+          test "$AGE_GAMBLING" = 'false'; test "$AGE_WEB" = 'false'
+
+          {
+            echo '## Kamilunavo Trace App Store readiness'
+            echo "- Content rights: $RIGHTS"
+            echo "- Primary category: $CATEGORY"
+            echo '- Privacy URL: verified'
+            echo '- German subtitle/description/keywords/support URL: verified'
+            echo '- Copyright: verified'
+            echo '- App Review contact information: complete'
+            echo '- Age rating declaration: complete for Trace v1 feature set'
+            echo "- Attached build: $BUILD_NUM"
+            echo "- German App Store screenshots currently present: $SCREENSHOT_COUNT"
+            echo "- Lifetime Pro: $IAP_STATE"
+            echo "- App version state: ${VERSION_STATE:-unknown}"
+            echo '- Submit for Review: NOT performed'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "TRACE_SCREENSHOT_COUNT=$SCREENSHOT_COUNT"
+          echo "TRACE_VERSION_STATE=${VERSION_STATE:-unknown}"
 
       - name: Cleanup protected key
         if: always()
