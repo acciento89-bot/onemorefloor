@@ -142,11 +142,21 @@ jobs:
             SID=$(jq -r --arg p "$PRODUCT_ID" '.included[]? | select(.type == "subscriptions" and .attributes.productId == $p) | .id' <<<"$GROUPS" | head -1)
             test -n "$SID"
 
-            EXISTING=$(asc_get "/v1/subscriptions/${SID}/appStoreReviewScreenshot")
+            EXISTING=$(curl --silent --show-error \
+              -H "Authorization: Bearer $ASC_TOKEN" \
+              -H 'Accept: application/json' \
+              "https://api.appstoreconnect.apple.com/v1/subscriptions/${SID}/appStoreReviewScreenshot")
             EXISTING_ID=$(jq -r '.data.id // empty' <<<"$EXISTING")
             if [[ -n "$EXISTING_ID" ]]; then
-              echo "$PRODUCT_ID already has review screenshot $EXISTING_ID; keeping it." >> "$GITHUB_STEP_SUMMARY"
-              continue
+              EXISTING_STATE=$(jq -r '.data.attributes.assetDeliveryState.state // empty' <<<"$EXISTING")
+              if [[ "$EXISTING_STATE" == 'COMPLETE' || -z "$EXISTING_STATE" ]]; then
+                echo "$PRODUCT_ID already has review screenshot $EXISTING_ID; keeping it." >> "$GITHUB_STEP_SUMMARY"
+                continue
+              fi
+              curl --silent --show-error --fail \
+                -H "Authorization: Bearer $ASC_TOKEN" \
+                -X DELETE \
+                "https://api.appstoreconnect.apple.com/v1/subscriptionAppStoreReviewScreenshots/${EXISTING_ID}" >/dev/null
             fi
 
             CREATE_BODY=$(jq -n \
@@ -155,14 +165,20 @@ jobs:
               --arg sid "$SID" \
               '{data:{type:"subscriptionAppStoreReviewScreenshots",attributes:{fileName:$fileName,fileSize:$fileSize},relationships:{subscription:{data:{type:"subscriptions",id:$sid}}}}}')
 
-            curl --silent --show-error --fail \
+            HTTP_CODE=$(curl --silent --show-error \
+              -w '%{http_code}' \
               -H "Authorization: Bearer $ASC_TOKEN" \
               -H 'Accept: application/json' \
               -H 'Content-Type: application/json' \
               -X POST \
               -d "$CREATE_BODY" \
               'https://api.appstoreconnect.apple.com/v1/subscriptionAppStoreReviewScreenshots' \
-              -o "$RUNNER_TEMP/reservation.json"
+              -o "$RUNNER_TEMP/reservation.json")
+            if [[ "$HTTP_CODE" != '201' && "$HTTP_CODE" != '200' ]]; then
+              echo "ASC screenshot reservation failed for $PRODUCT_ID with HTTP $HTTP_CODE"
+              jq . "$RUNNER_TEMP/reservation.json" || cat "$RUNNER_TEMP/reservation.json"
+              exit 1
+            fi
 
             RID=$(jq -r '.data.id // empty' "$RUNNER_TEMP/reservation.json")
             test -n "$RID"
@@ -176,14 +192,14 @@ jobs:
               OFFSET=$(jq -r '.offset' <<<"$OP")
               LENGTH=$(jq -r '.length' <<<"$OP")
               PART="$RUNNER_TEMP/upload-part-$INDEX.bin"
-              dd if="$IMAGE" of="$PART" bs=1 skip="$OFFSET" count="$LENGTH" 2>/dev/null
+              dd if="$IMAGE" of="$PART" bs=1 skip="$OFFSET" count="$LENGTH" status=none
 
               HEADER_ARGS=()
               while IFS=$'\t' read -r HNAME HVALUE; do
                 [[ -n "$HNAME" ]] && HEADER_ARGS+=( -H "$HNAME: $HVALUE" )
               done < <(jq -r '.requestHeaders[]? | [.name,.value] | @tsv' <<<"$OP")
 
-              curl --silent --show-error --fail \
+              curl --silent --show-error --fail-with-body \
                 -X "$METHOD" \
                 "${HEADER_ARGS[@]}" \
                 --data-binary "@$PART" \
@@ -195,14 +211,20 @@ jobs:
               --arg checksum "$CHECKSUM" \
               '{data:{type:"subscriptionAppStoreReviewScreenshots",id:$rid,attributes:{uploaded:true,sourceFileChecksum:$checksum}}}')
 
-            curl --silent --show-error --fail \
+            HTTP_CODE=$(curl --silent --show-error \
+              -w '%{http_code}' \
               -H "Authorization: Bearer $ASC_TOKEN" \
               -H 'Accept: application/json' \
               -H 'Content-Type: application/json' \
               -X PATCH \
               -d "$COMMIT_BODY" \
               "https://api.appstoreconnect.apple.com/v1/subscriptionAppStoreReviewScreenshots/${RID}" \
-              -o "$RUNNER_TEMP/commit.json"
+              -o "$RUNNER_TEMP/commit.json")
+            if [[ "$HTTP_CODE" != '200' ]]; then
+              echo "ASC screenshot commit failed for $PRODUCT_ID with HTTP $HTTP_CODE"
+              jq . "$RUNNER_TEMP/commit.json" || cat "$RUNNER_TEMP/commit.json"
+              exit 1
+            fi
 
             FINAL_STATE=''
             for ATTEMPT in $(seq 1 30); do
