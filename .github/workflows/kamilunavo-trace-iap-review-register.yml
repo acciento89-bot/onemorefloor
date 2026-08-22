@@ -1,0 +1,18 @@
+name: Kamilunavo Trace IAP Review Bridge Registration
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/kamilunavo-trace-iap-review-register.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Register temporary Trace bridge
+        run: echo 'TRACE_IAP_BRIDGE_REGISTERED'
