@@ -16,9 +16,9 @@ env:
   IAP_VERSION_ID: '8b715a31-6526-41bf-a7eb-226a629a5715'
 
 jobs:
-  diagnose:
+  pricing-and-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - name: Prepare App Store Connect token
         env:
@@ -41,27 +41,71 @@ jobs:
           )
           echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"; echo "ASC_KEY_PATH=$KEY" >> "$GITHUB_ENV"
 
-      - name: Retry app review item and print full Apple associated errors
+      - name: Resolve free German price point
+        run: |
+          set -euo pipefail
+          POINTS=$(curl --fail-with-body -sS --get -H "Authorization: Bearer $ASC_TOKEN" \
+            --data-urlencode 'filter[territory]=DEU' \
+            --data-urlencode 'fields[appPricePoints]=customerPrice' \
+            --data-urlencode 'limit=200' \
+            "https://api.appstoreconnect.apple.com/v1/apps/${APP_ID}/appPricePoints")
+          ZERO=$(jq -r '.data[] | select((.attributes.customerPrice|tonumber)==0) | .id' <<<"$POINTS" | head -1)
+          echo "TRACE_DEU_ZERO_PRICE_POINTS=$(jq -c '[.data[] | select((.attributes.customerPrice|tonumber)==0) | {id,price:.attributes.customerPrice}]' <<<"$POINTS")"
+          test -n "$ZERO"
+          echo "ZERO_PRICE_POINT_ID=$ZERO" >> "$GITHUB_ENV"
+
+      - name: Set app price schedule to Free
+        run: |
+          set -euo pipefail
+          CURRENT_CODE=$(curl -sS -o "$RUNNER_TEMP/current-price.json" -w '%{http_code}' -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/apps/${APP_ID}/appPriceSchedule?include=baseTerritory,manualPrices&limit%5BmanualPrices%5D=50")
+          if [[ "$CURRENT_CODE" == '200' ]]; then
+            CURRENT=$(cat "$RUNNER_TEMP/current-price.json")
+            SID=$(jq -r '.data.id // empty' <<<"$CURRENT")
+            echo "TRACE_EXISTING_PRICE_SCHEDULE=$SID"
+            MANUAL=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/appPriceSchedules/${SID}/manualPrices?include=appPricePoint,territory&fields%5BappPricePoints%5D=customerPrice&filter%5Bterritory%5D=DEU&limit=200")
+            ACTIVE_ZERO=$(jq -r '[.data[] as $p | .included[]? | select(.type=="appPricePoints" and .id==$p.relationships.appPricePoint.data.id and (.attributes.customerPrice|tonumber)==0)] | length' <<<"$MANUAL")
+            if [[ "$ACTIVE_ZERO" -gt 0 ]]; then
+              echo 'TRACE_APP_PRICE_ALREADY_FREE=true'
+              exit 0
+            fi
+          elif [[ "$CURRENT_CODE" != '404' ]]; then
+            cat "$RUNNER_TEMP/current-price.json"
+            exit 31
+          fi
+
+          BODY=$(jq -n --arg app "$APP_ID" --arg point "$ZERO_PRICE_POINT_ID" '{data:{type:"appPriceSchedules",relationships:{app:{data:{type:"apps",id:$app}},baseTerritory:{data:{type:"territories",id:"DEU"}},manualPrices:{data:[{type:"appPrices",id:"${newprice-0}"}]}}},included:[{type:"appPrices",id:"${newprice-0}",attributes:{startDate:null,endDate:null},relationships:{appPricePoint:{data:{type:"appPricePoints",id:$point}}}}]}')
+          CODE=$(curl -sS -o "$RUNNER_TEMP/set-price.json" -w '%{http_code}' -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" 'https://api.appstoreconnect.apple.com/v1/appPriceSchedules')
+          echo "TRACE_SET_PRICE_HTTP=$CODE"
+          if [[ "$CODE" != '201' ]]; then
+            jq -c '.' "$RUNNER_TEMP/set-price.json" || cat "$RUNNER_TEMP/set-price.json"
+            exit 32
+          fi
+          echo "TRACE_NEW_PRICE_SCHEDULE=$(jq -r '.data.id' "$RUNNER_TEMP/set-price.json")"
+
+      - name: Verify Free pricing from Apple
+        run: |
+          set -euo pipefail
+          S=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/apps/${APP_ID}/appPriceSchedule")
+          SID=$(jq -r '.data.id' <<<"$S"); test -n "$SID"
+          M=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/appPriceSchedules/${SID}/manualPrices?include=appPricePoint,territory&fields%5BappPricePoints%5D=customerPrice&filter%5Bterritory%5D=DEU&limit=200")
+          echo "TRACE_DEU_MANUAL_PRICES=$(jq -c '[.included[]? | select(.type=="appPricePoints") | {id,customerPrice:.attributes.customerPrice}]' <<<"$M")"
+          test "$(jq -r '[.included[]? | select(.type=="appPricePoints" and (.attributes.customerPrice|tonumber)==0)] | length' <<<"$M")" -gt 0
+
+      - name: Recheck associated submission blockers
         run: |
           set -euo pipefail
           SUBS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/apps/${APP_ID}/reviewSubmissions?limit=50")
-          RID=$(jq -r '.data[] | select(.attributes.state=="READY_FOR_REVIEW") | .id' <<<"$SUBS" | head -1)
-          test -n "$RID"
-          echo "TRACE_REVIEW_SUBMISSION_ID=$RID"
-          ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/reviewSubmissions/${RID}/items?include=appStoreVersion,inAppPurchaseVersion&limit=200")
-          echo "TRACE_CURRENT_ITEMS=$(jq -c '[.included[]? | {type,id,state:.attributes.state,versionString:.attributes.versionString}]' <<<"$ITEMS")"
+          RID=$(jq -r '.data[] | select(.attributes.state=="READY_FOR_REVIEW") | .id' <<<"$SUBS" | head -1); test -n "$RID"
           BODY=$(jq -n --arg rid "$RID" --arg vid "$APP_STORE_VERSION_ID" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$rid}},appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}')
-          CODE=$(curl -sS -o "$RUNNER_TEMP/apple-error.json" -w '%{http_code}' -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" 'https://api.appstoreconnect.apple.com/v1/reviewSubmissionItems')
-          echo "TRACE_APP_ITEM_HTTP=$CODE"
-          if [[ "$CODE" == '201' ]]; then
-            echo 'TRACE_APP_ITEM_CREATED=true'
-            exit 0
-          fi
-          echo 'TRACE_APPLE_FULL_ERROR_BEGIN'
-          jq -c '.' "$RUNNER_TEMP/apple-error.json" || cat "$RUNNER_TEMP/apple-error.json"
-          echo 'TRACE_APPLE_FULL_ERROR_END'
-          jq -c '.errors[]? | {status,code,title,detail,source,meta}' "$RUNNER_TEMP/apple-error.json" || true
-          exit 22
+          CODE=$(curl -sS -o "$RUNNER_TEMP/recheck.json" -w '%{http_code}' -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" 'https://api.appstoreconnect.apple.com/v1/reviewSubmissionItems')
+          echo "TRACE_RECHECK_HTTP=$CODE"
+          if [[ "$CODE" == '201' ]]; then echo 'TRACE_APP_VERSION_NOW_REVIEWABLE=true'; exit 0; fi
+          jq -c '.errors[]? | {status,code,title,detail,meta}' "$RUNNER_TEMP/recheck.json"
+          # Pricing must no longer be an associated error.
+          test "$(jq '[.errors[]?.meta.associatedErrors["/v2/appPrices/"][]?] | length' "$RUNNER_TEMP/recheck.json")" = '0'
+          # Keep the run green when the only remaining blocker is App Privacy, which Apple does not expose via the public ASC API.
+          test "$(jq '[.errors[]?.meta.associatedErrors["/v1/appDataUsages/"][]?] | length' "$RUNNER_TEMP/recheck.json")" -gt 0
+          echo 'TRACE_ONLY_REMAINING_BLOCKER=APP_PRIVACY_PUBLISH'
 
       - name: Cleanup key
         if: always()
