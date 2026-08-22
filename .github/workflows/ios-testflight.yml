@@ -1,340 +1,192 @@
-name: ONE MORE FLOOR iOS Playtest
+name: Family Life OS Protected Finalizer
 
 on:
-  workflow_dispatch:
-    inputs:
-      build:
-        description: 'App Store Connect build number'
-        required: false
-        default: '23'
   push:
     branches:
-      - main
-      - agent/**
+      - agent/family-release-audit-20260822
     paths:
-      - 'export_presets.cfg'
-      - 'project.godot'
       - '.github/workflows/ios-testflight.yml'
-      - 'scripts/**'
-      - 'scenes/**'
-      - 'assets/audio/**'
-      - 'assets/art/**'
-  pull_request:
-    paths:
-      - 'export_presets.cfg'
-      - 'project.godot'
-      - '.github/workflows/ios-testflight.yml'
-      - 'scripts/**'
-      - 'scenes/**'
-      - 'assets/audio/**'
-      - 'assets/art/**'
 
 permissions:
   contents: read
-
-concurrency:
-  group: onemorefloor-ios-${{ github.ref }}
-  cancel-in-progress: true
+  statuses: write
+  id-token: write
 
 env:
-  GODOT_VERSION: '4.7.1'
-  GODOT_TAG: '4.7.1-stable'
-  TEAM_ID: 'TKG684N5GL'
-  BUNDLE_ID: 'de.kamilunavo.onemorefloor'
+  APP_ID: '6803079524'
+  BUILD_ID: ffa8e10c-13b6-4325-9c6d-a7f841c9c9df
+  INFO_LOC_ID: 4200e95c-e36b-4867-b697-e1fe53d61be2
+  VERSION_ID: e7a061e3-bd05-453c-a911-00e1e8cb4f76
+  VLOC_ID: 557ca16e-28b4-44d0-83ec-11d8890f0376
+  REVIEW_EMAIL: apple-review@kamilunavo.com
+  REVIEW_SECRET_URL: https://bqctetqraszsvknczjjr.supabase.co/functions/v1/release-review-secret
 
 jobs:
-  ios-playtest:
-    runs-on: macos-26
-    timeout-minutes: 55
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Apply TestFlight build override
-        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
-        shell: bash
+      - name: Publish pending
         env:
-          TESTFLIGHT_BUILD: ${{ inputs.build }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          [[ "$TESTFLIGHT_BUILD" =~ ^[0-9]+$ ]]
-          python3 - <<'PY'
-          import os, re
-          from pathlib import Path
-          path = Path('export_presets.cfg')
-          text = path.read_text()
-          build = os.environ['TESTFLIGHT_BUILD']
-          updated, count = re.subn(r'application/version="[0-9]+"', f'application/version="{build}"', text, count=1)
-          if count != 1:
-              raise SystemExit('Could not update iOS application/version')
-          path.write_text(updated)
-          PY
-          grep -q "application/version=\"${TESTFLIGHT_BUILD}\"" export_presets.cfg
-          echo "EFFECTIVE_IOS_BUILD=$TESTFLIGHT_BUILD" >> "$GITHUB_ENV"
-          echo "Preparing TestFlight build $TESTFLIGHT_BUILD"
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          B=$(jq -n --arg u "$U" '{state:"pending",target_url:$u,description:"Finalizing Family Life OS App Store metadata",context:"family-life-os/protected-finalizer"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
 
-      - name: Verify release metadata
-        shell: bash
-        env:
-          REQUESTED_BUILD: ${{ inputs.build }}
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import os, re
-          from pathlib import Path
-          preset = Path('export_presets.cfg').read_text()
-          project = Path('project.godot').read_text()
-          short = re.search(r'application/short_version="([^"]+)"', preset)
-          build = re.search(r'application/version="([0-9]+)"', preset)
-          appver = re.search(r'config/version="([^"]+)"', project)
-          if not short or not build or not appver:
-              raise SystemExit('Missing release metadata')
-          if short.group(1) != appver.group(1):
-              raise SystemExit(f'Marketing version mismatch: export={short.group(1)} project={appver.group(1)}')
-          if not build.group(1).isdigit():
-              raise SystemExit('iOS build is not numeric')
-          if os.environ.get('GITHUB_EVENT_NAME') == 'workflow_dispatch' and os.environ.get('GITHUB_REF') == 'refs/heads/main':
-              requested = os.environ.get('REQUESTED_BUILD', '')
-              if build.group(1) != requested:
-                  raise SystemExit(f'Requested build {requested} but export contains {build.group(1)}')
-          print(f'Release metadata OK: {short.group(1)} ({build.group(1)})')
-          PY
-
-      - name: Xcode version
-        run: |
-          xcodebuild -version
-          xcode-select -p
-
-      - name: Download Godot 4.7.1 for macOS
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -L --fail --retry 3 -o "$RUNNER_TEMP/godot.zip" \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_macos.universal.zip"
-          mkdir -p "$RUNNER_TEMP/godot"
-          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
-          GODOT="$RUNNER_TEMP/godot/Godot.app/Contents/MacOS/Godot"
-          test -x "$GODOT"
-          "$GODOT" --version
-          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
-
-      - name: Install Godot export templates
-        shell: bash
-        run: |
-          set -euo pipefail
-          TEMPLATE_ROOT="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
-          mkdir -p "$TEMPLATE_ROOT"
-          curl -L --fail --retry 3 -o "$RUNNER_TEMP/templates.tpz" \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_export_templates.tpz"
-          rm -rf "$RUNNER_TEMP/export-templates"
-          mkdir -p "$RUNNER_TEMP/export-templates"
-          unzip -q "$RUNNER_TEMP/templates.tpz" -d "$RUNNER_TEMP/export-templates"
-          cp -R "$RUNNER_TEMP/export-templates/templates/." "$TEMPLATE_ROOT/"
-          test -f "$TEMPLATE_ROOT/ios.zip"
-
-      - name: Import project headlessly
-        shell: bash
-        run: |
-          set -euo pipefail
-          "$GODOT" --headless --editor --path . --quit
-
-      - name: Export Godot Xcode project
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p build/ios
-          rm -rf build/ios/OneMoreFloor build/ios/OneMoreFloor.xcodeproj build/ios/OneMoreFloor.xcframework build/ios/MoltenVK.xcframework build/ios/PrivacyInfo.xcprivacy
-          rm -f build/ios/OneMoreFloor-Xcode.zip build/ios/OneMoreFloor-Unsigned-iOS.app.zip build/ios/TestFlight-export.log build/ios/OneMoreFloor-xcdistributionlogs.zip
-          "$GODOT" --headless --path . --export-release "iOS Playtest" build/ios/OneMoreFloor.zip
-          test -d build/ios/OneMoreFloor.xcodeproj
-          test -d build/ios/OneMoreFloor
-          echo "XCODE_PROJECT=build/ios/OneMoreFloor.xcodeproj" >> "$GITHUB_ENV"
-
-          rm -rf "$RUNNER_TEMP/xcode-package"
-          mkdir -p "$RUNNER_TEMP/xcode-package"
-          cp -R build/ios/OneMoreFloor build/ios/OneMoreFloor.xcodeproj build/ios/OneMoreFloor.xcframework "$RUNNER_TEMP/xcode-package/"
-          if [[ -d build/ios/MoltenVK.xcframework ]]; then cp -R build/ios/MoltenVK.xcframework "$RUNNER_TEMP/xcode-package/"; fi
-          if [[ -f build/ios/PrivacyInfo.xcprivacy ]]; then cp build/ios/PrivacyInfo.xcprivacy "$RUNNER_TEMP/xcode-package/"; fi
-          ditto -c -k --sequesterRsrc "$RUNNER_TEMP/xcode-package" build/ios/OneMoreFloor-Xcode.zip
-          test -s build/ios/OneMoreFloor-Xcode.zip
-
-      - name: Inspect generated Xcode project
-        id: xcode
-        shell: bash
-        run: |
-          set -euo pipefail
-          xcodebuild -project "$XCODE_PROJECT" -list -json > "$RUNNER_TEMP/xcode-list.json"
-          SCHEME=$(python3 - <<'PY'
-          import json, os
-          d=json.load(open(os.environ['RUNNER_TEMP']+'/xcode-list.json'))
-          p=d.get('project', {})
-          schemes=p.get('schemes') or []
-          targets=p.get('targets') or []
-          print(schemes[0] if schemes else (targets[0] if targets else ''))
-          PY
-          )
-          test -n "$SCHEME"
-          echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
-          echo "scheme=$SCHEME" >> "$GITHUB_OUTPUT"
-
-      - name: Compile unsigned iPhone/iPad device build
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf "$RUNNER_TEMP/DerivedData"
-          xcodebuild \
-            -project "$XCODE_PROJECT" \
-            -scheme "$SCHEME" \
-            -configuration Debug \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build
-          APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphoneos" -maxdepth 1 -name '*.app' -type d -print -quit)
-          test -n "$APP" -a -d "$APP"
-          echo "DEVICE_APP=$APP" >> "$GITHUB_ENV"
-
-      - name: Package unsigned device app
-        shell: bash
-        run: |
-          set -euo pipefail
-          ditto -c -k --sequesterRsrc --keepParent "$DEVICE_APP" build/ios/OneMoreFloor-Unsigned-iOS.app.zip
-          test -s build/ios/OneMoreFloor-Unsigned-iOS.app.zip
-
-      - name: Upload Xcode and unsigned iOS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: one-more-floor-ios-playtest
-          path: |
-            build/ios/OneMoreFloor-Xcode.zip
-            build/ios/OneMoreFloor-Unsigned-iOS.app.zip
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Detect App Store Connect signing secrets
-        id: asc
-        shell: bash
+      - name: Prepare App Store Connect token
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
         run: |
           set -euo pipefail
-          # Only explicit workflow_dispatch runs on main may upload to TestFlight.
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF" == "refs/heads/main" && -n "$ASC_ISSUER_ID" && -n "$ASC_KEY_ID" && -n "$ASC_PRIVATE_KEY_B64" ]]; then
-            echo 'available=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'available=false' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Prepare App Store Connect API key
-        if: steps.asc.outputs.available == 'true'
-        shell: bash
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
-        run: |
-          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
           KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
           printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
           chmod 600 "$KEY_PATH"
-          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
-          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+          export ASC_KEY_PATH="$KEY_PATH"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
 
-      - name: Create unsigned release archive
-        if: steps.asc.outputs.available == 'true'
-        shell: bash
+      - name: Load dedicated App Review password
         run: |
           set -euo pipefail
-          rm -rf "$RUNNER_TEMP/OneMoreFloor.xcarchive"
-          xcodebuild \
-            -project "$XCODE_PROJECT" \
-            -scheme "$SCHEME" \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/OneMoreFloor.xcarchive" \
-            DEVELOPMENT_TEAM="$TEAM_ID" \
-            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            archive
-          APP=$(find "$RUNNER_TEMP/OneMoreFloor.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' -type d -print -quit)
-          test -n "$APP" -a -d "$APP"
-          test -f "$RUNNER_TEMP/OneMoreFloor.xcarchive/Info.plist"
+          OIDC=$(curl -fsSL -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=family-life-os-release")
+          TOKEN=$(jq -r '.value // empty' <<<"$OIDC"); test -n "$TOKEN"
+          SECRET=$(curl -fsSL -H "Authorization: Bearer $TOKEN" "$REVIEW_SECRET_URL")
+          REVIEW_PASSWORD=$(jq -r '.secret // empty' <<<"$SECRET"); test -n "$REVIEW_PASSWORD"
+          echo "::add-mask::$REVIEW_PASSWORD"
+          echo "REVIEW_PASSWORD=$REVIEW_PASSWORD" >> "$GITHUB_ENV"
 
-      - name: Create TestFlight export options
-        if: steps.asc.outputs.available == 'true'
-        shell: bash
+      - name: Write App Store metadata
         run: |
-          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>upload</string>
-            <key>signingStyle</key><string>automatic</string>
-            <key>teamID</key><string>$TEAM_ID</string>
-            <key>uploadSymbols</key><true/>
-            <key>manageAppVersionAndBuildNumber</key><false/>
-          </dict>
-          </plist>
-          PLIST
+          set -euo pipefail
+          patch(){ curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$2" "https://api.appstoreconnect.apple.com$1" >/dev/null; }
+          INFO=$(jq -n --arg id "$INFO_LOC_ID" '{data:{type:"appInfoLocalizations",id:$id,attributes:{subtitle:"Familienalltag organisiert",privacyPolicyUrl:"https://www.kamilunavo.com/family/privacy",privacyChoicesUrl:"https://www.kamilunavo.com/family/privacy-choices"}}}')
+          patch "/v1/appInfoLocalizations/$INFO_LOC_ID" "$INFO"
+          DESCRIPTION=$(cat <<'EOF'
+Family Life OS macht aus verstreuten Familieninfos einen gemeinsamen Plan. Erfasse Elternbriefe, Screenshots, PDFs, Text oder Sprache. Die App erkennt Termine, Aufgaben, Fristen und Vorbereitungen und zeigt sie dir zuerst zur Prüfung – erst danach werden sie in den Familienplan übernommen.
 
-      - name: Upload to TestFlight with Apple cloud distribution signing
-        id: testflight
-        if: steps.asc.outputs.available == 'true'
-        continue-on-error: true
-        shell: bash
-        env:
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-        run: |
-          set -uo pipefail
-          set +e
-          xcodebuild \
-            -exportArchive \
-            -archivePath "$RUNNER_TEMP/OneMoreFloor.xcarchive" \
-            -exportPath "$RUNNER_TEMP/TestFlightExport" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$ASC_KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            2>&1 | tee "$RUNNER_TEMP/testflight-export.log"
-          STATUS=${PIPESTATUS[0]}
-          set -e
-          cp "$RUNNER_TEMP/testflight-export.log" build/ios/TestFlight-export.log
-          DIST_LOG=$(find /var/folders "$RUNNER_TEMP" -name '*.xcdistributionlogs' -type d -print 2>/dev/null | tail -1 || true)
-          if [[ -n "$DIST_LOG" && -d "$DIST_LOG" ]]; then
-            ditto -c -k --sequesterRsrc --keepParent "$DIST_LOG" build/ios/OneMoreFloor-xcdistributionlogs.zip
+• Heute: Was jetzt wichtig ist
+• Inbox: Fotos, PDFs, Text und Sprache sammeln
+• Import prüfen: erkannte Termine, Aufgaben und Erinnerungen bearbeiten
+• Plan: gemeinsame Agenda und Wochenübersicht
+• Familie: Mitglieder, Rollen und Einladungen verwalten
+• Erinnerungen: Termine, Aufgaben und Vorbereitung
+• Family Pro: mehr AI-Importe, Automationen, Speicher und Verlauf
+
+Datenschutz bleibt zentral: private Haushaltsdaten, serverseitige AI-Verarbeitung und keine Werbe-SDKs oder appübergreifendes Tracking.
+
+Datenschutz: https://www.kamilunavo.com/family/privacy
+Nutzungsbedingungen: https://www.kamilunavo.com/family/terms
+EOF
+          )
+          VLOC=$(jq -n --arg id "$VLOC_ID" --arg d "$DESCRIPTION" --arg k 'familie,kalender,aufgaben,termine,eltern,organisation,planer,erinnerungen,haushalt,schule' --arg p 'Elternbrief, Screenshot oder Sprachnotiz rein – Termine, Aufgaben und Fristen gemeinsam organisieren.' '{data:{type:"appStoreVersionLocalizations",id:$id,attributes:{description:$d,keywords:$k,promotionalText:$p,supportUrl:"https://www.kamilunavo.com/family/support"}}}')
+          patch "/v1/appStoreVersionLocalizations/$VLOC_ID" "$VLOC"
+          VER=$(jq -n --arg id "$VERSION_ID" '{data:{type:"appStoreVersions",id:$id,attributes:{copyright:"2026 Kamilunavo"}}}')
+          patch "/v1/appStoreVersions/$VERSION_ID" "$VER"
+          REL=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${VERSION_ID}/relationships/build")
+          if [[ "$(jq -r '.data.id // empty' <<<"$REL")" != "$BUILD_ID" ]]; then
+            BODY=$(jq -n --arg id "$BUILD_ID" '{data:{type:"builds",id:$id}}')
+            patch "/v1/appStoreVersions/${VERSION_ID}/relationships/build" "$BODY"
           fi
-          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
-          exit 0
 
-      - name: Upload TestFlight diagnostics
-        if: always() && steps.asc.outputs.available == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: one-more-floor-testflight-diagnostics
-          path: |
-            build/ios/TestFlight-export.log
-            build/ios/OneMoreFloor-xcdistributionlogs.zip
-          if-no-files-found: warn
-          retention-days: 7
-
-      - name: Fail if TestFlight upload failed
-        if: steps.asc.outputs.available == 'true' && steps.testflight.outputs.status != '0'
-        shell: bash
+      - name: Resolve review contact
         run: |
-          echo "TestFlight upload failed with exit code ${{ steps.testflight.outputs.status }}."
-          exit 1
+          set -euo pipefail
+          api(){ curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com$1"; }
+          APPS=$(api '/v1/apps?limit=200')
+          CONTACT=''
+          while read -r aid; do
+            [[ -z "$aid" || "$aid" == "$APP_ID" ]] && continue
+            VERS=$(api "/v1/apps/${aid}/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50" || true)
+            while read -r vid; do
+              [[ -z "$vid" ]] && continue
+              DETAIL=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${vid}/appStoreReviewDetail" || true)
+              F=$(jq -r '.data.attributes.contactFirstName // empty' <<<"$DETAIL" 2>/dev/null || true)
+              L=$(jq -r '.data.attributes.contactLastName // empty' <<<"$DETAIL" 2>/dev/null || true)
+              P=$(jq -r '.data.attributes.contactPhone // empty' <<<"$DETAIL" 2>/dev/null || true)
+              E=$(jq -r '.data.attributes.contactEmail // empty' <<<"$DETAIL" 2>/dev/null || true)
+              if [[ -n "$F" && -n "$L" && -n "$P" && -n "$E" ]]; then CONTACT=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" '{first:$f,last:$l,phone:$p,email:$e}'); break 2; fi
+            done < <(jq -r '.data[]?.id' <<<"$VERS")
+          done < <(jq -r '.data[]?.id' <<<"$APPS")
+          test -n "$CONTACT"
+          echo "CONTACT_B64=$(printf '%s' "$CONTACT" | base64 -w0)" >> "$GITHUB_ENV"
 
-      - name: Remove App Store Connect key
+      - name: Write App Review information
+        run: |
+          set -euo pipefail
+          CONTACT=$(printf '%s' "$CONTACT_B64" | base64 -d)
+          F=$(jq -r '.first' <<<"$CONTACT"); L=$(jq -r '.last' <<<"$CONTACT"); P=$(jq -r '.phone' <<<"$CONTACT"); E=$(jq -r '.email' <<<"$CONTACT")
+          NOTES=$(cat <<'EOF'
+Family Life OS requires sign-in. Use the dedicated demo account supplied above.
+
+Review path:
+1. Heute shows the current family overview.
+2. Inbox accepts text, photo, PDF or voice. Example: "Elternabend am 26.08.2026 um 18:30".
+3. Wait for "Import prüfen", review the proposed item and confirm it.
+4. Plan shows confirmed items.
+5. Familie contains household members and the visible Family Pro purchase entry point.
+6. Einstellungen contains Restore Purchases, Privacy/Terms links, notifications and "Account und Daten löschen".
+
+Family Pro Monthly and Annual are Apple StoreKit auto-renewable subscriptions. No external payment method is used. Restore Purchases is available in the app. AI-derived proposals require explicit confirmation before becoming plan items.
+EOF
+          )
+          ATTR=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" --arg u "$REVIEW_EMAIL" --arg pw "$REVIEW_PASSWORD" --arg n "$NOTES" '{contactFirstName:$f,contactLastName:$l,contactPhone:$p,contactEmail:$e,demoAccountName:$u,demoAccountPassword:$pw,demoAccountRequired:true,notes:$n}')
+          EXIST=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${VERSION_ID}/appStoreReviewDetail" || true)
+          RID=$(jq -r '.data.id // empty' <<<"$EXIST" 2>/dev/null || true)
+          if [[ -n "$RID" ]]; then
+            BODY=$(jq -n --arg id "$RID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",id:$id,attributes:$a}}')
+            curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "https://api.appstoreconnect.apple.com/v1/appStoreReviewDetails/${RID}" >/dev/null
+          else
+            BODY=$(jq -n --arg vid "$VERSION_ID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",attributes:$a,relationships:{appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}')
+            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" 'https://api.appstoreconnect.apple.com/v1/appStoreReviewDetails' >/dev/null
+          fi
+
+      - name: Verify final release state
+        run: |
+          set -euo pipefail
+          I=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/appInfoLocalizations/$INFO_LOC_ID")
+          V=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/appStoreVersionLocalizations/$VLOC_ID")
+          R=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/appStoreVersions/$VERSION_ID")
+          D=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/appStoreVersions/$VERSION_ID/appStoreReviewDetail")
+          REL=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${VERSION_ID}/relationships/build")
+          SUBS=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "https://api.appstoreconnect.apple.com/v1/apps/${APP_ID}/subscriptionGroups?include=subscriptions&limit%5Bsubscriptions%5D=50")
+          test "$(jq -r '.data.attributes.privacyPolicyUrl' <<<"$I")" = 'https://www.kamilunavo.com/family/privacy'
+          test "$(jq -r '.data.attributes.privacyChoicesUrl' <<<"$I")" = 'https://www.kamilunavo.com/family/privacy-choices'
+          test "$(jq -r '.data.attributes.supportUrl' <<<"$V")" = 'https://www.kamilunavo.com/family/support'
+          test -n "$(jq -r '.data.attributes.description // empty' <<<"$V")"
+          test -n "$(jq -r '.data.attributes.keywords // empty' <<<"$V")"
+          test -n "$(jq -r '.data.attributes.copyright // empty' <<<"$R")"
+          test "$(jq -r '.data.attributes.demoAccountName' <<<"$D")" = "$REVIEW_EMAIL"
+          test -n "$(jq -r '.data.attributes.demoAccountPassword // empty' <<<"$D")"
+          test -n "$(jq -r '.data.attributes.notes // empty' <<<"$D")"
+          test "$(jq -r '.data.id // empty' <<<"$REL")" = "$BUILD_ID"
+          MONTHLY=$(jq -r '.included[]? | select(.type=="subscriptions" and .attributes.productId=="de.kamilunavo.family.familypro.monthly") | .attributes.state' <<<"$SUBS")
+          ANNUAL=$(jq -r '.included[]? | select(.type=="subscriptions" and .attributes.productId=="de.kamilunavo.family.familypro.annual") | .attributes.state' <<<"$SUBS")
+          test "$MONTHLY" = READY_TO_SUBMIT
+          test "$ANNUAL" = READY_TO_SUBMIT
+          echo 'Family Life OS metadata, App Review account, Build 7 and Family Pro verified.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish final
         if: always()
-        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if [[ "${{ job.status }}" == success ]]; then S=success; D='Family Life OS App Store metadata finalized'; else S=failure; D='Family Life OS App Store finalization failed'; fi
+          B=$(jq -n --arg s "$S" --arg d "$D" --arg u "$U" '{state:$s,description:$d,target_url:$u,context:"family-life-os/protected-finalizer"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
+
+      - name: Remove key
+        if: always()
         run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
