@@ -19,6 +19,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
+      - name: Publish pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          B=$(jq -n --arg u "$U" '{state:"pending",description:"Diagnosing Apple IAP conflict",target_url:$u,context:"99-9/iap-diagnostic"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
+
       - name: Prepare token
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -67,6 +75,24 @@ jobs:
           echo "HTTP $CODE"
           jq . "$RUNNER_TEMP/resp.json" || cat "$RUNNER_TEMP/resp.json"
           if [[ "$CODE" -lt 200 || "$CODE" -ge 300 ]]; then exit 1; fi
+
+      - name: Publish success
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          B=$(jq -n --arg u "$U" '{state:"success",description:"Apple IAP diagnostic completed",target_url:$u,context:"99-9/iap-diagnostic"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
+
+      - name: Publish failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          B=$(jq -n --arg u "$U" '{state:"failure",description:"Apple IAP diagnostic found API error",target_url:$u,context:"99-9/iap-diagnostic"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
 
       - name: Remove key
         if: always()
