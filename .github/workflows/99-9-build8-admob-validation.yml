@@ -167,4 +167,5 @@ jobs:
           grep -F 'com.android.billingclient' build/android/dex-packages.txt
           echo 'Google Play Billing classes present ✅'
 
+# Final pinned validation for 85aa91e1fffea288f42255cf4705ec92f80183c5.
 # Status is published by 99-9-build8-admob-validation-status.yml.
