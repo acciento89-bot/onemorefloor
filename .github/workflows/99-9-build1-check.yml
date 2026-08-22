@@ -1,4 +1,4 @@
-name: 99.9 Build 1 App Store Check
+name: 99.9 Build 2 App Store Check
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
 
 env:
   BUNDLE_ID: de.kamilunavo.ninenine
-  BUILD_NUMBER: '1'
+  BUILD_NUMBER: '2'
 
 jobs:
   check:
@@ -44,7 +44,7 @@ jobs:
           )
           echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
 
-      - name: Find Build 1
+      - name: Find Build 2
         id: build
         shell: bash
         run: |
@@ -80,9 +80,9 @@ jobs:
           set -euo pipefail
           U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           if [[ "$FOUND" == true ]]; then
-            BODY=$(jq -n --arg d "Build 1 visible in ASC: ${STATE}" --arg u "$U" '{state:"success",description:$d,target_url:$u,context:"99-9/build1-check"}')
+            BODY=$(jq -n --arg d "Build 2 visible in ASC: ${STATE}" --arg u "$U" '{state:"success",description:$d,target_url:$u,context:"99-9/build2-check"}')
           else
-            BODY=$(jq -n --arg u "$U" '{state:"pending",description:"Upload accepted; Build 1 not visible in ASC yet",target_url:$u,context:"99-9/build1-check"}')
+            BODY=$(jq -n --arg u "$U" '{state:"pending",description:"Upload accepted; Build 2 not visible in ASC yet",target_url:$u,context:"99-9/build2-check"}')
           fi
           curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
