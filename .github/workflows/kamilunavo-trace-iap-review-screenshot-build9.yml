@@ -1,4 +1,5 @@
 name: Kamilunavo Trace Lifetime Pro Review Screenshot Build 9
+# Retriggered after PR was marked ready for review.
 
 on:
   pull_request:
@@ -230,15 +231,14 @@ jobs:
           jq -n --arg name "$NAME" --argjson size "$SIZE" --arg iap "$IAP_ID" \
             '{data:{type:"inAppPurchaseAppStoreReviewScreenshots",attributes:{fileName:$name,fileSize:$size},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iap}}}}}' \
             > "$RUNNER_TEMP/reserve-body.json"
-          HTTP=$(curl --silent --show-error -H "$H" -H 'Content-Type: application/json' -X POST \
-            -d @"$RUNNER_TEMP/reserve-body.json" -o "$RUNNER_TEMP/reservation.json" -w '%{http_code}' \
-            'https://api.appstoreconnect.apple.com/v1/inAppPurchaseAppStoreReviewScreenshots')
-          [[ "$HTTP" == 201 ]] || { echo "Screenshot reservation HTTP $HTTP"; cat "$RUNNER_TEMP/reservation.json"; exit 1; }
-          SHOT_ID=$(jq -r '.data.id' "$RUNNER_TEMP/reservation.json")
+          RESERVE="$RUNNER_TEMP/reservation.json"
+          HTTP=$(curl --silent --show-error -H "$H" -H 'Content-Type: application/json' -X POST -d @"$RUNNER_TEMP/reserve-body.json" -o "$RESERVE" -w '%{http_code}' 'https://api.appstoreconnect.apple.com/v1/inAppPurchaseAppStoreReviewScreenshots')
+          [[ "$HTTP" == 201 ]] || { echo "Screenshot reservation HTTP $HTTP"; cat "$RESERVE"; exit 1; }
+          SHOT_ID=$(jq -r '.data.id' "$RESERVE")
           test -n "$SHOT_ID"
           echo "SHOT_ID=$SHOT_ID" >> "$GITHUB_ENV"
 
-          python3 - "$FILE" "$RUNNER_TEMP/reservation.json" <<'PY'
+          python3 - "$FILE" "$RESERVE" <<'PY'
           import json, sys, urllib.request
           file_path, reservation_path = sys.argv[1:]
           blob = open(file_path, 'rb').read()
@@ -263,9 +263,7 @@ jobs:
           jq -n --arg id "$SHOT_ID" --arg md5 "$CHECKSUM" \
             '{data:{type:"inAppPurchaseAppStoreReviewScreenshots",id:$id,attributes:{uploaded:true,sourceFileChecksum:$md5}}}' \
             > "$RUNNER_TEMP/commit-body.json"
-          HTTP=$(curl --silent --show-error -H "$H" -H 'Content-Type: application/json' -X PATCH \
-            -d @"$RUNNER_TEMP/commit-body.json" -o "$RUNNER_TEMP/commit-response.json" -w '%{http_code}' \
-            "https://api.appstoreconnect.apple.com/v1/inAppPurchaseAppStoreReviewScreenshots/$SHOT_ID")
+          HTTP=$(curl --silent --show-error -H "$H" -H 'Content-Type: application/json' -X PATCH -d @"$RUNNER_TEMP/commit-body.json" -o "$RUNNER_TEMP/commit-response.json" -w '%{http_code}' "https://api.appstoreconnect.apple.com/v1/inAppPurchaseAppStoreReviewScreenshots/$SHOT_ID")
           [[ "$HTTP" == 200 ]] || { echo "Screenshot commit HTTP $HTTP"; cat "$RUNNER_TEMP/commit-response.json"; exit 1; }
           echo "Lifetime Pro App Review screenshot uploaded: $SHOT_ID" >> "$GITHUB_STEP_SUMMARY"
 
