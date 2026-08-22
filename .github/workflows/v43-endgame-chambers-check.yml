@@ -55,7 +55,6 @@ jobs:
             code=$(curl -sS -o "$out" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$body" "$BASE$path")
             if [[ "$code" -lt 200 || "$code" -ge 300 ]]; then echo "PATCH $path -> HTTP $code" >&2; cat "$out" >&2; exit 1; fi
           }
-
           APP=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/apps/$APP_ID")
           RIGHTS=$(jq -r '.data.attributes.contentRightsDeclaration // empty' <<<"$APP")
           echo "Current content rights: ${RIGHTS:-unset}"
@@ -63,7 +62,6 @@ jobs:
             BODY=$(jq -n --arg id "$APP_ID" '{data:{type:"apps",id:$id,attributes:{contentRightsDeclaration:"USES_THIRD_PARTY_CONTENT"}}}')
             request_patch "/v1/apps/$APP_ID" "$BODY"
           fi
-
           CATS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/appCategories?filter%5Bplatforms%5D=IOS&exists%5Bparent%5D=false&limit=200")
           PROD=$(jq -r '.data[]? | select(.id=="PRODUCTIVITY") | .id' <<<"$CATS" | head -1)
           test "$PROD" = PRODUCTIVITY
@@ -75,7 +73,6 @@ jobs:
             BODY=$(jq -n --arg id "$APP_INFO_ID" '{data:{type:"appInfos",id:$id,relationships:{primaryCategory:{data:{type:"appCategories",id:"PRODUCTIVITY"}}}}}')
             request_patch "/v1/appInfos/$APP_INFO_ID" "$BODY"
           fi
-
           APP=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/apps/$APP_ID")
           CAT=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/appInfos/$APP_INFO_ID/primaryCategory")
           echo "Verified content rights: $(jq -r '.data.attributes.contentRightsDeclaration' <<<"$APP")"
@@ -88,13 +85,11 @@ jobs:
           set -euo pipefail
           git clone --depth 1 https://github.com/acciento89-bot/appideenchatgpt.git "$RUNNER_TEMP/appideenchatgpt"
           cd "$RUNNER_TEMP/appideenchatgpt"
-          DTYPE=$(xcrun simctl list devicetypes -j | jq -r '[.devicetypes[] | select(.name | contains("iPad Pro (12.9-inch)"))] | last | .identifier // empty')
-          echo "12.9-inch device type: $DTYPE"
+          xcrun simctl list devicetypes -j | jq -r '.devicetypes[] | select(.name | contains("iPad Pro (12.9-inch)")) | "candidate: \(.name) id=\(.identifier) min=\(.minRuntimeVersionString // "?") max=\(.maxRuntimeVersionString // "?")"'
+          DTYPE=$(xcrun simctl list devicetypes -j | jq -r '[.devicetypes[] | select(.name | contains("iPad Pro (12.9-inch)"))] | sort_by(.minRuntimeVersion) | last | .identifier // empty')
+          echo "Selected 12.9-inch device type: $DTYPE"
           test -n "$DTYPE"
-          RUNTIME=$(xcrun simctl list runtimes -j | jq -r '[.runtimes[] | select(.isAvailable == true and (.name | startswith("iOS")))] | sort_by(.version) | last | .identifier // empty')
-          echo "iOS runtime: $RUNTIME"
-          test -n "$RUNTIME"
-          UDID=$(xcrun simctl create FamilyLifeAppStoreShot "$DTYPE" "$RUNTIME")
+          UDID=$(xcrun simctl create FamilyLifeAppStoreShot "$DTYPE")
           echo "SIM_UDID=$UDID" >> "$GITHUB_ENV"
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b
@@ -132,7 +127,6 @@ jobs:
           get(){ curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "$BASE$1"; }
           post(){ curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$2" "$BASE$1"; }
           patch(){ curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$2" "$BASE$1"; }
-
           SETS=$(get "/v1/appStoreVersionLocalizations/$VLOC_ID/appScreenshotSets?filter%5BscreenshotDisplayType%5D=APP_IPAD_PRO_3GEN_129&include=appScreenshots&limit=50")
           SET_ID=$(jq -r '.data[0].id // empty' <<<"$SETS")
           if [[ -z "$SET_ID" ]]; then
@@ -142,7 +136,6 @@ jobs:
           fi
           echo "iPad screenshot set: $SET_ID"
           test -n "$SET_ID"
-
           CURRENT=$(get "/v1/appScreenshotSets/$SET_ID/appScreenshots?limit=50")
           COMPLETE_COUNT=$(jq '[.data[]? | select(.attributes.assetDeliveryState.state=="COMPLETE")] | length' <<<"$CURRENT")
           echo "Existing complete screenshots: $COMPLETE_COUNT"
@@ -166,8 +159,7 @@ jobs:
                   headers = {h['name']: h['value'] for h in op.get('requestHeaders', [])}
                   req = urllib.request.Request(op['url'], data=data, method=op['method'], headers=headers)
                   with urllib.request.urlopen(req) as response:
-                      if not 200 <= response.status < 300:
-                          raise RuntimeError(response.status)
+                      if not 200 <= response.status < 300: raise RuntimeError(response.status)
           PY
             SUM=$(md5 -q "$IPAD_SCREENSHOT")
             COMMIT=$(jq -n --arg id "$SCREENSHOT_ID" --arg sum "$SUM" '{data:{type:"appScreenshots",id:$id,attributes:{uploaded:true,sourceFileChecksum:$sum}}}')
