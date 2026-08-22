@@ -11,7 +11,7 @@ on:
       build:
         description: 'App Store Connect build number'
         required: false
-        default: '2'
+        default: '5'
 
 permissions:
   contents: read
@@ -105,7 +105,7 @@ jobs:
           REQUESTED_BUILD: ${{ inputs.build }}
         run: |
           set -euo pipefail
-          BUILD="${REQUESTED_BUILD:-2}"
+          BUILD="${REQUESTED_BUILD:-5}"
           [[ "$BUILD" =~ ^[0-9]+$ ]]
           echo "EFFECTIVE_BUILD=$BUILD" >> "$GITHUB_ENV"
           python3 - <<'PY'
@@ -113,7 +113,7 @@ jobs:
           from pathlib import Path
           p=Path('source/export_presets.cfg')
           text=p.read_text()
-          build=os.environ.get('EFFECTIVE_BUILD') or os.environ.get('REQUESTED_BUILD') or '2'
+          build=os.environ.get('EFFECTIVE_BUILD') or os.environ.get('REQUESTED_BUILD') or '5'
           text,count=re.subn(r'application/version="[0-9]+"',f'application/version="{build}"',text,count=1)
           if count != 1: raise SystemExit('Could not set iOS build number')
           p.write_text(text)
@@ -187,7 +187,7 @@ jobs:
           cp -R "$RUNNER_TEMP/templates/templates/." "$T/"
           test -f "$T/ios.zip"
 
-      - name: Import project and export Xcode project
+      - name: Import project, export Xcode project and embed GodotIap
         if: steps.creds.outputs.ready == 'true'
         shell: bash
         run: |
@@ -198,6 +198,10 @@ jobs:
           rm -rf build/ios/NineNine build/ios/NineNine.xcodeproj build/ios/NineNine.xcframework build/ios/MoltenVK.xcframework build/ios/PrivacyInfo.xcprivacy
           "$GODOT" --headless --path . --export-release "iOS Playtest" build/ios/NineNine.zip
           test -d build/ios/NineNine.xcodeproj
+          test -d addons/godot-iap/bin/ios/GodotIap.framework
+          chmod +x addons/godot-iap/scripts/fix_ios_embed.sh
+          IOS_EXPORT_DIR="$PWD/build/ios" ./addons/godot-iap/scripts/fix_ios_embed.sh
+          grep -q 'GodotIap.framework' build/ios/NineNine.xcodeproj/project.pbxproj
           echo "XCODE_PROJECT=$PWD/build/ios/NineNine.xcodeproj" >> "$GITHUB_ENV"
 
       - name: Resolve generated Xcode scheme
@@ -215,7 +219,7 @@ jobs:
           test -n "$SCHEME"
           echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
 
-      - name: Create unsigned release archive
+      - name: Create unsigned release archive with embedded IAP framework
         if: steps.creds.outputs.ready == 'true'
         shell: bash
         run: |
@@ -234,6 +238,7 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             archive
           test -f "$RUNNER_TEMP/NineNine.xcarchive/Info.plist"
+          test -d "$RUNNER_TEMP/NineNine.xcarchive/Products/Applications/NineNine.app/Frameworks/GodotIap.framework"
 
       - name: Create TestFlight export options
         if: steps.creds.outputs.ready == 'true'
