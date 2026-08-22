@@ -1,0 +1,2 @@
+Trigger trusted Family Life OS App Store Connect finalization after privacy manifest merge.
+Timestamp context: 2026-08-22 release pass.
