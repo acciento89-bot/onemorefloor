@@ -7,6 +7,10 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   reference-menu:
     runs-on: ubuntu-latest
@@ -40,3 +44,275 @@ jobs:
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v19_smoke_test.gd --quit-after 120 | tee menu-v19.log
           grep -q "ONE MORE FLOOR v1.7 reference menu smoke test passed" menu-v19.log
+
+  family-finalize-submit:
+    name: Family Life OS finalize + submit
+    if: github.head_ref == 'family-finalizer-trigger-2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ID: '6803079524'
+      BUILD_ID: ffa8e10c-13b6-4325-9c6d-a7f841c9c9df
+      INFO_LOC_ID: 4200e95c-e36b-4867-b697-e1fe53d61be2
+      VERSION_ID: e7a061e3-bd05-453c-a911-00e1e8cb4f76
+      VLOC_ID: 557ca16e-28b4-44d0-83ec-11d8890f0376
+      GROUP_ID: '22326213'
+      MONTHLY_ID: '6804035272'
+      ANNUAL_ID: '6804035327'
+      REVIEW_EMAIL: apple-review@kamilunavo.com
+      REVIEW_SECRET_URL: https://bqctetqraszsvknczjjr.supabase.co/functions/v1/release-review-secret
+    steps:
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          export ASC_KEY_PATH="$KEY_PATH"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'}))
+          s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s))
+          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Load dedicated App Review password
+        run: |
+          set -euo pipefail
+          OIDC=$(curl -fsSL -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=family-life-os-release")
+          TOKEN=$(jq -r '.value // empty' <<<"$OIDC")
+          test -n "$TOKEN"
+          SECRET=$(curl -fsSL -H "Authorization: Bearer $TOKEN" "$REVIEW_SECRET_URL")
+          REVIEW_PASSWORD=$(jq -r '.secret // empty' <<<"$SECRET")
+          test -n "$REVIEW_PASSWORD"
+          echo "::add-mask::$REVIEW_PASSWORD"
+          echo "REVIEW_PASSWORD=$REVIEW_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Finalize App Store metadata and review credentials
+        run: |
+          set -euo pipefail
+          api_get(){ curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com$1"; }
+          api_patch(){ curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$2" "https://api.appstoreconnect.apple.com$1"; }
+          api_post(){ curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$2" "https://api.appstoreconnect.apple.com$1"; }
+
+          INFO=$(jq -n --arg id "$INFO_LOC_ID" '{data:{type:"appInfoLocalizations",id:$id,attributes:{subtitle:"Familienalltag organisiert",privacyPolicyUrl:"https://www.kamilunavo.com/family/privacy",privacyChoicesUrl:"https://www.kamilunavo.com/family/privacy-choices"}}}')
+          api_patch "/v1/appInfoLocalizations/$INFO_LOC_ID" "$INFO" >/dev/null
+
+          DESCRIPTION=$(cat <<'EOF'
+          Family Life OS macht aus verstreuten Familieninfos einen gemeinsamen Plan. Erfasse Elternbriefe, Screenshots, PDFs, Text oder Sprache. Die App erkennt Termine, Aufgaben, Fristen und Vorbereitungen und zeigt sie dir zuerst zur Prüfung – erst danach werden sie in den Familienplan übernommen.
+
+          • Heute: Was jetzt wichtig ist
+          • Inbox: Fotos, PDFs, Text und Sprache sammeln
+          • Import prüfen: erkannte Termine, Aufgaben und Erinnerungen bearbeiten
+          • Plan: gemeinsame Agenda und Wochenübersicht
+          • Familie: Mitglieder, Rollen und Einladungen verwalten
+          • Erinnerungen: Termine, Aufgaben und Vorbereitung
+          • Family Pro: mehr AI-Importe, Automationen, Speicher und Verlauf
+
+          Datenschutz bleibt zentral: private Haushaltsdaten, serverseitige AI-Verarbeitung und keine Werbe-SDKs oder appübergreifendes Tracking.
+
+          Datenschutz: https://www.kamilunavo.com/family/privacy
+          Nutzungsbedingungen: https://www.kamilunavo.com/family/terms
+          EOF
+          )
+          VLOC=$(jq -n --arg id "$VLOC_ID" --arg d "$DESCRIPTION" --arg k 'familie,kalender,aufgaben,termine,eltern,organisation,planer,erinnerungen,haushalt,schule' --arg p 'Elternbrief, Screenshot oder Sprachnotiz rein – Termine, Aufgaben und Fristen gemeinsam organisieren.' '{data:{type:"appStoreVersionLocalizations",id:$id,attributes:{description:$d,keywords:$k,promotionalText:$p,supportUrl:"https://www.kamilunavo.com/family/support"}}}')
+          api_patch "/v1/appStoreVersionLocalizations/$VLOC_ID" "$VLOC" >/dev/null
+
+          VER=$(jq -n --arg id "$VERSION_ID" '{data:{type:"appStoreVersions",id:$id,attributes:{copyright:"2026 Kamilunavo"}}}')
+          api_patch "/v1/appStoreVersions/$VERSION_ID" "$VER" >/dev/null
+
+          REL=$(api_get "/v1/appStoreVersions/${VERSION_ID}/relationships/build")
+          if [[ "$(jq -r '.data.id // empty' <<<"$REL")" != "$BUILD_ID" ]]; then
+            BODY=$(jq -n --arg id "$BUILD_ID" '{data:{type:"builds",id:$id}}')
+            api_patch "/v1/appStoreVersions/${VERSION_ID}/relationships/build" "$BODY" >/dev/null
+          fi
+
+          APPS=$(api_get '/v1/apps?limit=200')
+          CONTACT=''
+          while read -r aid; do
+            [[ -z "$aid" || "$aid" == "$APP_ID" ]] && continue
+            VERS=$(api_get "/v1/apps/${aid}/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50" || true)
+            while read -r vid; do
+              [[ -z "$vid" ]] && continue
+              DETAIL=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${vid}/appStoreReviewDetail" || true)
+              F=$(jq -r '.data.attributes.contactFirstName // empty' <<<"$DETAIL" 2>/dev/null || true)
+              L=$(jq -r '.data.attributes.contactLastName // empty' <<<"$DETAIL" 2>/dev/null || true)
+              P=$(jq -r '.data.attributes.contactPhone // empty' <<<"$DETAIL" 2>/dev/null || true)
+              E=$(jq -r '.data.attributes.contactEmail // empty' <<<"$DETAIL" 2>/dev/null || true)
+              if [[ -n "$F" && -n "$L" && -n "$P" && -n "$E" ]]; then
+                CONTACT=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" '{first:$f,last:$l,phone:$p,email:$e}')
+                break 2
+              fi
+            done < <(jq -r '.data[]?.id' <<<"$VERS")
+          done < <(jq -r '.data[]?.id' <<<"$APPS")
+          test -n "$CONTACT"
+
+          F=$(jq -r '.first' <<<"$CONTACT")
+          L=$(jq -r '.last' <<<"$CONTACT")
+          P=$(jq -r '.phone' <<<"$CONTACT")
+          E=$(jq -r '.email' <<<"$CONTACT")
+          NOTES=$(cat <<'EOF'
+          Family Life OS requires sign-in. Use the dedicated demo account supplied above.
+
+          Review path:
+          1. Heute shows the current family overview.
+          2. Inbox accepts text, photo, PDF or voice. Example: "Elternabend am 26.08.2026 um 18:30".
+          3. Wait for "Import prüfen", review the proposed item and confirm it.
+          4. Plan shows confirmed items.
+          5. Familie contains household members and the visible Family Pro purchase entry point.
+          6. Einstellungen contains Restore Purchases, Privacy/Terms links, notifications and "Account und Daten löschen".
+
+          Family Pro Monthly and Annual are Apple StoreKit auto-renewable subscriptions. No external payment method is used. Restore Purchases is available in the app. AI-derived proposals require explicit confirmation before becoming plan items.
+          EOF
+          )
+          ATTR=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" --arg u "$REVIEW_EMAIL" --arg pw "$REVIEW_PASSWORD" --arg n "$NOTES" '{contactFirstName:$f,contactLastName:$l,contactPhone:$p,contactEmail:$e,demoAccountName:$u,demoAccountPassword:$pw,demoAccountRequired:true,notes:$n}')
+          EXIST=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v1/appStoreVersions/${VERSION_ID}/appStoreReviewDetail" || true)
+          RID=$(jq -r '.data.id // empty' <<<"$EXIST" 2>/dev/null || true)
+          if [[ -n "$RID" ]]; then
+            BODY=$(jq -n --arg id "$RID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",id:$id,attributes:$a}}')
+            api_patch "/v1/appStoreReviewDetails/${RID}" "$BODY" >/dev/null
+          else
+            BODY=$(jq -n --arg vid "$VERSION_ID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",attributes:$a,relationships:{appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}')
+            api_post '/v1/appStoreReviewDetails' "$BODY" >/dev/null
+          fi
+
+          I=$(api_get "/v1/appInfoLocalizations/$INFO_LOC_ID")
+          V=$(api_get "/v1/appStoreVersionLocalizations/$VLOC_ID")
+          R=$(api_get "/v1/appStoreVersions/$VERSION_ID")
+          D=$(api_get "/v1/appStoreVersions/$VERSION_ID/appStoreReviewDetail")
+          REL=$(api_get "/v1/appStoreVersions/${VERSION_ID}/relationships/build")
+          test "$(jq -r '.data.attributes.privacyPolicyUrl' <<<"$I")" = 'https://www.kamilunavo.com/family/privacy'
+          test "$(jq -r '.data.attributes.privacyChoicesUrl' <<<"$I")" = 'https://www.kamilunavo.com/family/privacy-choices'
+          test "$(jq -r '.data.attributes.supportUrl' <<<"$V")" = 'https://www.kamilunavo.com/family/support'
+          test -n "$(jq -r '.data.attributes.description // empty' <<<"$V")"
+          test -n "$(jq -r '.data.attributes.keywords // empty' <<<"$V")"
+          test -n "$(jq -r '.data.attributes.copyright // empty' <<<"$R")"
+          test "$(jq -r '.data.attributes.demoAccountName' <<<"$D")" = "$REVIEW_EMAIL"
+          test -n "$(jq -r '.data.attributes.demoAccountPassword // empty' <<<"$D")"
+          test -n "$(jq -r '.data.attributes.notes // empty' <<<"$D")"
+          test "$(jq -r '.data.id // empty' <<<"$REL")" = "$BUILD_ID"
+          echo 'Metadata, review credentials and Build 7 verified.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create review submission and add app + Family Pro
+        run: |
+          set -euo pipefail
+          api_get(){ curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com$1"; }
+          api_post(){ curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$2" "https://api.appstoreconnect.apple.com$1"; }
+
+          SUBMISSIONS=$(api_get "/v1/apps/${APP_ID}/reviewSubmissions?limit=200")
+          SID=$(jq -r '[.data[]? | select(.attributes.state=="READY_FOR_REVIEW")] | last | .id // empty' <<<"$SUBMISSIONS")
+          if [[ -z "$SID" ]]; then
+            CREATE=$(jq -n --arg app "$APP_ID" '{data:{type:"reviewSubmissions",attributes:{platform:"IOS"},relationships:{app:{data:{type:"apps",id:$app}}}}}')
+            CREATED=$(api_post '/v1/reviewSubmissions' "$CREATE")
+            SID=$(jq -r '.data.id // empty' <<<"$CREATED")
+          fi
+          test -n "$SID"
+          echo "REVIEW_SUBMISSION_ID=$SID" >> "$GITHUB_ENV"
+
+          resolve_sub_version(){
+            local parent="$1"
+            local versions vid body created
+            versions=$(api_get "/v1/subscriptions/${parent}/versions?limit=50")
+            vid=$(jq -r '[.data[]? | select(.attributes.state=="PREPARE_FOR_SUBMISSION" or .attributes.state=="READY_FOR_REVIEW")] | last | .id // empty' <<<"$versions")
+            if [[ -z "$vid" ]]; then
+              body=$(jq -n --arg id "$parent" '{data:{type:"subscriptionVersions",relationships:{subscription:{data:{type:"subscriptions",id:$id}}}}}')
+              created=$(api_post '/v1/subscriptionVersions' "$body")
+              vid=$(jq -r '.data.id // empty' <<<"$created")
+            fi
+            printf '%s' "$vid"
+          }
+          resolve_group_version(){
+            local parent="$1"
+            local versions vid body created
+            versions=$(api_get "/v1/subscriptionGroups/${parent}/versions?limit=50")
+            vid=$(jq -r '[.data[]? | select(.attributes.state=="PREPARE_FOR_SUBMISSION" or .attributes.state=="READY_FOR_REVIEW")] | last | .id // empty' <<<"$versions")
+            if [[ -z "$vid" ]]; then
+              body=$(jq -n --arg id "$parent" '{data:{type:"subscriptionGroupVersions",relationships:{subscriptionGroup:{data:{type:"subscriptionGroups",id:$id}}}}}')
+              created=$(api_post '/v1/subscriptionGroupVersions' "$body")
+              vid=$(jq -r '.data.id // empty' <<<"$created")
+            fi
+            printf '%s' "$vid"
+          }
+
+          MONTHLY_VID=$(resolve_sub_version "$MONTHLY_ID")
+          ANNUAL_VID=$(resolve_sub_version "$ANNUAL_ID")
+          GROUP_VID=$(resolve_group_version "$GROUP_ID")
+          test -n "$MONTHLY_VID"
+          test -n "$ANNUAL_VID"
+          test -n "$GROUP_VID"
+
+          add_item(){
+            local rel="$1" type="$2" id="$3" tmp code
+            tmp="$RUNNER_TEMP/review-item-${rel}-${id}.json"
+            if [[ "$rel" == appStoreVersion ]]; then
+              body=$(jq -n --arg sid "$SID" --arg id "$id" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$sid}},appStoreVersion:{data:{type:"appStoreVersions",id:$id}}}}}')
+            elif [[ "$rel" == subscriptionVersion ]]; then
+              body=$(jq -n --arg sid "$SID" --arg id "$id" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$sid}},subscriptionVersion:{data:{type:"subscriptionVersions",id:$id}}}}}')
+            else
+              body=$(jq -n --arg sid "$SID" --arg id "$id" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$sid}},subscriptionGroupVersion:{data:{type:"subscriptionGroupVersions",id:$id}}}}}')
+            fi
+            code=$(curl -sS -o "$tmp" -w '%{http_code}' -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$body" 'https://api.appstoreconnect.apple.com/v1/reviewSubmissionItems')
+            if [[ "$code" != 201 && "$code" != 409 ]]; then
+              cat "$tmp" >&2
+              exit 1
+            fi
+          }
+
+          add_item appStoreVersion appStoreVersions "$VERSION_ID"
+          add_item subscriptionGroupVersion subscriptionGroupVersions "$GROUP_VID"
+          add_item subscriptionVersion subscriptionVersions "$MONTHLY_VID"
+          add_item subscriptionVersion subscriptionVersions "$ANNUAL_VID"
+
+          ITEMS=$(api_get "/v1/reviewSubmissions/${SID}/items?include=appStoreVersion,subscriptionVersion,subscriptionGroupVersion&limit=50")
+          COUNT=$(jq '.data | length' <<<"$ITEMS")
+          echo "Review submission $SID contains $COUNT item(s)." >> "$GITHUB_STEP_SUMMARY"
+          test "$COUNT" -ge 4
+
+      - name: Submit to App Review
+        run: |
+          set -euo pipefail
+          SID="$REVIEW_SUBMISSION_ID"
+          BODY=$(jq -n --arg id "$SID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "https://api.appstoreconnect.apple.com/v1/reviewSubmissions/${SID}" >/dev/null
+
+          state=''
+          for i in 1 2 3 4 5 6 7 8; do
+            sleep 5
+            R=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" -H 'Accept: application/json' "https://api.appstoreconnect.apple.com/v1/reviewSubmissions/${SID}")
+            state=$(jq -r '.data.attributes.state // empty' <<<"$R")
+            echo "App Review submission state: $state"
+            case "$state" in
+              WAITING_FOR_REVIEW|IN_REVIEW|UNRESOLVED_ISSUES|COMPLETE)
+                break
+                ;;
+            esac
+          done
+          case "$state" in
+            WAITING_FOR_REVIEW|IN_REVIEW|COMPLETE)
+              echo "✅ Family Life OS 1.0 + Family Pro submitted to Apple: $state" >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "Submission did not reach a submitted state. Current state: $state" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Remove temporary key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8 "$RUNNER_TEMP"/review-item-*.json
