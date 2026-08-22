@@ -7,6 +7,9 @@ on:
       - agent/**
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   validate-v43:
     runs-on: ubuntu-latest
@@ -37,3 +40,79 @@ jobs:
           set -o pipefail
           ./godot --headless --path . --script res://scripts/v43_endgame_chambers_smoke_test.gd --quit-after 120 | tee v43.log
           grep -q "ONE MORE FLOOR v1.30 endgame chambers smoke test passed" v43.log
+
+  family-submit-now:
+    name: Family Life OS submit now
+    if: github.head_ref == 'family-finalizer-trigger-2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      REVIEW_SUBMISSION_ID: 3b4e487e-d776-471e-abff-0fae824a72cd
+    steps:
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          export ASC_KEY_PATH="$KEY_PATH"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s))
+          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Inspect and submit review package
+        run: |
+          set -euo pipefail
+          SID="$REVIEW_SUBMISSION_ID"
+          BASE='https://api.appstoreconnect.apple.com'
+          R=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$SID")
+          echo "Before submit: $(jq -r '.data.attributes.state // "unknown"' <<<"$R")"
+          ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$SID/items?include=appStoreVersion,subscriptionVersion,subscriptionGroupVersion&limit=50")
+          echo "Review item count: $(jq '.data | length' <<<"$ITEMS")"
+          jq -r '.included[]? | "included: \(.type) \(.id) state=\(.attributes.state // "n/a")"' <<<"$ITEMS" || true
+
+          BODY=$(jq -n --arg id "$SID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
+          OUT="$RUNNER_TEMP/submit.json"
+          CODE=$(curl -sS -o "$OUT" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v1/reviewSubmissions/$SID")
+          if [[ "$CODE" -lt 200 || "$CODE" -ge 300 ]]; then
+            echo "Apple submit HTTP $CODE" >&2
+            cat "$OUT" >&2
+            exit 1
+          fi
+
+          state=''
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            sleep 4
+            R=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$SID")
+            state=$(jq -r '.data.attributes.state // empty' <<<"$R")
+            echo "After submit: $state"
+            case "$state" in
+              WAITING_FOR_REVIEW|IN_REVIEW|COMPLETE) break ;;
+            esac
+          done
+          case "$state" in
+            WAITING_FOR_REVIEW|IN_REVIEW|COMPLETE)
+              echo "✅ Family Life OS submitted: $state" >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "Unexpected submission state: $state" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8 "$RUNNER_TEMP/submit.json"
