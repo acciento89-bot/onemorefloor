@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/99-9-build8-admob-validation.yml'
+  pull_request:
   workflow_dispatch:
 
 permissions:
