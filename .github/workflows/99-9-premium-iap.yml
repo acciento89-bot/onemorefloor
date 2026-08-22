@@ -1,0 +1,158 @@
+name: 99.9 Premium IAP Setup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-premium-iap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: de.kamilunavo.ninenine
+  BASE_TERRITORY: DEU
+  TARGET_PRICE: '0.99'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          export ASC_KEY_PATH="$KEY_PATH"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Resolve 99.9 App Store app
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.appstoreconnect.apple.com'
+          APPS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'limit=10' "$API/v1/apps")
+          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS")
+          test -n "$APP_ID"
+          echo "ASC_APP_ID=$APP_ID" >> "$GITHUB_ENV"
+
+      - name: Create or resolve premium theme products
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.appstoreconnect.apple.com'
+          PRODUCTS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" \
+            "$API/v1/apps/$ASC_APP_ID/inAppPurchasesV2?limit=200")
+
+          ensure_iap() {
+            local sku="$1" ref="$2" note="$3"
+            local existing
+            existing=$(jq -r --arg sku "$sku" '.data[]? | select(.attributes.productId==$sku) | .id' <<<"$PRODUCTS" | head -1)
+            if [[ -n "$existing" ]]; then
+              echo "$existing"
+              return
+            fi
+            local body response
+            body=$(jq -n --arg app "$ASC_APP_ID" --arg sku "$sku" --arg ref "$ref" --arg note "$note" '{data:{type:"inAppPurchases",attributes:{name:$ref,productId:$sku,inAppPurchaseType:"NON_CONSUMABLE",reviewNote:$note,availableInAllTerritories:true},relationships:{app:{data:{type:"apps",id:$app}}}}}')
+            response=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
+              "$API/v2/inAppPurchases" -d "$body")
+            jq -r '.data.id' <<<"$response"
+          }
+
+          NEON_ID=$(ensure_iap 'de.kamilunavo.ninenine.theme.neon' 'Nine Nine Neon Pulse' 'Permanently unlocks the Neon Pulse cosmetic design in 99.9%.')
+          GOLD_ID=$(ensure_iap 'de.kamilunavo.ninenine.theme.gold' 'Nine Nine Gold Rush' 'Permanently unlocks the Gold Rush cosmetic design in 99.9%.')
+          AURORA_ID=$(ensure_iap 'de.kamilunavo.ninenine.theme.aurora' 'Nine Nine Aurora' 'Permanently unlocks the Aurora cosmetic design in 99.9%.')
+          test -n "$NEON_ID"; test -n "$GOLD_ID"; test -n "$AURORA_ID"
+          echo "NEON_ID=$NEON_ID" >> "$GITHUB_ENV"
+          echo "GOLD_ID=$GOLD_ID" >> "$GITHUB_ENV"
+          echo "AURORA_ID=$AURORA_ID" >> "$GITHUB_ENV"
+
+      - name: Add English and German metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.appstoreconnect.apple.com'
+          ensure_loc() {
+            local iid="$1" locale="$2" name="$3" desc="$4"
+            local current existing body
+            current=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$iid/inAppPurchaseLocalizations?limit=50")
+            existing=$(jq -r --arg locale "$locale" '.data[]? | select(.attributes.locale==$locale) | .id' <<<"$current" | head -1)
+            [[ -n "$existing" ]] && return 0
+            body=$(jq -n --arg iid "$iid" --arg locale "$locale" --arg name "$name" --arg desc "$desc" '{data:{type:"inAppPurchaseLocalizations",attributes:{locale:$locale,name:$name,description:$desc},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}}}}}')
+            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
+              "$API/v2/inAppPurchaseLocalizations" -d "$body" >/dev/null
+          }
+
+          ensure_loc "$NEON_ID" 'en-US' 'Neon Pulse' 'Unlock the Neon Pulse design permanently.'
+          ensure_loc "$NEON_ID" 'de-DE' 'Neon Pulse' 'Schaltet das Neon-Pulse-Design dauerhaft frei.'
+          ensure_loc "$GOLD_ID" 'en-US' 'Gold Rush' 'Unlock the Gold Rush design permanently.'
+          ensure_loc "$GOLD_ID" 'de-DE' 'Gold Rush' 'Schaltet das Gold-Rush-Design dauerhaft frei.'
+          ensure_loc "$AURORA_ID" 'en-US' 'Aurora' 'Unlock the Aurora design permanently.'
+          ensure_loc "$AURORA_ID" 'de-DE' 'Aurora' 'Schaltet das Aurora-Design dauerhaft frei.'
+
+      - name: Configure 0.99 EUR base price
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.appstoreconnect.apple.com'
+          ensure_price() {
+            local iid="$1"
+            local current points price_point price_ref body
+            set +e
+            current=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/inAppPurchasePriceSchedules/$iid/manualPrices?limit=5")
+            if jq -e '.data | length > 0' >/dev/null 2>&1 <<<"$current"; then
+              set -e
+              return 0
+            fi
+            set -e
+            points=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" \
+              --data-urlencode "filter[territory]=$BASE_TERRITORY" --data-urlencode 'limit=8000' \
+              "$API/v2/inAppPurchases/$iid/pricePoints")
+            price_point=$(jq -r --arg price "$TARGET_PRICE" '.data[]? | select(.attributes.customerPrice==$price) | .id' <<<"$points" | head -1)
+            if [[ -z "$price_point" ]]; then
+              echo "Could not find $TARGET_PRICE price point for $iid in $BASE_TERRITORY"
+              exit 1
+            fi
+            price_ref='${price1}'
+            body=$(jq -n --arg iid "$iid" --arg ppid "$price_point" --arg ref "$price_ref" --arg territory "$BASE_TERRITORY" '{data:{type:"inAppPurchasePriceSchedules",relationships:{inAppPurchase:{data:{type:"inAppPurchases",id:$iid}},baseTerritory:{data:{type:"territories",id:$territory}},manualPrices:{data:[{type:"inAppPurchasePrices",id:$ref}]}}},included:[{type:"inAppPurchasePrices",id:$ref,attributes:{startDate:null},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}},inAppPurchasePricePoint:{data:{type:"inAppPurchasePricePoints",id:$ppid}}}}]}')
+            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
+              "$API/v1/inAppPurchasePriceSchedules" -d "$body" >/dev/null
+          }
+          ensure_price "$NEON_ID"
+          ensure_price "$GOLD_ID"
+          ensure_price "$AURORA_ID"
+
+      - name: Verify catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.appstoreconnect.apple.com'
+          for iid in "$NEON_ID" "$GOLD_ID" "$AURORA_ID"; do
+            curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$iid" | \
+              jq -e '.data.attributes.inAppPurchaseType == "NON_CONSUMABLE"' >/dev/null
+          done
+          printf 'Premium IAP IDs:\n- neon: %s\n- gold: %s\n- aurora: %s\n' "$NEON_ID" "$GOLD_ID" "$AURORA_ID" >> "$GITHUB_STEP_SUMMARY"
+          printf '\nBase price: %s EUR (%s)\n' "$TARGET_PRICE" "$BASE_TERRITORY" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
