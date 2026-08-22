@@ -21,7 +21,7 @@ env:
 
 jobs:
   finalize:
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'agent/family-release-audit-20260822'
+    if: github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.head.ref == 'agent/family-release-audit-20260822' || startsWith(github.event.pull_request.head.ref, 'family-finalizer-trigger'))
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
