@@ -1,0 +1,304 @@
+name: 99.9 TestFlight Bridge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-testflight-bridge.yml'
+      - 'bridge/99-9-testflight.trigger'
+  workflow_dispatch:
+    inputs:
+      build:
+        description: 'App Store Connect build number'
+        required: false
+        default: '1'
+
+permissions:
+  contents: read
+  statuses: write
+
+env:
+  SOURCE_REPO: acciento89-bot/99-9
+  SOURCE_REF: main
+  GODOT_VERSION: '4.7.2'
+  GODOT_TAG: '4.7.2-stable'
+  TEAM_ID: 'TKG684N5GL'
+  BUNDLE_ID: 'de.kamilunavo.ninenine'
+  APP_VERSION: '1.0.0'
+
+jobs:
+  testflight:
+    runs-on: macos-26
+    timeout-minutes: 55
+    steps:
+      - name: Check bridge credentials
+        id: creds
+        env:
+          REPO_TOKEN: ${{ secrets.NINENINE_REPO_TOKEN }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$REPO_TOKEN" ]]; then
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo 'reason=missing_repo_token' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ -z "$ASC_ISSUER_ID" || -z "$ASC_KEY_ID" || -z "$ASC_PRIVATE_KEY_B64" ]]; then
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo 'reason=missing_asc_secrets' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo 'ready=true' >> "$GITHUB_OUTPUT"
+          echo 'reason=ready' >> "$GITHUB_OUTPUT"
+
+      - name: Publish blocked status
+        if: steps.creds.outputs.ready != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REASON: ${{ steps.creds.outputs.reason }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if [[ "$REASON" == missing_repo_token ]]; then
+            DESC='Add NINENINE_REPO_TOKEN with read-only access to private 99-9'
+          else
+            DESC='App Store Connect signing secrets are missing'
+          fi
+          BODY=$(jq -n --arg d "$DESC" --arg u "$U" '{state:"failure",description:$d,target_url:$u,context:"99-9/testflight-bridge"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
+
+      - name: Stop cleanly while bridge is blocked
+        if: steps.creds.outputs.ready != 'true'
+        shell: bash
+        run: exit 0
+
+      - name: Publish pending status
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          BODY=$(jq -n --arg u "$U" '{state:"pending",description:"Building and uploading 99.9% to TestFlight",target_url:$u,context:"99-9/testflight-bridge"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
+
+      - name: Checkout private 99-9 source
+        if: steps.creds.outputs.ready == 'true'
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.SOURCE_REPO }}
+          ref: ${{ env.SOURCE_REF }}
+          token: ${{ secrets.NINENINE_REPO_TOKEN }}
+          path: source
+          persist-credentials: false
+
+      - name: Resolve build number
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        env:
+          REQUESTED_BUILD: ${{ inputs.build }}
+        run: |
+          set -euo pipefail
+          BUILD="${REQUESTED_BUILD:-1}"
+          [[ "$BUILD" =~ ^[0-9]+$ ]]
+          echo "EFFECTIVE_BUILD=$BUILD" >> "$GITHUB_ENV"
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          p=Path('source/export_presets.cfg')
+          text=p.read_text()
+          build=os.environ.get('EFFECTIVE_BUILD') or os.environ.get('REQUESTED_BUILD') or '1'
+          text,count=re.subn(r'application/version="[0-9]+"',f'application/version="{build}"',text,count=1)
+          if count != 1: raise SystemExit('Could not set iOS build number')
+          p.write_text(text)
+          PY
+
+      - name: Prepare App Store Connect API key
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Verify App Store Connect app record exists
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          APPS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $JWT" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'limit=10' \
+            'https://api.appstoreconnect.apple.com/v1/apps')
+          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS")
+          if [[ -z "$APP_ID" ]]; then
+            echo 'App Store Connect app record for de.kamilunavo.ninenine does not exist.'
+            exit 1
+          fi
+          echo "ASC_APP_ID=$APP_ID" >> "$GITHUB_ENV"
+
+      - name: Download Godot 4.7.2 for macOS
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/godot.zip" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_macos.universal.zip"
+          mkdir -p "$RUNNER_TEMP/godot"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          GODOT="$RUNNER_TEMP/godot/Godot.app/Contents/MacOS/Godot"
+          test -x "$GODOT"
+          "$GODOT" --version
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+
+      - name: Install Godot iOS export template
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          T="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$T" "$RUNNER_TEMP/templates"
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/templates.tpz" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_export_templates.tpz"
+          unzip -q "$RUNNER_TEMP/templates.tpz" -d "$RUNNER_TEMP/templates"
+          cp -R "$RUNNER_TEMP/templates/templates/." "$T/"
+          test -f "$T/ios.zip"
+
+      - name: Import project and export Xcode project
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd source
+          "$GODOT" --headless --editor --path . --quit
+          mkdir -p build/ios
+          rm -rf build/ios/NineNine build/ios/NineNine.xcodeproj build/ios/NineNine.xcframework build/ios/MoltenVK.xcframework build/ios/PrivacyInfo.xcprivacy
+          "$GODOT" --headless --path . --export-release "iOS Playtest" build/ios/NineNine.zip
+          test -d build/ios/NineNine.xcodeproj
+          echo "XCODE_PROJECT=$PWD/build/ios/NineNine.xcodeproj" >> "$GITHUB_ENV"
+
+      - name: Resolve generated Xcode scheme
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project "$XCODE_PROJECT" -list -json > "$RUNNER_TEMP/xcode-list.json"
+          SCHEME=$(python3 - <<'PY'
+          import json, os
+          d=json.load(open(os.environ['RUNNER_TEMP']+'/xcode-list.json')).get('project',{})
+          print((d.get('schemes') or d.get('targets') or [''])[0])
+          PY
+          )
+          test -n "$SCHEME"
+          echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
+
+      - name: Create unsigned release archive
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/NineNine.xcarchive"
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/NineNine.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive
+          test -f "$RUNNER_TEMP/NineNine.xcarchive/Info.plist"
+
+      - name: Create TestFlight export options
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>method</key><string>app-store-connect</string>
+          <key>destination</key><string>upload</string>
+          <key>signingStyle</key><string>automatic</string>
+          <key>teamID</key><string>$TEAM_ID</string>
+          <key>uploadSymbols</key><true/>
+          <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+
+      - name: Upload build to TestFlight
+        id: upload
+        if: steps.creds.outputs.ready == 'true'
+        continue-on-error: true
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/NineNine.xcarchive" \
+            -exportPath "$RUNNER_TEMP/TestFlightExport" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            2>&1 | tee "$RUNNER_TEMP/testflight-export.log"
+          STATUS=${PIPESTATUS[0]}
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Publish final status
+        if: always() && steps.creds.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPLOAD_STATUS: ${{ steps.upload.outputs.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if [[ "$UPLOAD_STATUS" == 0 ]]; then
+            STATE=success
+            DESC="99.9% ${APP_VERSION} (${EFFECTIVE_BUILD}) uploaded to TestFlight"
+          else
+            STATE=failure
+            DESC='99.9% TestFlight upload failed; inspect workflow log'
+          fi
+          BODY=$(jq -n --arg s "$STATE" --arg d "$DESC" --arg u "$U" '{state:$s,description:$d,target_url:$u,context:"99-9/testflight-bridge"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
+          if [[ "$UPLOAD_STATUS" != 0 ]]; then exit 1; fi
+
+      - name: Remove App Store Connect key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
