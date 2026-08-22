@@ -1,0 +1,209 @@
+name: Family Life OS Finish App Review v2
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+env:
+  APP_ID: '6803079524'
+  VERSION_ID: 'e7a061e3-bd05-453c-a911-00e1e8cb4f76'
+  VLOC_ID: '557ca16e-28b4-44d0-83ec-11d8890f0376'
+  BUILD_NUMBER: '8'
+  EXPECTED_REVIEW_SUBMISSION_ID: '3b4e487e-d776-471e-abff-0fae824a72cd'
+
+jobs:
+  finish:
+    name: Finalize Family Life OS 1.0
+    if: github.head_ref == 'family-finalizer-trigger-2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          export ASC_KEY_PATH="$KEY_PATH"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+1200,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s))
+          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Ensure Build 8 is attached
+        id: build
+        run: |
+          set -euo pipefail
+          BASE='https://api.appstoreconnect.apple.com'
+          VERSION=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/appStoreVersions/$VERSION_ID?include=build")
+          BUILD_ID=$(jq -r '.data.relationships.build.data.id // empty' <<<"$VERSION")
+          if [[ -z "$BUILD_ID" ]]; then
+            BUILD_ID=$(jq -r '.included[]? | select(.type=="builds" and .attributes.version=="8") | .id' <<<"$VERSION" | head -1)
+          fi
+          if [[ -z "$BUILD_ID" ]]; then
+            BUILDS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/builds?filter%5Bapp%5D=$APP_ID&filter%5Bversion%5D=$BUILD_NUMBER&sort=-uploadedDate&limit=10")
+            BUILD_ID=$(jq -r '.data[0].id // empty' <<<"$BUILDS")
+          fi
+          test -n "$BUILD_ID"
+          BUILD=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/builds/$BUILD_ID")
+          ACTUAL=$(jq -r '.data.attributes.version // empty' <<<"$BUILD")
+          PROCESSING=$(jq -r '.data.attributes.processingState // empty' <<<"$BUILD")
+          echo "Build id=$BUILD_ID version=$ACTUAL processing=$PROCESSING"
+          test "$ACTUAL" = '8'
+          if [[ "$PROCESSING" == 'INVALID' || "$PROCESSING" == 'FAILED' ]]; then exit 1; fi
+          CURRENT=$(jq -r '.data.relationships.build.data.id // empty' <<<"$VERSION")
+          if [[ "$CURRENT" != "$BUILD_ID" ]]; then
+            BODY=$(jq -n --arg bid "$BUILD_ID" '{data:{type:"builds",id:$bid}}')
+            curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v1/appStoreVersions/$VERSION_ID/relationships/build" >/dev/null
+          fi
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Inspect iPad screenshot
+        id: screenshot
+        run: |
+          set -euo pipefail
+          BASE='https://api.appstoreconnect.apple.com'
+          SETS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/appStoreVersionLocalizations/$VLOC_ID/appScreenshotSets?include=appScreenshots&limit=50")
+          echo "Screenshot sets:"
+          jq -r '.data[]? | [.id,.attributes.screenshotDisplayType] | @tsv' <<<"$SETS"
+          IPAD_SET=$(jq -r '.data[]? | select(.attributes.screenshotDisplayType=="APP_IPAD_PRO_3GEN_129") | .id' <<<"$SETS" | head -1)
+          if [[ -z "$IPAD_SET" ]]; then
+            IPAD_SET=$(jq -r '.data[]? | select(.attributes.screenshotDisplayType | contains("IPAD")) | .id' <<<"$SETS" | head -1)
+          fi
+          test -n "$IPAD_SET"
+          SHOTS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/appScreenshotSets/$IPAD_SET/appScreenshots?limit=50")
+          jq -r '.data[]? | [.id,.attributes.fileName,.attributes.assetDeliveryState.state] | @tsv' <<<"$SHOTS"
+          COMPLETE=$(jq '[.data[]? | select(.attributes.assetDeliveryState.state=="COMPLETE")] | length' <<<"$SHOTS")
+          test "$COMPLETE" -ge 1
+          echo "ipad_complete=$COMPLETE" >> "$GITHUB_OUTPUT"
+
+      - name: Locate open review package
+        id: package
+        run: |
+          set -euo pipefail
+          BASE='https://api.appstoreconnect.apple.com'
+          SID="$EXPECTED_REVIEW_SUBMISSION_ID"
+          ONE=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$SID")
+          STATE=$(jq -r '.data.attributes.state // empty' <<<"$ONE")
+          if [[ "$STATE" != 'READY_FOR_REVIEW' ]]; then
+            ALL=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/apps/$APP_ID/reviewSubmissions?filter%5Bplatform%5D=IOS&filter%5Bstate%5D=READY_FOR_REVIEW&limit=50")
+            SID=$(jq -r '.data[0].id // empty' <<<"$ALL")
+            STATE='READY_FOR_REVIEW'
+          fi
+          test -n "$SID"
+          echo "submission_id=$SID" >> "$GITHUB_OUTPUT"
+          echo "submission_state=$STATE" >> "$GITHUB_OUTPUT"
+
+      - name: Add App Version 1.0 to review package
+        id: add
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          BASE='https://api.appstoreconnect.apple.com'
+          SID='${{ steps.package.outputs.submission_id }}'
+          ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$SID/items?limit=200")
+          echo "Current review items: $(jq '.data|length' <<<"$ITEMS")"
+          HAVE=$(jq -r --arg vid "$VERSION_ID" '[.data[]? | select(.relationships.appStoreVersion.data.id==$vid)] | length' <<<"$ITEMS")
+          if [[ "$HAVE" -eq 0 ]]; then
+            BODY=$(jq -n --arg sid "$SID" --arg vid "$VERSION_ID" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$sid}},appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}')
+            CODE=$(curl -sS -o "$RUNNER_TEMP/add.json" -w '%{http_code}' -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v1/reviewSubmissionItems")
+            echo "Add version HTTP $CODE"
+            if [[ "$CODE" -lt 200 || "$CODE" -ge 300 ]]; then
+              jq '{errors:[.errors[]? | {status,code,title,detail,source}]}' "$RUNNER_TEMP/add.json" > "$RUNNER_TEMP/add-safe.json"
+              cat "$RUNNER_TEMP/add-safe.json"
+              exit 1
+            fi
+          fi
+          ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$SID/items?limit=200")
+          HAVE=$(jq -r --arg vid "$VERSION_ID" '[.data[]? | select(.relationships.appStoreVersion.data.id==$vid)] | length' <<<"$ITEMS")
+          test "$HAVE" -ge 1
+          echo "have_version=$HAVE" >> "$GITHUB_OUTPUT"
+          echo "item_count=$(jq '.data|length' <<<"$ITEMS")" >> "$GITHUB_OUTPUT"
+
+      - name: Stop and report if Apple rejected app-version linkage
+        if: steps.add.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### Family Life OS – letzter Apple-Validator'
+            echo
+            echo '- Build 8 ist vorhanden/angehängt.'
+            echo '- Der iPad-Screenshot ist vorhanden und verarbeitet.'
+            echo '- Apple blockiert nur noch das Hinzufügen der App-Version zum Review-Paket:'
+            echo '```json'
+            cat "$RUNNER_TEMP/add-safe.json" 2>/dev/null || echo '{"error":"keine strukturierte Antwort"}'
+            echo '```'
+          } > "$RUNNER_TEMP/comment.md"
+          gh pr comment 149 --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
+          exit 1
+
+      - name: Final submit
+        id: submit
+        run: |
+          set -euo pipefail
+          BASE='https://api.appstoreconnect.apple.com'
+          SID='${{ steps.package.outputs.submission_id }}'
+          BODY=$(jq -n --arg id "$SID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
+          CODE=$(curl -sS -o "$RUNNER_TEMP/submit.json" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v1/reviewSubmissions/$SID")
+          echo "Submit HTTP $CODE"
+          if [[ "$CODE" -lt 200 || "$CODE" -ge 300 ]]; then
+            jq '{errors:[.errors[]? | {status,code,title,detail,source}]}' "$RUNNER_TEMP/submit.json" > "$RUNNER_TEMP/submit-safe.json"
+            cat "$RUNNER_TEMP/submit-safe.json"
+            exit 1
+          fi
+          FINAL=''
+          for i in {1..30}; do
+            sleep 4
+            R=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/reviewSubmissions/$SID")
+            FINAL=$(jq -r '.data.attributes.state // empty' <<<"$R")
+            echo "Review state: $FINAL"
+            case "$FINAL" in WAITING_FOR_REVIEW|IN_REVIEW|COMPLETE) break ;; esac
+          done
+          case "$FINAL" in WAITING_FOR_REVIEW|IN_REVIEW|COMPLETE) ;; *) exit 1 ;; esac
+          echo "final_state=$FINAL" >> "$GITHUB_OUTPUT"
+
+      - name: Report submit failure
+        if: failure() && steps.add.outcome == 'success' && steps.submit.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '### Family Life OS – Apple Submit-Validator'
+            echo
+            echo '```json'
+            cat "$RUNNER_TEMP/submit-safe.json" 2>/dev/null || echo '{"error":"Statuswechsel wurde von Apple nicht abgeschlossen"}'
+            echo '```'
+          } > "$RUNNER_TEMP/comment.md"
+          gh pr comment 149 --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
+
+      - name: Success
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > "$RUNNER_TEMP/comment.md" <<EOF
+          ### Family Life OS 1.0 vollständig eingereicht ✅
+
+          - Build **8** ist der Version 1.0 zugewiesen.
+          - Der erforderliche **iPad-Pro-Screenshot** ist in App Store Connect vollständig verarbeitet.
+          - App-Version **1.0** ist im selben Review-Paket.
+          - Finaler Apple-Status: **${{ steps.submit.outputs.final_state }}**
+          EOF
+          gh pr comment 149 --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
