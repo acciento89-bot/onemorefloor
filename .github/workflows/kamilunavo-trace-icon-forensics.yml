@@ -1,0 +1,73 @@
+name: Kamilunavo Trace Icon Forensics
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/kamilunavo-trace-icon-forensics.yml'
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_REF: '74bb5139c81ce6ff611fc81e218f009033a2854b'
+
+jobs:
+  inspect-icon:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: acciento89-bot/appideenchatgpt
+          ref: ${{ env.SOURCE_REF }}
+          path: trace
+
+      - name: Build unsigned archive
+        working-directory: trace/apps/002-evidaro/prototype
+        run: |
+          xcodebuild -project EvidaroPrototype.xcodeproj -scheme EvidaroPrototype -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Trace.xcarchive" PRODUCT_BUNDLE_IDENTIFIER=de.kamilunavo.trace CURRENT_PROJECT_VERSION=8 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" archive
+
+      - name: Inspect source and compiled icon pixels
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/pngstats.py" <<'PY'
+          import struct,zlib,sys
+          def load(path):
+              b=open(path,'rb').read(); assert b[:8]==b'\x89PNG\r\n\x1a\n'
+              p=8; raw=b''; w=h=ct=bd=None
+              while p<len(b):
+                  n=struct.unpack('>I',b[p:p+4])[0]; t=b[p+4:p+8]; d=b[p+8:p+8+n]; p+=12+n
+                  if t==b'IHDR': w,h,bd,ct,_,_,_=struct.unpack('>IIBBBBB',d)
+                  elif t==b'IDAT': raw+=d
+                  elif t==b'IEND': break
+              assert bd==8 and ct in (2,6),(bd,ct)
+              chans=3 if ct==2 else 4; data=zlib.decompress(raw); stride=w*chans; rows=[]; prev=[0]*stride; off=0
+              for y in range(h):
+                  f=data[off]; off+=1; scan=list(data[off:off+stride]); off+=stride; out=[0]*stride
+                  for x,v in enumerate(scan):
+                      a=out[x-chans] if x>=chans else 0; b0=prev[x]; c=prev[x-chans] if x>=chans else 0
+                      if f==0: val=v
+                      elif f==1: val=(v+a)&255
+                      elif f==2: val=(v+b0)&255
+                      elif f==3: val=(v+((a+b0)//2))&255
+                      elif f==4:
+                          p0=a+b0-c; pa=abs(p0-a); pb=abs(p0-b0); pc=abs(p0-c); pr=a if pa<=pb and pa<=pc else (b0 if pb<=pc else c)
+                          val=(v+pr)&255
+                      out[x]=val
+                  rows.append(out); prev=out
+              pix=[]
+              for r in rows:
+                  for i in range(0,len(r),chans): pix.append(tuple(r[i:i+3]))
+              rs=[p[0] for p in pix]; gs=[p[1] for p in pix]; bs=[p[2] for p in pix]
+              avg=(sum(rs)//len(rs),sum(gs)//len(gs),sum(bs)//len(bs))
+              dark=sum(1 for r,g,b in pix if max(r,g,b)<40)/len(pix)
+              blue=sum(1 for r,g,b in pix if b>r+20 and b>g+10)/len(pix)
+              teal=sum(1 for r,g,b in pix if g>r+20 and b>r+20)/len(pix)
+              samples=[pix[0],pix[w//2],pix[(h//2)*w+w//2],pix[-1]]
+              print(f'{path}: {w}x{h} avg={avg} dark_fraction={dark:.3f} blue_fraction={blue:.3f} teal_fraction={teal:.3f} samples={samples}')
+          for p in sys.argv[1:]: load(p)
+          PY
+          SRC='trace/apps/002-evidaro/prototype/EvidaroPrototype/Assets.xcassets/AppIcon.appiconset/KamilunavoTrace-AppIcon-1024.png'
+          APP="$RUNNER_TEMP/Trace.xcarchive/Products/Applications/EvidaroPrototype.app"
+          python3 "$RUNNER_TEMP/pngstats.py" "$SRC" "$APP/AppIcon60x60@2x.png"
+          plutil -p "$APP/Info.plist" | grep -A20 -E 'CFBundleIcons|CFBundleIcon'
