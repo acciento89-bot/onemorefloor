@@ -92,7 +92,7 @@ jobs:
           s = "#{h}.#{p}"
           seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new, s))
           raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
-          puts "#{s}.#{p && b64url(raw)}"
+          puts "#{s}.#{b64url(raw)}"
           RUBY
           )
           AUTH="Authorization: Bearer $JWT"
