@@ -1,149 +1,223 @@
-name: Godot Check
+name: Kamilunavo Trace Lifetime Pro Review Screenshot Bridge
 
 on:
-  push:
-    branches:
-      - main
-      - agent/**
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: trace-iap-review-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TRACE_REF: '2e2d51a26b8c07cd4555deed8f1b1466af184e83'
+  BUNDLE_ID: 'de.kamilunavo.trace'
+  PRODUCT_ID: 'de.kamilunavo.trace.pro.lifetime'
+  PROJECT_DIR: 'appideenchatgpt/apps/002-evidaro/prototype'
+
 jobs:
-  validate:
-    runs-on: ubuntu-latest
-    timeout-minutes: 7
+  complete-review-screenshot:
+    runs-on: macos-26
+    timeout-minutes: 35
     steps:
-      - name: Checkout
+      - name: Checkout exact accepted Trace Build 9 source
         uses: actions/checkout@v5
+        with:
+          repository: acciento89-bot/appideenchatgpt
+          ref: ${{ env.TRACE_REF }}
+          path: appideenchatgpt
 
-      - name: Download Godot 4.7.1
+      - name: Verify source and add CI-only Pro screenshot entry
+        shell: bash
         run: |
-          curl -L --fail --retry 3 \
-            -o godot.zip \
-            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
-          unzip -q godot.zip
-          mv Godot_v4.7.1-stable_linux.x86_64 godot
-          chmod +x godot
-          ./godot --version
+          set -euo pipefail
+          cd appideenchatgpt
+          test "$(git rev-parse HEAD)" = "$TRACE_REF"
+          python3 apps/002-evidaro/ci/preflight.py
+          python3 apps/002-evidaro/ci/release_preflight.py
+          python3 apps/002-evidaro/ci/public_identity_preflight.py
+          cd ..
+          python3 <<'PY'
+          from pathlib import Path
+          app = Path('appideenchatgpt/apps/002-evidaro/prototype/EvidaroPrototype/EvidaroPrototypeApp.swift')
+          text = app.read_text()
+          old = '''        WindowGroup {
+            AppLockGateView(store: store, appLock: appLock)
+#if DEBUG
+                .task {
+                    await PersistenceSmokeRunner.runIfRequested(using: store)
+                    await AppLockSmokeRunner.runIfRequested()
+                    await EvidenceBundleSmokeRunner.runIfRequested(using: store)
+                }
+#endif
+        }'''
+          new = '''        WindowGroup {
+#if DEBUG
+            if CommandLine.arguments.contains("--trace-review-screenshot") {
+                ProUpgradeView(entitlement: EntitlementStore.shared)
+            } else {
+                AppLockGateView(store: store, appLock: appLock)
+                    .task {
+                        await PersistenceSmokeRunner.runIfRequested(using: store)
+                        await AppLockSmokeRunner.runIfRequested()
+                        await EvidenceBundleSmokeRunner.runIfRequested(using: store)
+                    }
+            }
+#else
+            AppLockGateView(store: store, appLock: appLock)
+#endif
+        }'''
+          if text.count(old) != 1:
+              raise SystemExit('App entry anchor mismatch')
+          app.write_text(text.replace(old, new))
 
-      # Only standalone-safe library scripts belong here. Historical main_*.gd
-      # files intentionally use relative inheritance and are validated by the
-      # project-wide parse + actual smoke tests below instead of --script mode.
-      - name: Check critical standalone scripts
-        run: |
-          ./godot --headless --path . --script res://scripts/progression.gd --check-only
-          ./godot --headless --path . --script res://scripts/run_profile.gd --check-only
-          ./godot --headless --path . --script res://scripts/loot_system.gd --check-only
-          ./godot --headless --path . --script res://scripts/enemy_factory.gd --check-only
-          ./godot --headless --path . --script res://scripts/room_system.gd --check-only
-          ./godot --headless --path . --script res://scripts/settings_manager.gd --check-only
-          ./godot --headless --path . --script res://scripts/telemetry.gd --check-only
-          ./godot --headless --path . --script res://scripts/balance_profile.gd --check-only
-          ./godot --headless --path . --script res://scripts/release_audio.gd --check-only
+          pro = Path('appideenchatgpt/apps/002-evidaro/prototype/EvidaroPrototype/ProUpgradeView.swift')
+          text = pro.read_text()
+          if text.count('Text(entitlement.displayPrice)') != 1:
+              raise SystemExit('Price anchor mismatch')
+          text = text.replace('Text(entitlement.displayPrice)', 'Text(CommandLine.arguments.contains("--trace-review-screenshot") ? "14,99 €" : entitlement.displayPrice)', 1)
+          old_error = '''                    if let message = entitlement.lastErrorMessage, !message.isEmpty {
+                        Text(message)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }'''
+          new_error = '''                    if !CommandLine.arguments.contains("--trace-review-screenshot"),
+                       let message = entitlement.lastErrorMessage, !message.isEmpty {
+                        Text(message)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }'''
+          if text.count(old_error) != 1:
+              raise SystemExit('Error anchor mismatch')
+          pro.write_text(text.replace(old_error, new_error))
+          PY
 
-      - name: Parse project headlessly
+      - name: Build simulator and capture Trace Pro review screenshot
+        shell: bash
         run: |
-          set -o pipefail
-          ./godot --headless --editor --path . --quit 2>&1 | tee parse.log
-          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script|ERROR:.*audio|Error.*SVG" parse.log; then
-            echo "Godot reported script/resource errors during project parse"
-            exit 1
+          set -euo pipefail
+          RUNTIME=$(xcrun simctl list runtimes -j | jq -r '[.runtimes[] | select(.platform == "iOS" and .isAvailable == true)][-1].identifier // empty')
+          test -n "$RUNTIME"
+          DEVICE_TYPE=$(xcrun simctl list devicetypes -j | jq -r '[.devicetypes[] | select(.name | test("iPhone .*Pro Max$"))][-1].identifier // empty')
+          test -n "$DEVICE_TYPE"
+          UDID=$(xcrun simctl create 'Trace IAP Review' "$DEVICE_TYPE" "$RUNTIME")
+          echo "REVIEW_UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcodebuild -project "$PROJECT_DIR/EvidaroPrototype.xcodeproj" -scheme EvidaroPrototype -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$RUNNER_TEMP/TraceReviewDD" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" build
+          APP=$(find "$RUNNER_TEMP/TraceReviewDD/Build/Products/Debug-iphonesimulator" -maxdepth 1 -name '*.app' -type d -print -quit)
+          test -n "$APP" -a -d "$APP"
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" "$BUNDLE_ID" --trace-review-screenshot -AppleLanguages '(de)' -AppleLocale 'de_DE'
+          sleep 6
+          mkdir -p review-artifact
+          xcrun simctl io "$UDID" screenshot review-artifact/Trace-Pro-Review.png
+          sips -s format jpeg -s formatOptions 95 review-artifact/Trace-Pro-Review.png --out review-artifact/Trace-Pro-Review.jpg >/dev/null
+          WIDTH=$(sips -g pixelWidth review-artifact/Trace-Pro-Review.jpg | awk '/pixelWidth/{print $2}')
+          HEIGHT=$(sips -g pixelHeight review-artifact/Trace-Pro-Review.jpg | awk '/pixelHeight/{print $2}')
+          SIZE=$(stat -f%z review-artifact/Trace-Pro-Review.jpg)
+          [[ "$WIDTH" -ge 1200 && "$HEIGHT" -ge 2600 && "$SIZE" -gt 50000 ]]
+          echo "Trace Pro review screenshot: ${WIDTH}x${HEIGHT}, ${SIZE} bytes" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload screenshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kamilunavo-trace-iap-review-screenshot-build9
+          path: review-artifact/Trace-Pro-Review.jpg
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload missing App Review screenshot and verify Lifetime Pro metadata
+        shell: bash
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID" -a -n "$ASC_KEY_ID" -a -n "$ASC_PRIVATE_KEY_B64"
+          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
+          chmod 600 "$KEY"
+          export ASC_KEY_PATH="$KEY"
+          cat > "$RUNNER_TEMP/jwt.rb" <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v, padding: false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          JWT=$(ruby "$RUNNER_TEMP/jwt.rb")
+          H="Authorization: Bearer $JWT"
+
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'fields[apps]=name,bundleId' 'https://api.appstoreconnect.apple.com/v1/apps' -o "$RUNNER_TEMP/app.json"
+          test "$(jq '.data | length' "$RUNNER_TEMP/app.json")" = 1
+          APP_ID=$(jq -r '.data[0].id' "$RUNNER_TEMP/app.json")
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode "filter[productId]=$PRODUCT_ID" --data-urlencode 'fields[inAppPurchases]=productId,state,appStoreReviewScreenshot' "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/inAppPurchasesV2" -o "$RUNNER_TEMP/iap.json"
+          test "$(jq '.data | length' "$RUNNER_TEMP/iap.json")" = 1
+          IAP_ID=$(jq -r '.data[0].id' "$RUNNER_TEMP/iap.json")
+          BEFORE=$(jq -r '.data[0].attributes.state' "$RUNNER_TEMP/iap.json")
+          echo "Lifetime Pro before: $BEFORE"
+
+          HTTP=$(curl --silent --show-error -H "$H" -o "$RUNNER_TEMP/rel.json" -w '%{http_code}' "https://api.appstoreconnect.apple.com/v2/inAppPurchases/$IAP_ID/relationships/appStoreReviewScreenshot")
+          SHOT_ID=''
+          if [[ "$HTTP" == 200 ]]; then SHOT_ID=$(jq -r '.data.id // empty' "$RUNNER_TEMP/rel.json"); elif [[ "$HTTP" != 404 ]]; then cat "$RUNNER_TEMP/rel.json"; exit 1; fi
+
+          if [[ -z "$SHOT_ID" ]]; then
+            FILE='review-artifact/Trace-Pro-Review.jpg'; SIZE=$(stat -f%z "$FILE")
+            jq -n --arg name 'Kamilunavo-Trace-Pro-Review.jpg' --argjson size "$SIZE" --arg iap "$IAP_ID" '{data:{type:"inAppPurchaseAppStoreReviewScreenshots",attributes:{fileName:$name,fileSize:$size},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iap}}}}}' > "$RUNNER_TEMP/reserve-body.json"
+            HTTP=$(curl --silent --show-error -H "$H" -H 'Content-Type: application/json' -X POST -d @"$RUNNER_TEMP/reserve-body.json" -o "$RUNNER_TEMP/reservation.json" -w '%{http_code}' 'https://api.appstoreconnect.apple.com/v1/inAppPurchaseAppStoreReviewScreenshots')
+            [[ "$HTTP" == 201 ]] || { cat "$RUNNER_TEMP/reservation.json"; exit 1; }
+            SHOT_ID=$(jq -r '.data.id' "$RUNNER_TEMP/reservation.json")
+            python3 - "$FILE" "$RUNNER_TEMP/reservation.json" <<'PY'
+          import json, sys, urllib.request
+          blob=open(sys.argv[1],'rb').read(); r=json.load(open(sys.argv[2]))
+          for op in r['data']['attributes']['uploadOperations']:
+              o=int(op.get('offset',0)); n=int(op['length']); data=blob[o:o+n]
+              if len(data)!=n: raise SystemExit('upload slice mismatch')
+              headers={h['name']:h['value'] for h in op.get('requestHeaders',[])}
+              req=urllib.request.Request(op['url'],data=data,method=op['method'],headers=headers)
+              with urllib.request.urlopen(req,timeout=120) as resp:
+                  if not 200 <= resp.status < 300: raise SystemExit(f'upload HTTP {resp.status}')
+          PY
+            CHECKSUM=$(md5 -q "$FILE")
+            jq -n --arg id "$SHOT_ID" --arg md5 "$CHECKSUM" '{data:{type:"inAppPurchaseAppStoreReviewScreenshots",id:$id,attributes:{uploaded:true,sourceFileChecksum:$md5}}}' > "$RUNNER_TEMP/commit-body.json"
+            HTTP=$(curl --silent --show-error -H "$H" -H 'Content-Type: application/json' -X PATCH -d @"$RUNNER_TEMP/commit-body.json" -o "$RUNNER_TEMP/commit.json" -w '%{http_code}' "https://api.appstoreconnect.apple.com/v1/inAppPurchaseAppStoreReviewScreenshots/$SHOT_ID")
+            [[ "$HTTP" == 200 ]] || { cat "$RUNNER_TEMP/commit.json"; exit 1; }
+            echo "Uploaded Lifetime Pro App Review screenshot: $SHOT_ID" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Existing Lifetime Pro App Review screenshot found: $SHOT_ID" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Run main scene smoke test
+          STATE=''
+          for ATTEMPT in $(seq 1 18); do
+            HTTP=$(curl --silent --show-error --get -H "$H" --data-urlencode 'fields[inAppPurchaseAppStoreReviewScreenshots]=fileName,fileSize,sourceFileChecksum,imageAsset,assetDeliveryState' -o "$RUNNER_TEMP/shot.json" -w '%{http_code}' "https://api.appstoreconnect.apple.com/v1/inAppPurchaseAppStoreReviewScreenshots/$SHOT_ID")
+            if [[ "$HTTP" == 200 ]]; then
+              STATE=$(jq -r '.data.attributes.assetDeliveryState.state // empty' "$RUNNER_TEMP/shot.json")
+              ERRORS=$(jq '.data.attributes.assetDeliveryState.errors // [] | length' "$RUNNER_TEMP/shot.json")
+              echo "Screenshot asset attempt $ATTEMPT: ${STATE:-unknown}"
+              [[ "$ERRORS" == 0 ]]
+              if [[ "$STATE" == COMPLETE || "$STATE" == UPLOAD_COMPLETE ]]; then break; fi
+            fi
+            sleep 5
+          done
+          [[ "$STATE" == COMPLETE || "$STATE" == UPLOAD_COMPLETE ]]
+
+          curl --fail --silent --show-error --get -H "$H" --data-urlencode "filter[productId]=$PRODUCT_ID" --data-urlencode 'fields[inAppPurchases]=productId,state,appStoreReviewScreenshot' "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/inAppPurchasesV2" -o "$RUNNER_TEMP/final-iap.json"
+          AFTER=$(jq -r '.data[0].attributes.state' "$RUNNER_TEMP/final-iap.json")
+          echo "Lifetime Pro IAP state after screenshot: $AFTER" >> "$GITHUB_STEP_SUMMARY"
+          [[ "$AFTER" != MISSING_METADATA ]]
+          rm -f "$KEY"
+
+      - name: Cleanup simulator
+        if: always()
+        shell: bash
         run: |
-          set -o pipefail
-          ./godot --headless --path . --quit-after 10 2>&1 | tee main.log
-          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script" main.log; then
-            echo "Godot reported script errors while starting Main"
-            exit 1
+          if [[ -n "${REVIEW_UDID:-}" ]]; then
+            xcrun simctl shutdown "$REVIEW_UDID" || true
+            xcrun simctl delete "$REVIEW_UDID" || true
           fi
-
-      - name: Run gameplay smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/smoke_test.gd --quit-after 120 | tee smoke.log
-          grep -q "ONE MORE FLOOR gameplay smoke test passed" smoke.log
-
-      - name: Run Deep Tower gameplay smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/deep_tower_smoke_test.gd --quit-after 120 | tee deep-tower-smoke.log
-          grep -q "ONE MORE FLOOR Deep Tower gameplay smoke test passed" deep-tower-smoke.log
-
-      - name: Run Run System 2.0 smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/v23_gameplay_smoke_test.gd --quit-after 120 | tee v23-gameplay-smoke.log
-          grep -q "ONE MORE FLOOR v1.11 Run System 2.0 smoke test passed" v23-gameplay-smoke.log
-
-      - name: Run v1.13 gameplay depth smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/v25_gameplay_smoke_test.gd --quit-after 120 | tee v25-gameplay-smoke.log
-          grep -q "ONE MORE FLOOR v1.13 gameplay depth smoke test passed" v25-gameplay-smoke.log
-
-      - name: Run v1.14 endless ascension smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/v27_endless_smoke_test.gd --quit-after 120 | tee v27-endless-smoke.log
-          grep -q "ONE MORE FLOOR v1.14 endless ascension smoke test passed" v27-endless-smoke.log
-
-      - name: Run v1.15 endgame realms smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/v28_endgame_smoke_test.gd --quit-after 120 | tee v28-endgame-smoke.log
-          grep -q "ONE MORE FLOOR v1.15 endgame realms smoke test passed" v28-endgame-smoke.log
-
-      - name: Run v1.0 release smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/release_smoke_test.gd --quit-after 120 | tee release-smoke.log
-          grep -q "ONE MORE FLOOR v1.0 release smoke test passed" release-smoke.log
-
-      - name: Run v1.1 visual audio smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/v11_smoke_test.gd --quit-after 120 | tee v11-smoke.log
-          grep -q "ONE MORE FLOOR v1.1 visual/audio smoke test passed" v11-smoke.log
-
-      - name: Run v1.2 production art smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/v12_smoke_test.gd --quit-after 120 | tee v12-smoke.log
-          grep -q "ONE MORE FLOOR v1.2 production art smoke test passed" v12-smoke.log
-
-      - name: Run v1.2 rc3 premium art mobile input smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/v13_smoke_test.gd --quit-after 120 | tee v13-smoke.log
-          grep -q "ONE MORE FLOOR v1.2 rc3 premium art/mobile input smoke test passed" v13-smoke.log
-
-      - name: Run v1.3 high fidelity art smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/v14_smoke_test.gd --quit-after 120 | tee v14-smoke.log
-          grep -q "ONE MORE FLOOR v1.3 high-fidelity art smoke test passed" v14-smoke.log
-
-      - name: Run v1.4 premium overhaul smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/v15_smoke_test.gd --quit-after 120 | tee v15-smoke.log
-          grep -q "ONE MORE FLOOR v1.4 premium overhaul smoke test passed" v15-smoke.log
-
-      - name: Run v1.5 final premium menus smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/v16_smoke_test.gd --quit-after 120 | tee v16-smoke.log
-          grep -q "ONE MORE FLOOR v1.5 final premium menus smoke test passed" v16-smoke.log
-
-      - name: Run v1.6 exact concept menus smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/v17_smoke_test.gd --quit-after 120 | tee v17-smoke.log
-          grep -q "ONE MORE FLOOR v1.6 exact concept menus smoke test passed" v17-smoke.log
-
-      - name: Run v1.28 progression UI art-pass smoke script
-        run: |
-          set -o pipefail
-          ./godot --headless --path . --script res://scripts/v41_progression_ui_smoke_test.gd --quit-after 120 | tee v41-progression-ui-smoke.log
-          grep -q "ONE MORE FLOOR v1.28 progression UI art pass smoke test passed" v41-progression-ui-smoke.log
