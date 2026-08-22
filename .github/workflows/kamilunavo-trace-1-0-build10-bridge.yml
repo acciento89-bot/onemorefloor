@@ -1,0 +1,16 @@
+name: Kamilunavo Trace 1.0 Build 10 Bridge
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/kamilunavo-trace-1-0-build10-bridge.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'TRACE_1_0_BUILD10_BRIDGE_REGISTERED'
