@@ -13,7 +13,7 @@ permissions:
 
 env:
   SOURCE_REPO: acciento89-bot/99-9
-  SOURCE_REF: feature/build8-admob-test
+  SOURCE_REF: 85aa91e1fffea288f42255cf4705ec92f80183c5
   GODOT_VERSION: '4.7.2'
   GODOT_TAG: '4.7.2-stable'
 
