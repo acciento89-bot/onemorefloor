@@ -3,8 +3,7 @@ name: 99.9 Premium IAP Setup
 on:
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/99-9-premium-iap.yml'
+    paths: ['.github/workflows/99-9-premium-iap.yml']
   workflow_dispatch:
 
 permissions:
@@ -24,13 +23,10 @@ jobs:
       - name: Publish pending status
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
         run: |
-          set -euo pipefail
           U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          BODY=$(jq -n --arg u "$U" '{state:"pending",description:"Configuring 99.9% premium theme IAPs",target_url:$u,context:"99-9/premium-iap"}')
-          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
+          B=$(jq -n --arg u "$U" '{state:"pending",description:"Configuring 99.9% premium theme IAPs",target_url:$u,context:"99-9/premium-iap"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
 
       - name: Prepare App Store Connect token
         env:
@@ -56,91 +52,82 @@ jobs:
           )
           echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
 
-      - name: Resolve 99.9 App Store app
+      - name: Resolve app and premium products
         shell: bash
         run: |
           set -euo pipefail
           API='https://api.appstoreconnect.apple.com'
-          APPS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" \
-            --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'limit=10' "$API/v1/apps")
-          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS")
-          test -n "$APP_ID"
+          APPS=$(curl -fsSL -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'limit=10' "$API/v1/apps")
+          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS"); test -n "$APP_ID"
           echo "ASC_APP_ID=$APP_ID" >> "$GITHUB_ENV"
-
-      - name: Create or resolve premium theme products
-        shell: bash
-        run: |
-          set -euo pipefail
-          API='https://api.appstoreconnect.apple.com'
-          PRODUCTS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" \
-            "$API/v1/apps/$ASC_APP_ID/inAppPurchasesV2?limit=200")
-
+          PRODUCTS=$(curl -fsSL -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/inAppPurchasesV2?limit=200")
           ensure_iap() {
-            local sku="$1" ref="$2" note="$3"
-            local existing body response
+            local sku="$1" ref="$2" note="$3" existing body response
             existing=$(jq -r --arg sku "$sku" '.data[]? | select(.attributes.productId==$sku) | .id' <<<"$PRODUCTS" | head -1)
-            if [[ -n "$existing" ]]; then
-              echo "$existing"
-              return
-            fi
-            body=$(jq -n --arg app "$ASC_APP_ID" --arg sku "$sku" --arg ref "$ref" --arg note "$note" '{data:{type:"inAppPurchases",attributes:{name:$ref,productId:$sku,inAppPurchaseType:"NON_CONSUMABLE",reviewNote:$note},relationships:{app:{data:{type:"apps",id:$app}}}}}')
-            response=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
-              "$API/v2/inAppPurchases" -d "$body")
+            if [[ -n "$existing" ]]; then echo "$existing"; return; fi
+            body=$(jq -n --arg app "$APP_ID" --arg sku "$sku" --arg ref "$ref" --arg note "$note" '{data:{type:"inAppPurchases",attributes:{name:$ref,productId:$sku,inAppPurchaseType:"NON_CONSUMABLE",reviewNote:$note},relationships:{app:{data:{type:"apps",id:$app}}}}}')
+            response=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' "$API/v2/inAppPurchases" -d "$body")
             jq -r '.data.id' <<<"$response"
           }
-
           NEON_ID=$(ensure_iap 'de.kamilunavo.ninenine.theme.neon' 'Nine Nine Neon Pulse' 'Permanently unlocks the Neon Pulse cosmetic design in 99.9%.')
           GOLD_ID=$(ensure_iap 'de.kamilunavo.ninenine.theme.gold' 'Nine Nine Gold Rush' 'Permanently unlocks the Gold Rush cosmetic design in 99.9%.')
           AURORA_ID=$(ensure_iap 'de.kamilunavo.ninenine.theme.aurora' 'Nine Nine Aurora' 'Permanently unlocks the Aurora cosmetic design in 99.9%.')
           test -n "$NEON_ID"; test -n "$GOLD_ID"; test -n "$AURORA_ID"
-          echo "NEON_ID=$NEON_ID" >> "$GITHUB_ENV"
-          echo "GOLD_ID=$GOLD_ID" >> "$GITHUB_ENV"
-          echo "AURORA_ID=$AURORA_ID" >> "$GITHUB_ENV"
+          echo "NEON_ID=$NEON_ID" >> "$GITHUB_ENV"; echo "GOLD_ID=$GOLD_ID" >> "$GITHUB_ENV"; echo "AURORA_ID=$AURORA_ID" >> "$GITHUB_ENV"
 
       - name: Configure worldwide availability
         shell: bash
         run: |
           set -euo pipefail
           API='https://api.appstoreconnect.apple.com'
-          TERRITORIES=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/territories?limit=200")
-          TERRITORY_DATA=$(jq '[.data[] | {type:"territories",id:.id}]' <<<"$TERRITORIES")
-          test "$(jq 'length' <<<"$TERRITORY_DATA")" -gt 0
-
+          TERRITORIES=$(curl -fsSL -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/territories?limit=200")
+          TD=$(jq '[.data[] | {type:"territories",id:.id}]' <<<"$TERRITORIES"); test "$(jq 'length' <<<"$TD")" -gt 0
           ensure_availability() {
-            local iid="$1" current body code
-            code=$(curl -sS -o "$RUNNER_TEMP/availability.json" -w '%{http_code}' -H "Authorization: Bearer $ASC_TOKEN" \
-              "$API/v2/inAppPurchases/$iid/inAppPurchaseAvailability")
-            if [[ "$code" == 200 ]]; then return 0; fi
-            body=$(jq -n --arg iid "$iid" --argjson territories "$TERRITORY_DATA" '{data:{type:"inAppPurchaseAvailabilities",attributes:{availableInNewTerritories:true},relationships:{availableTerritories:{data:$territories},inAppPurchase:{data:{type:"inAppPurchases",id:$iid}}}}}')
-            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
-              "$API/v1/inAppPurchaseAvailabilities" -d "$body" >/dev/null
+            local iid="$1" code body
+            code=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$iid/inAppPurchaseAvailability")
+            [[ "$code" == 200 ]] && return 0
+            body=$(jq -n --arg iid "$iid" --argjson t "$TD" '{data:{type:"inAppPurchaseAvailabilities",attributes:{availableInNewTerritories:true},relationships:{availableTerritories:{data:$t},inAppPurchase:{data:{type:"inAppPurchases",id:$iid}}}}}')
+            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' "$API/v1/inAppPurchaseAvailabilities" -d "$body" >/dev/null
           }
-          ensure_availability "$NEON_ID"
-          ensure_availability "$GOLD_ID"
-          ensure_availability "$AURORA_ID"
+          ensure_availability "$NEON_ID"; ensure_availability "$GOLD_ID"; ensure_availability "$AURORA_ID"
 
-      - name: Add English and German metadata
+      - name: Create or resolve IAP draft versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.appstoreconnect.apple.com'
+          ensure_version() {
+            local iid="$1" versions existing body response
+            versions=$(curl -fsSL -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$iid/versions?limit=50")
+            existing=$(jq -r '.data[]? | select(.attributes.state=="PREPARE_FOR_SUBMISSION") | .id' <<<"$versions" | head -1)
+            if [[ -n "$existing" ]]; then echo "$existing"; return; fi
+            body=$(jq -n --arg iid "$iid" '{data:{type:"inAppPurchaseVersions",relationships:{inAppPurchase:{data:{type:"inAppPurchases",id:$iid}}}}}')
+            response=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' "$API/v1/inAppPurchaseVersions" -d "$body")
+            jq -r '.data.id' <<<"$response"
+          }
+          NEON_VERSION=$(ensure_version "$NEON_ID"); GOLD_VERSION=$(ensure_version "$GOLD_ID"); AURORA_VERSION=$(ensure_version "$AURORA_ID")
+          test -n "$NEON_VERSION"; test -n "$GOLD_VERSION"; test -n "$AURORA_VERSION"
+          echo "NEON_VERSION=$NEON_VERSION" >> "$GITHUB_ENV"; echo "GOLD_VERSION=$GOLD_VERSION" >> "$GITHUB_ENV"; echo "AURORA_VERSION=$AURORA_VERSION" >> "$GITHUB_ENV"
+
+      - name: Add English and German metadata to draft versions
         shell: bash
         run: |
           set -euo pipefail
           API='https://api.appstoreconnect.apple.com'
           ensure_loc() {
-            local iid="$1" locale="$2" name="$3" desc="$4"
-            local current existing body
-            current=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$iid/inAppPurchaseLocalizations?limit=50")
-            existing=$(jq -r --arg locale "$locale" '.data[]? | select(.attributes.locale==$locale) | .id' <<<"$current" | head -1)
+            local vid="$1" locale="$2" name="$3" desc="$4" current existing body
+            current=$(curl -fsSL -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/inAppPurchaseVersions/$vid/localizations?limit=50")
+            existing=$(jq -r --arg l "$locale" '.data[]? | select(.attributes.locale==$l) | .id' <<<"$current" | head -1)
             [[ -n "$existing" ]] && return 0
-            body=$(jq -n --arg iid "$iid" --arg locale "$locale" --arg name "$name" --arg desc "$desc" '{data:{type:"inAppPurchaseLocalizations",attributes:{locale:$locale,name:$name,description:$desc},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}}}}}')
-            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
-              "$API/v2/inAppPurchaseLocalizations" -d "$body" >/dev/null
+            body=$(jq -n --arg vid "$vid" --arg locale "$locale" --arg name "$name" --arg desc "$desc" '{data:{type:"inAppPurchaseLocalizations",attributes:{locale:$locale,name:$name,description:$desc},relationships:{version:{data:{type:"inAppPurchaseVersions",id:$vid}}}}}')
+            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' "$API/v2/inAppPurchaseLocalizations" -d "$body" >/dev/null
           }
-
-          ensure_loc "$NEON_ID" 'en-US' 'Neon Pulse' 'Unlock the Neon Pulse design permanently.'
-          ensure_loc "$NEON_ID" 'de-DE' 'Neon Pulse' 'Schaltet das Neon-Pulse-Design dauerhaft frei.'
-          ensure_loc "$GOLD_ID" 'en-US' 'Gold Rush' 'Unlock the Gold Rush design permanently.'
-          ensure_loc "$GOLD_ID" 'de-DE' 'Gold Rush' 'Schaltet das Gold-Rush-Design dauerhaft frei.'
-          ensure_loc "$AURORA_ID" 'en-US' 'Aurora' 'Unlock the Aurora design permanently.'
-          ensure_loc "$AURORA_ID" 'de-DE' 'Aurora' 'Schaltet das Aurora-Design dauerhaft frei.'
+          ensure_loc "$NEON_VERSION" 'en-US' 'Neon Pulse' 'Unlock the Neon Pulse design permanently.'
+          ensure_loc "$NEON_VERSION" 'de-DE' 'Neon Pulse' 'Schaltet das Neon-Pulse-Design dauerhaft frei.'
+          ensure_loc "$GOLD_VERSION" 'en-US' 'Gold Rush' 'Unlock the Gold Rush design permanently.'
+          ensure_loc "$GOLD_VERSION" 'de-DE' 'Gold Rush' 'Schaltet das Gold-Rush-Design dauerhaft frei.'
+          ensure_loc "$AURORA_VERSION" 'en-US' 'Aurora' 'Unlock the Aurora design permanently.'
+          ensure_loc "$AURORA_VERSION" 'de-DE' 'Aurora' 'Schaltet das Aurora-Design dauerhaft frei.'
 
       - name: Configure 0.99 EUR base price
         shell: bash
@@ -148,23 +135,16 @@ jobs:
           set -euo pipefail
           API='https://api.appstoreconnect.apple.com'
           ensure_price() {
-            local iid="$1"
-            local current points price_point price_ref body
+            local iid="$1" current points pp ref body
             current=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/inAppPurchasePriceSchedules/$iid/manualPrices?limit=5")
             if jq -e '.data | length > 0' >/dev/null 2>&1 <<<"$current"; then return 0; fi
-            points=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" \
-              --data-urlencode "filter[territory]=$BASE_TERRITORY" --data-urlencode 'limit=8000' \
-              "$API/v2/inAppPurchases/$iid/pricePoints")
-            price_point=$(jq -r --arg price "$TARGET_PRICE" '.data[]? | select(.attributes.customerPrice==$price) | .id' <<<"$points" | head -1)
-            test -n "$price_point"
-            price_ref='${price1}'
-            body=$(jq -n --arg iid "$iid" --arg ppid "$price_point" --arg ref "$price_ref" --arg territory "$BASE_TERRITORY" '{data:{type:"inAppPurchasePriceSchedules",relationships:{inAppPurchase:{data:{type:"inAppPurchases",id:$iid}},baseTerritory:{data:{type:"territories",id:$territory}},manualPrices:{data:[{type:"inAppPurchasePrices",id:$ref}]}}},included:[{type:"inAppPurchasePrices",id:$ref,attributes:{startDate:null},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}},inAppPurchasePricePoint:{data:{type:"inAppPurchasePricePoints",id:$ppid}}}}]}')
-            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' \
-              "$API/v1/inAppPurchasePriceSchedules" -d "$body" >/dev/null
+            points=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[territory]=$BASE_TERRITORY" --data-urlencode 'limit=8000' "$API/v2/inAppPurchases/$iid/pricePoints")
+            pp=$(jq -r --arg p "$TARGET_PRICE" '.data[]? | select(.attributes.customerPrice==$p) | .id' <<<"$points" | head -1); test -n "$pp"
+            ref='${price1}'
+            body=$(jq -n --arg iid "$iid" --arg pp "$pp" --arg ref "$ref" --arg territory "$BASE_TERRITORY" '{data:{type:"inAppPurchasePriceSchedules",relationships:{inAppPurchase:{data:{type:"inAppPurchases",id:$iid}},baseTerritory:{data:{type:"territories",id:$territory}},manualPrices:{data:[{type:"inAppPurchasePrices",id:$ref}]}}},included:[{type:"inAppPurchasePrices",id:$ref,attributes:{startDate:null},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}},inAppPurchasePricePoint:{data:{type:"inAppPurchasePricePoints",id:$pp}}}}]}')
+            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' "$API/v1/inAppPurchasePriceSchedules" -d "$body" >/dev/null
           }
-          ensure_price "$NEON_ID"
-          ensure_price "$GOLD_ID"
-          ensure_price "$AURORA_ID"
+          ensure_price "$NEON_ID"; ensure_price "$GOLD_ID"; ensure_price "$AURORA_ID"
 
       - name: Verify catalog
         shell: bash
@@ -172,31 +152,27 @@ jobs:
           set -euo pipefail
           API='https://api.appstoreconnect.apple.com'
           for iid in "$NEON_ID" "$GOLD_ID" "$AURORA_ID"; do
-            curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$iid" | \
-              jq -e '.data.attributes.inAppPurchaseType == "NON_CONSUMABLE"' >/dev/null
+            curl -fsSL -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$iid" | jq -e '.data.attributes.inAppPurchaseType=="NON_CONSUMABLE"' >/dev/null
           done
-          printf 'Premium IAP IDs:\n- neon: %s\n- gold: %s\n- aurora: %s\n' "$NEON_ID" "$GOLD_ID" "$AURORA_ID" >> "$GITHUB_STEP_SUMMARY"
-          printf '\nBase price: %s EUR (%s)\n' "$TARGET_PRICE" "$BASE_TERRITORY" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Premium IAP IDs:\n- neon: %s\n- gold: %s\n- aurora: %s\n\nBase price: %s EUR (%s)\n' "$NEON_ID" "$GOLD_ID" "$AURORA_ID" "$TARGET_PRICE" "$BASE_TERRITORY" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish success status
         if: success()
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
         run: |
           U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          BODY=$(jq -n --arg u "$U" '{state:"success",description:"Three 99.9% premium IAPs configured",target_url:$u,context:"99-9/premium-iap"}')
-          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
+          B=$(jq -n --arg u "$U" '{state:"success",description:"Three 99.9% premium IAPs configured",target_url:$u,context:"99-9/premium-iap"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
 
       - name: Publish failure status
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
         run: |
           U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          BODY=$(jq -n --arg u "$U" '{state:"failure",description:"Premium IAP setup failed; inspect workflow",target_url:$u,context:"99-9/premium-iap"}')
-          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
+          B=$(jq -n --arg u "$U" '{state:"failure",description:"Premium IAP setup failed; inspect workflow",target_url:$u,context:"99-9/premium-iap"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
 
       - name: Remove key
         if: always()
