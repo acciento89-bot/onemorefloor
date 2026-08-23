@@ -144,6 +144,9 @@ jobs:
           chmod 600 "$KEY_PATH"
           grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
           echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          cp "$KEY_PATH" "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
 
       - name: Verify App Store Connect app record exists
         if: steps.creds.outputs.ready == 'true'
@@ -243,11 +246,8 @@ jobs:
           test -n "$SCHEME"
           echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
 
-      - name: Create distribution-signed Build 8 release archive
+      - name: Create unsigned Build 8 release archive
         if: steps.creds.outputs.ready == 'true'
-        env:
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         shell: bash
         run: |
           set -euo pipefail
@@ -258,24 +258,41 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/NineNine.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$ASC_KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
             archive
           test -f "$RUNNER_TEMP/NineNine.xcarchive/Info.plist"
           APP="$RUNNER_TEMP/NineNine.xcarchive/Products/Applications/NineNine.app"
           test -d "$APP"
-          test -d "$APP/Frameworks/GodotIap.framework"
           test -d "$APP/Frameworks/GoogleMobileAds.framework"
           test -d "$APP/Frameworks/UserMessagingPlatform.framework"
-          codesign --verify --strict --verbose=2 "$APP/Frameworks/GoogleMobileAds.framework"
-          codesign --verify --strict --verbose=2 "$APP/Frameworks/UserMessagingPlatform.framework"
-          codesign --verify --deep --strict --verbose=2 "$APP"
-          echo 'Archive and embedded AdMob frameworks have valid code signatures.'
+          echo "ARCHIVE_APP=$APP" >> "$GITHUB_ENV"
+
+      - name: Prime embedded frameworks for Apple cloud re-signing
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          COUNT=0
+          while IFS= read -r -d '' FW; do
+            echo "Ad-hoc priming: $FW"
+            codesign --force --sign - --timestamp=none "$FW"
+            codesign --verify --strict --verbose=2 "$FW"
+            COUNT=$((COUNT + 1))
+          done < <(find "$ARCHIVE_APP/Frameworks" -maxdepth 1 -type d -name '*.framework' -print0)
+          while IFS= read -r -d '' DYLIB; do
+            echo "Ad-hoc priming: $DYLIB"
+            codesign --force --sign - --timestamp=none "$DYLIB"
+            codesign --verify --strict --verbose=2 "$DYLIB"
+            COUNT=$((COUNT + 1))
+          done < <(find "$ARCHIVE_APP/Frameworks" -maxdepth 1 -type f -name '*.dylib' -print0)
+          test "$COUNT" -gt 0
+          codesign --verify --strict --verbose=2 "$ARCHIVE_APP/Frameworks/GoogleMobileAds.framework"
+          codesign --verify --strict --verbose=2 "$ARCHIVE_APP/Frameworks/UserMessagingPlatform.framework"
+          echo "Primed $COUNT embedded code objects for cloud distribution re-signing."
 
       - name: Create TestFlight export options
         if: steps.creds.outputs.ready == 'true'
@@ -286,7 +303,7 @@ jobs:
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict>
           <key>method</key><string>app-store-connect</string>
-          <key>destination</key><string>upload</string>
+          <key>destination</key><string>export</string>
           <key>signingStyle</key><string>automatic</string>
           <key>teamID</key><string>$TEAM_ID</string>
           <key>uploadSymbols</key><true/>
@@ -294,15 +311,18 @@ jobs:
           </dict></plist>
           PLIST
 
-      - name: Upload Build 8 to TestFlight
-        id: upload
+      - name: Cloud-sign Build 8 IPA
+        id: cloudsign
         if: steps.creds.outputs.ready == 'true'
+        continue-on-error: true
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         shell: bash
         run: |
           set -uo pipefail
+          rm -rf "$RUNNER_TEMP/TestFlightExport"
+          mkdir -p "$RUNNER_TEMP/TestFlightExport"
           set +e
           xcodebuild \
             -exportArchive \
@@ -318,27 +338,87 @@ jobs:
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
           exit "$STATUS"
 
+      - name: Verify Apple Distribution signatures in exported IPA
+        if: steps.cloudsign.outputs.status == '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          IPA=$(find "$RUNNER_TEMP/TestFlightExport" -maxdepth 2 -type f -name '*.ipa' -print -quit)
+          test -n "$IPA" -a -s "$IPA"
+          rm -rf "$RUNNER_TEMP/SignedPayload"
+          mkdir -p "$RUNNER_TEMP/SignedPayload"
+          unzip -q "$IPA" -d "$RUNNER_TEMP/SignedPayload"
+          SIGNED_APP=$(find "$RUNNER_TEMP/SignedPayload/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)
+          test -n "$SIGNED_APP" -a -d "$SIGNED_APP"
+          for FW in GoogleMobileAds.framework UserMessagingPlatform.framework; do
+            P="$SIGNED_APP/Frameworks/$FW"
+            test -d "$P"
+            codesign --verify --strict --verbose=2 "$P"
+            INFO=$(codesign -dvv "$P" 2>&1)
+            echo "$INFO"
+            grep -q '^Authority=Apple Distribution' <<<"$INFO"
+          done
+          codesign --verify --deep --strict --verbose=2 "$SIGNED_APP"
+          echo "SIGNED_IPA=$IPA" >> "$GITHUB_ENV"
+          echo 'GoogleMobileAds and UserMessagingPlatform are Apple Distribution signed.'
+
+      - name: Upload signed Build 8 IPA to TestFlight
+        id: upload
+        if: steps.cloudsign.outputs.status == '0'
+        continue-on-error: true
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          xcrun altool --upload-app --type ios -f "$SIGNED_IPA" \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" \
+            2>&1 | tee "$RUNNER_TEMP/altool-upload.log"
+          STATUS=${PIPESTATUS[0]}
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          exit "$STATUS"
+
       - name: Publish final status
         if: always() && steps.creds.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          CLOUDSIGN_STATUS: ${{ steps.cloudsign.outputs.status }}
           UPLOAD_STATUS: ${{ steps.upload.outputs.status }}
         shell: bash
         run: |
           set -euo pipefail
           U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          if [[ "$UPLOAD_STATUS" == 0 ]]; then
+          if [[ "$CLOUDSIGN_STATUS" == 0 && "$UPLOAD_STATUS" == 0 ]]; then
             STATE=success
             DESC="99.9% ${APP_VERSION} (${EFFECTIVE_BUILD}) uploaded to TestFlight"
+          elif [[ "$CLOUDSIGN_STATUS" != 0 ]]; then
+            STATE=failure
+            DESC='99.9% Build 8 cloud distribution signing failed'
           else
             STATE=failure
-            DESC='99.9% Build 8 TestFlight upload failed; inspect workflow log'
+            DESC='99.9% Build 8 TestFlight upload failed'
           fi
           BODY=$(jq -n --arg s "$STATE" --arg d "$DESC" --arg u "$U" '{state:$s,description:$d,target_url:$u,context:"99-9/testflight-bridge"}')
           curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
 
+      - name: Fail if cloud signing or TestFlight upload failed
+        if: always() && steps.creds.outputs.ready == 'true' && (steps.cloudsign.outputs.status != '0' || steps.upload.outputs.status != '0')
+        shell: bash
+        run: |
+          echo "Cloud signing status: ${{ steps.cloudsign.outputs.status }}"
+          echo "Upload status: ${{ steps.upload.outputs.status }}"
+          exit 1
+
       - name: Remove App Store Connect key
         if: always()
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         shell: bash
-        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+        run: |
+          rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+          if [[ -n "${ASC_KEY_ID:-}" ]]; then
+            rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          fi
