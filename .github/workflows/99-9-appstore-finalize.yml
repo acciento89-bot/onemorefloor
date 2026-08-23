@@ -1,0 +1,125 @@
+name: 99.9 App Store Finalize
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-appstore-finalize.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  BUNDLE_ID: de.kamilunavo.ninenine
+  VERSION_STRING: '1.0.0'
+  BUILD_NUMBER: '15'
+  PRODUCT_ID: de.kamilunavo.ninenine.removeads
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
+          chmod 600 "$KEY"
+          export ASC_KEY_PATH="$KEY"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+1200,aud:'appstoreconnect-v1'}))
+          s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s))
+          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Attach Build 15 and verify Remove Ads is ready
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=https://api.appstoreconnect.apple.com
+          H=(-H "Authorization: Bearer $ASC_TOKEN")
+
+          APPS=$(curl --fail-with-body -sS -G "${H[@]}" --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode limit=10 "$BASE/v1/apps")
+          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS")
+          test -n "$APP_ID"
+
+          VERS=$(curl --fail-with-body -sS -G "${H[@]}" --data-urlencode "filter[platform]=IOS" --data-urlencode "filter[versionString]=$VERSION_STRING" --data-urlencode limit=20 "$BASE/v1/apps/$APP_ID/appStoreVersions")
+          VERSION_ID=$(jq -r '.data[0].id // empty' <<<"$VERS")
+          VERSION_STATE=$(jq -r '.data[0].attributes.appStoreState // empty' <<<"$VERS")
+          test -n "$VERSION_ID"
+
+          BUILDS=$(curl --fail-with-body -sS -G "${H[@]}" --data-urlencode "filter[app]=$APP_ID" --data-urlencode "filter[version]=$BUILD_NUMBER" --data-urlencode 'sort=-uploadedDate' --data-urlencode limit=20 "$BASE/v1/builds")
+          BUILD_ID=$(jq -r '.data[0].id // empty' <<<"$BUILDS")
+          test -n "$BUILD_ID"
+          BUILD=$(curl --fail-with-body -sS "${H[@]}" "$BASE/v1/builds/$BUILD_ID")
+          BUILD_STATE=$(jq -r '.data.attributes.processingState // empty' <<<"$BUILD")
+          test "$BUILD_STATE" = VALID
+
+          BODY=$(jq -n --arg id "$BUILD_ID" '{data:{type:"builds",id:$id}}')
+          curl --fail-with-body -sS -X PATCH "${H[@]}" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v1/appStoreVersions/$VERSION_ID/relationships/build" >/dev/null
+
+          IAPS=$(curl --fail-with-body -sS -G "${H[@]}" --data-urlencode "filter[productId]=$PRODUCT_ID" --data-urlencode 'include=appStoreReviewScreenshot' --data-urlencode limit=20 "$BASE/v1/apps/$APP_ID/inAppPurchasesV2")
+          IAP_ID=$(jq -r '.data[0].id // empty' <<<"$IAPS")
+          IAP_STATE=$(jq -r '.data[0].attributes.state // empty' <<<"$IAPS")
+          IAP_TYPE=$(jq -r '.data[0].attributes.inAppPurchaseType // empty' <<<"$IAPS")
+          IAP_ALL_TERRITORIES=$(jq -r '.data[0].attributes.availableInAllTerritories // false' <<<"$IAPS")
+          test -n "$IAP_ID"
+          test "$IAP_TYPE" = NON_CONSUMABLE
+          case "$IAP_STATE" in READY_TO_SUBMIT|WAITING_FOR_REVIEW|IN_REVIEW|PENDING_BINARY_APPROVAL|APPROVED) ;; *) echo "Remove Ads not ready: $IAP_STATE"; exit 1;; esac
+
+          SHOTS=$(curl --fail-with-body -sS "${H[@]}" "$BASE/v1/inAppPurchases/$IAP_ID/appStoreReviewScreenshot" || true)
+          SHOT_ID=$(jq -r '.data.id // empty' <<<"$SHOTS" 2>/dev/null || true)
+          if [[ -z "$SHOT_ID" ]]; then
+            SHOT_ID=$(jq -r '.included[]? | select(.type=="inAppPurchaseAppStoreReviewScreenshots") | .id' <<<"$IAPS" | head -1)
+          fi
+          test -n "$SHOT_ID"
+          SHOT=$(curl --fail-with-body -sS "${H[@]}" "$BASE/v1/inAppPurchaseAppStoreReviewScreenshots/$SHOT_ID")
+          SHOT_STATE=$(jq -r '.data.attributes.assetDeliveryState.state // empty' <<<"$SHOT")
+          test "$SHOT_STATE" = COMPLETE
+
+          cat > /tmp/finalize.txt <<EOF
+          app_id=$APP_ID
+          bundle=$BUNDLE_ID
+          version_id=$VERSION_ID
+          version=$VERSION_STRING
+          version_state=$VERSION_STATE
+          build_id=$BUILD_ID
+          build=$BUILD_NUMBER
+          build_state=$BUILD_STATE
+          iap_id=$IAP_ID
+          iap_product=$PRODUCT_ID
+          iap_type=$IAP_TYPE
+          iap_state=$IAP_STATE
+          iap_available_in_all_territories=$IAP_ALL_TERRITORIES
+          iap_review_screenshot_id=$SHOT_ID
+          iap_review_screenshot_state=$SHOT_STATE
+          build_attached=true
+          api_submit_performed=false
+          final_submit_requires_appstoreconnect_ui_for_first_non_consumable=true
+          EOF
+          cat /tmp/finalize.txt
+
+          CONTENT=$(base64 -w0 /tmp/finalize.txt)
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/validation/99-9-appstore-finalize-result.txt"
+          EXISTING=$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H 'Accept: application/vnd.github+json' "$API")
+          SHA=$(jq -r '.sha // empty' <<<"$EXISTING")
+          PAYLOAD=$(jq -n --arg message 'Record 99.9 App Store finalization preflight' --arg content "$CONTENT" --arg sha "$SHA" '{message:$message,content:$content,branch:"main"} + (if $sha!="" then {sha:$sha} else {} end)')
+          curl --fail-with-body -sS -X PUT -H "Authorization: Bearer $GITHUB_TOKEN" -H 'Accept: application/vnd.github+json' -H 'Content-Type: application/json' -d "$PAYLOAD" "$API" >/dev/null
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
