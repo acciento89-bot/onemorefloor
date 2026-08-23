@@ -1,0 +1,232 @@
+name: 99.9 iOS Build 11 Close Fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-ios-build11-close-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_REPO: acciento89-bot/99-9
+  SOURCE_REF: d208591456309e992771e23cfd5e35ec89f123d8
+  GODOT_VERSION: '4.7.2'
+  GODOT_TAG: '4.7.2-stable'
+  TEAM_ID: 'TKG684N5GL'
+  BUNDLE_ID: 'de.kamilunavo.ninenine'
+  APP_VERSION: '1.0.0'
+  BUILD_NUMBER: '11'
+
+jobs:
+  ios-testflight:
+    runs-on: macos-26
+    timeout-minutes: 55
+    steps:
+      - name: Check credentials
+        env:
+          REPO_TOKEN: ${{ secrets.NINENINE_REPO_TOKEN }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$REPO_TOKEN"; test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+
+      - name: Checkout locked iOS source
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.SOURCE_REPO }}
+          ref: ${{ env.SOURCE_REF }}
+          token: ${{ secrets.NINENINE_REPO_TOKEN }}
+          path: source
+          persist-credentials: false
+
+      - name: Verify iOS close fix and release config
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_REF"
+          grep -q 'res://scripts/main_v10.gd' scenes/main.tscn
+          grep -q '_shutting_down = true' scripts/ads_service.gd
+          grep -q 'de.kamilunavo.ninenine.removeads' scripts/iap_service.gd
+          grep -q 'ca-app-pub-8944085355624754~5700066119' project.godot
+          grep -q 'ca-app-pub-8944085355624754/9156045067' scripts/ads_service.gd
+          ! grep -q 'com.kamilunavo.game999' project.godot scripts/*.gd export_presets.cfg
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          p=Path('export_presets.cfg')
+          text=p.read_text()
+          text,count=re.subn(r'application/version="[0-9]+"','application/version="11"',text,count=1)
+          if count != 1: raise SystemExit('Could not set iOS build number')
+          p.write_text(text)
+          PY
+
+      - name: Prepare App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          cp "$KEY_PATH" "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      - name: Install Godot and iOS templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/godot.zip" "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_macos.universal.zip"
+          mkdir -p "$RUNNER_TEMP/godot"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          GODOT="$RUNNER_TEMP/godot/Godot.app/Contents/MacOS/Godot"
+          test -x "$GODOT"
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+          T="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$T" "$RUNNER_TEMP/templates"
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/templates.tpz" "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_export_templates.tpz"
+          unzip -q "$RUNNER_TEMP/templates.tpz" -d "$RUNNER_TEMP/templates"
+          cp -R "$RUNNER_TEMP/templates/templates/." "$T/"
+          test -f "$T/ios.zip"
+
+      - name: Install iOS AdMob and Share packages
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/ci_install_admob.sh ios
+          bash scripts/ci_install_share_ios.sh
+          test -f addons/admob/ios/bin/ads/poing_godot_admob_ads.gd
+          test -f ios/plugins/share/share.gdip
+          test -f ios/plugins/share/share.release.a
+          grep -q 'plugins/Share=true' export_presets.cfg
+
+      - name: Export and verify iOS Xcode project
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd source
+          "$GODOT" --headless --editor --path . --quit
+          mkdir -p build/ios
+          rm -rf build/ios/NineNine build/ios/NineNine.xcodeproj build/ios/NineNine.xcframework build/ios/MoltenVK.xcframework build/ios/PrivacyInfo.xcprivacy
+          "$GODOT" --headless --path . --export-release "iOS Playtest" build/ios/NineNine.zip
+          test -d build/ios/NineNine.xcodeproj
+          test -d addons/godot-iap/bin/ios/GodotIap.framework
+          chmod +x addons/godot-iap/scripts/fix_ios_embed.sh
+          IOS_EXPORT_DIR="$PWD/build/ios" ./addons/godot-iap/scripts/fix_ios_embed.sh
+          grep -q 'GodotIap.framework' build/ios/NineNine.xcodeproj/project.pbxproj
+          grep -R -q 'ca-app-pub-8944085355624754~5700066119' build/ios
+          grep -R -q 'GoogleMobileAds' build/ios
+          grep -Ei -q 'share(\.release)?\.a|share\.a' build/ios/NineNine.xcodeproj/project.pbxproj
+          echo "XCODE_PROJECT=$PWD/build/ios/NineNine.xcodeproj" >> "$GITHUB_ENV"
+
+      - name: Resolve Xcode scheme
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project "$XCODE_PROJECT" -list -json > "$RUNNER_TEMP/xcode-list.json"
+          SCHEME=$(python3 - <<'PY'
+          import json, os
+          d=json.load(open(os.environ['RUNNER_TEMP']+'/xcode-list.json')).get('project',{})
+          print((d.get('schemes') or d.get('targets') or [''])[0])
+          PY
+          )
+          test -n "$SCHEME"
+          echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
+
+      - name: Create unsigned iOS archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/NineNine.xcarchive"
+          xcodebuild -project "$XCODE_PROJECT" -scheme "$SCHEME" -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NineNine.xcarchive" DEVELOPMENT_TEAM="$TEAM_ID" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" archive
+          APP="$RUNNER_TEMP/NineNine.xcarchive/Products/Applications/NineNine.app"
+          test -d "$APP"
+          test -d "$APP/Frameworks/GoogleMobileAds.framework"
+          test -d "$APP/Frameworks/UserMessagingPlatform.framework"
+          echo "ARCHIVE_APP=$APP" >> "$GITHUB_ENV"
+
+      - name: Prime embedded code for cloud signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          COUNT=0
+          while IFS= read -r -d '' FW; do codesign --force --sign - --timestamp=none "$FW"; codesign --verify --strict --verbose=2 "$FW"; COUNT=$((COUNT + 1)); done < <(find "$ARCHIVE_APP/Frameworks" -maxdepth 1 -type d -name '*.framework' -print0)
+          while IFS= read -r -d '' DYLIB; do codesign --force --sign - --timestamp=none "$DYLIB"; codesign --verify --strict --verbose=2 "$DYLIB"; COUNT=$((COUNT + 1)); done < <(find "$ARCHIVE_APP/Frameworks" -maxdepth 1 -type f -name '*.dylib' -print0)
+          test "$COUNT" -gt 0
+
+      - name: Create App Store export options
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>method</key><string>app-store-connect</string>
+          <key>destination</key><string>export</string>
+          <key>signingStyle</key><string>automatic</string>
+          <key>teamID</key><string>$TEAM_ID</string>
+          <key>uploadSymbols</key><true/>
+          <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+
+      - name: Cloud-sign iOS IPA
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/TestFlightExport"
+          mkdir -p "$RUNNER_TEMP/TestFlightExport"
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/NineNine.xcarchive" -exportPath "$RUNNER_TEMP/TestFlightExport" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          IPA=$(find "$RUNNER_TEMP/TestFlightExport" -maxdepth 2 -type f -name '*.ipa' -print -quit)
+          test -n "$IPA" -a -s "$IPA"
+          echo "SIGNED_IPA=$IPA" >> "$GITHUB_ENV"
+
+      - name: Verify Apple Distribution signatures
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/SignedPayload"
+          mkdir -p "$RUNNER_TEMP/SignedPayload"
+          unzip -q "$SIGNED_IPA" -d "$RUNNER_TEMP/SignedPayload"
+          SIGNED_APP=$(find "$RUNNER_TEMP/SignedPayload/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)
+          test -d "$SIGNED_APP"
+          for FW in GoogleMobileAds.framework UserMessagingPlatform.framework; do
+            P="$SIGNED_APP/Frameworks/$FW"
+            codesign --verify --strict --verbose=2 "$P"
+            INFO=$(codesign -dvv "$P" 2>&1)
+            grep -q '^Authority=Apple Distribution' <<<"$INFO"
+          done
+          codesign --verify --deep --strict --verbose=2 "$SIGNED_APP"
+
+      - name: Upload Build 11 to TestFlight
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcrun altool --upload-app --type ios -f "$SIGNED_IPA" --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+
+      - name: Remove App Store Connect key
+        if: always()
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+          if [[ -n "${ASC_KEY_ID:-}" ]]; then rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"; fi
