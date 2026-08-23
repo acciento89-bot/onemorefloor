@@ -91,3 +91,5 @@ jobs:
       - name: Remove key
         if: always()
         run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+
+# Build 8 ASC recheck after successful rerun upload.
