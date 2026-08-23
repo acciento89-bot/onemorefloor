@@ -1,0 +1,144 @@
+name: 99.9 TestFlight Crash Diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-testflight-crash-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  BUNDLE_ID: de.kamilunavo.ninenine
+  TARGET_BUILD: '12'
+
+jobs:
+  diagnose:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
+          chmod 600 "$KEY"
+          export ASC_KEY_PATH="$KEY"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+1200,aud:'appstoreconnect-v1'}))
+          s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s))
+          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Fetch latest TestFlight crash log for Build 12
+        id: crash
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://api.appstoreconnect.apple.com'
+          APPS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'limit=10' "$BASE/v1/apps")
+          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS")
+          test -n "$APP_ID"
+
+          FOUND=''
+          for TRY in {1..12}; do
+            CRASHES=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" \
+              --data-urlencode 'limit=100' \
+              --data-urlencode 'sort=-createdDate' \
+              --data-urlencode 'include=build' \
+              --data-urlencode 'fields[betaFeedbackCrashSubmissions]=createdDate,deviceModel,osVersion,locale,appUptimeInMilliseconds,buildBundleId,comment,build,crashLog' \
+              --data-urlencode 'fields[builds]=version' \
+              "$BASE/v1/apps/$APP_ID/betaFeedbackCrashSubmissions")
+            printf '%s' "$CRASHES" > "$RUNNER_TEMP/crashes.json"
+            FOUND=$(python3 <<'PY'
+          import json, os
+          p=os.path.join(os.environ['RUNNER_TEMP'],'crashes.json')
+          d=json.load(open(p))
+          builds={x['id']:str(x.get('attributes',{}).get('version','')) for x in d.get('included',[]) if x.get('type')=='builds'}
+          target=os.environ.get('TARGET_BUILD','12')
+          for x in d.get('data',[]):
+              bid=((x.get('relationships') or {}).get('build') or {}).get('data') or {}
+              if builds.get(bid.get('id',''))==target:
+                  print(x.get('id',''))
+                  break
+          PY
+          )
+            if [[ -n "$FOUND" ]]; then break; fi
+            sleep 30
+          done
+
+          if [[ -z "$FOUND" ]]; then
+            echo 'found=false' >> "$GITHUB_OUTPUT"
+            printf 'No TestFlight crash submission for Build %s was available yet. Apple may still be processing it.\n' "$TARGET_BUILD" > "$RUNNER_TEMP/report.md"
+            exit 0
+          fi
+
+          echo 'found=true' >> "$GITHUB_OUTPUT"
+          echo "submission_id=$FOUND" >> "$GITHUB_OUTPUT"
+          SUB=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" \
+            --data-urlencode 'include=build' \
+            --data-urlencode 'fields[betaFeedbackCrashSubmissions]=createdDate,deviceModel,osVersion,locale,appUptimeInMilliseconds,buildBundleId,comment,build,crashLog' \
+            --data-urlencode 'fields[builds]=version' \
+            "$BASE/v1/betaFeedbackCrashSubmissions/$FOUND")
+          printf '%s' "$SUB" > "$RUNNER_TEMP/submission.json"
+
+          REL=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/betaFeedbackCrashSubmissions/$FOUND/relationships/crashLog")
+          CRASH_ID=$(jq -r '.data.id // empty' <<<"$REL")
+          test -n "$CRASH_ID"
+          LOGJSON=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode 'fields[betaCrashLogs]=logText' "$BASE/v1/betaCrashLogs/$CRASH_ID")
+          printf '%s' "$LOGJSON" > "$RUNNER_TEMP/log.json"
+
+          python3 <<'PY'
+          import json, os
+          rt=os.environ['RUNNER_TEMP']
+          sub=json.load(open(rt+'/submission.json'))
+          log=json.load(open(rt+'/log.json'))
+          a=sub['data'].get('attributes',{})
+          included=sub.get('included',[])
+          build='?'
+          for x in included:
+              if x.get('type')=='builds': build=str(x.get('attributes',{}).get('version','?'))
+          text=log.get('data',{}).get('attributes',{}).get('logText','')
+          head='\n'.join([
+              '# 99.9% TestFlight crash diagnostic',
+              '',
+              f"- Build: {build}",
+              f"- Created: {a.get('createdDate','?')}",
+              f"- Device: {a.get('deviceModel','?')}",
+              f"- iOS: {a.get('osVersion','?')}",
+              f"- Uptime ms: {a.get('appUptimeInMilliseconds','?')}",
+              f"- Bundle: {a.get('buildBundleId','?')}",
+              '',
+              '```text',
+          ])
+          # GitHub issue body limit is ~65k; keep the useful front of the Apple crash log.
+          body=head+'\n'+text[:56000]+'\n```\n'
+          open(rt+'/report.md','w').write(body)
+          PY
+
+      - name: Publish diagnostic result as GitHub issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TITLE="99.9 TestFlight crash diagnostic Build $TARGET_BUILD $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$RUNNER_TEMP/report.md"
