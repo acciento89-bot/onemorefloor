@@ -1,0 +1,21 @@
+name: 99.9 Build 8 Dispatcher
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-build8-dispatch.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch TestFlight bridge as build 8
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run 99-9-testflight-bridge.yml --repo "$GITHUB_REPOSITORY" -f build=8
