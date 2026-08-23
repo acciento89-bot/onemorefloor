@@ -1,0 +1,6 @@
+result=failure
+run_id=32652375473
+source_ref=1e9531a699ae5d960dbe1c305f1c69dac7d92ebc
+build=16
+bundle=de.kamilunavo.ninenine
+storekit_autoload_safe=true
