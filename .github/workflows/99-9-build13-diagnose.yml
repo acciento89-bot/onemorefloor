@@ -1,0 +1,51 @@
+name: 99.9 Build 13 Diagnose
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-build13-diagnose.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Capture latest Build 13 failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUNS=$(gh api "repos/$REPO/actions/workflows/99-9-ios-build13-termination-fix.yml/runs?per_page=5")
+          RUN_ID=$(jq -r '.workflow_runs[] | select(.conclusion=="failure") | .id' <<<"$RUNS" | head -1)
+          if [[ -z "$RUN_ID" ]]; then
+            echo "No failed Build 13 run found"
+            exit 1
+          fi
+          echo "Failed run: $RUN_ID"
+          JOBS=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100")
+          JOB_ID=$(jq -r '.jobs[] | select(.conclusion=="failure") | .id' <<<"$JOBS" | head -1)
+          JOB_NAME=$(jq -r --argjson id "$JOB_ID" '.jobs[] | select(.id==$id) | .name' <<<"$JOBS")
+          FAILED_STEP=$(jq -r --argjson id "$JOB_ID" '.jobs[] | select(.id==$id) | .steps[]? | select(.conclusion=="failure") | .name' <<<"$JOBS" | head -1)
+          test -n "$JOB_ID"
+          gh api "repos/$REPO/actions/jobs/$JOB_ID/logs" > job.log || true
+          tail -n 220 job.log > tail.log
+          {
+            echo "# Build 13 failure diagnostic"
+            echo
+            echo "Run: $RUN_ID"
+            echo "Job: $JOB_NAME ($JOB_ID)"
+            echo "Failed step: $FAILED_STEP"
+            echo
+            echo '```text'
+            cat tail.log
+            echo '```'
+          } > issue.md
+          gh issue create --repo "$REPO" --title "99.9 Build 13 failure diagnostic run $RUN_ID" --body-file issue.md
