@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/99-9-appstore-finalize.yml'
+      - 'bridge/99-9-appstore-finalize.trigger'
   workflow_dispatch:
 
 permissions:
