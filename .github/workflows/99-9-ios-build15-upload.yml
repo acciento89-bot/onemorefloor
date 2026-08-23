@@ -1,0 +1,91 @@
+name: 99.9 iOS Build 15 Upload
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-ios-build15-upload-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+env:
+  SOURCE_RUN_ID: '32646173679'
+  ARTIFACT_NAME: 'NineNine-iOS-Build15-release-ready-NOT-UPLOADED'
+  BUNDLE_ID: 'de.kamilunavo.ninenine'
+  APP_VERSION: '1.0.0'
+  BUILD_NUMBER: '15'
+
+jobs:
+  upload-build15:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - name: Download previously validated signed Build 15 IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: artifact
+          run-id: ${{ env.SOURCE_RUN_ID }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+
+      - name: Verify exact release identity before upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          IPA=$(find artifact -type f -name '*.ipa' -print -quit)
+          test -n "$IPA" -a -s "$IPA"
+          rm -rf "$RUNNER_TEMP/VerifyPayload"
+          mkdir -p "$RUNNER_TEMP/VerifyPayload"
+          unzip -q "$IPA" -d "$RUNNER_TEMP/VerifyPayload"
+          APP=$(find "$RUNNER_TEMP/VerifyPayload/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)
+          test -d "$APP"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -qx "$BUNDLE_ID"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -qx "$APP_VERSION"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -qx "$BUILD_NUMBER"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          echo "IPA=$IPA" >> "$GITHUB_ENV"
+
+      - name: Prepare App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+
+      - name: Upload Build 15 to App Store Connect
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          xcrun altool --upload-app \
+            --file "$IPA" \
+            --type ios \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID" \
+            --verbose
+
+      - name: Remove App Store Connect key
+        if: always()
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        shell: bash
+        run: |
+          if [[ -n "${ASC_KEY_ID:-}" ]]; then
+            rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          fi
