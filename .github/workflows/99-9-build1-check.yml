@@ -92,4 +92,4 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
 
-# Build 8 ASC recheck after successful rerun upload.
+# Build 8 ASC recheck triggered 2026-08-23 11:32 CEST.
