@@ -1,0 +1,132 @@
+name: 99.9 iOS Crashlog Fix Fast Validate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-ios-crashlog-fix-fast-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  SOURCE_REPO: acciento89-bot/99-9
+  SOURCE_REF: 2ea3ddd30cdbc5a1369d9e9484f0a173ef662021
+  GODOT_VERSION: '4.7.2'
+  GODOT_TAG: '4.7.2-stable'
+
+jobs:
+  validate:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Checkout bridge for result recording
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          path: bridge
+
+      - name: Checkout locked iOS source
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.SOURCE_REPO }}
+          ref: ${{ env.SOURCE_REF }}
+          token: ${{ secrets.NINENINE_REPO_TOKEN }}
+          path: source
+          persist-credentials: false
+
+      - name: Verify exact iOS-safe runtime graph
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_REF"
+          grep -q 'main_v11_ios_shutdown_safe.gd' scenes/main.tscn
+          grep -q 'leaderboard_service_ios_safe.gd' scenes/main.tscn
+          grep -q 'iap_service_ios_safe.gd' scenes/main.tscn
+          grep -q 'ads_service_ios_safe.gd' scenes/main.tscn
+          grep -q 'Callable(self, "_complete_ios_async_waiter")' addons/godot-iap/godot_iap_ios_safe.gd
+          grep -q '_replace_ios_lambda_connections' scripts/main_v11_ios_shutdown_safe.gd
+          grep -q '_cancel_ios_pending' scripts/iap_service_ios_safe.gd
+          ! grep -En 'connect\(func|:= *func|= *func\(' scripts/main_v11_ios_shutdown_safe.gd scripts/leaderboard_service_ios_safe.gd scripts/iap_service_ios_safe.gd scripts/ads_service_ios_safe.gd addons/godot-iap/godot_iap_ios_safe.gd
+          grep -q 'de.kamilunavo.ninenine.removeads' scripts/iap_service.gd
+          grep -q 'ca-app-pub-8944085355624754~5700066119' project.godot
+          grep -q 'ca-app-pub-8944085355624754/9156045067' scripts/ads_service.gd
+          ! grep -q 'com.kamilunavo.game999' project.godot scripts/*.gd export_presets.cfg
+
+      - name: Install Godot and iOS export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/godot.zip" "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_macos.universal.zip"
+          mkdir -p "$RUNNER_TEMP/godot"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          GODOT="$RUNNER_TEMP/godot/Godot.app/Contents/MacOS/Godot"
+          test -x "$GODOT"
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+          T="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$T" "$RUNNER_TEMP/templates"
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/templates.tpz" "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/Godot_v${GODOT_TAG}_export_templates.tpz"
+          unzip -q "$RUNNER_TEMP/templates.tpz" -d "$RUNNER_TEMP/templates"
+          cp -R "$RUNNER_TEMP/templates/templates/." "$T/"
+          test -f "$T/ios.zip"
+
+      - name: Install iOS dependencies only
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/ci_install_admob.sh ios
+          bash scripts/ci_install_share_ios.sh
+
+      - name: Parse all active scripts
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT" --headless --editor --path . --quit
+          "$GODOT" --headless --path . --quit-after 2
+
+      - name: Export iOS Xcode project without signing or upload
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          p=Path('export_presets.cfg')
+          s=p.read_text()
+          s,n=re.subn(r'application/version="[0-9]+"','application/version="15"',s,count=1)
+          if n != 1: raise SystemExit('iOS build number replacement failed')
+          p.write_text(s)
+          PY
+          mkdir -p build/ios
+          "$GODOT" --headless --path . --export-release "iOS Playtest" build/ios/NineNine.zip
+          test -d build/ios/NineNine.xcodeproj
+          chmod +x addons/godot-iap/scripts/fix_ios_embed.sh
+          IOS_EXPORT_DIR="$PWD/build/ios" ./addons/godot-iap/scripts/fix_ios_embed.sh
+          grep -q 'GodotIap.framework' build/ios/NineNine.xcodeproj/project.pbxproj
+          grep -R -q 'GoogleMobileAds' build/ios
+          grep -R -q 'ca-app-pub-8944085355624754~5700066119' build/ios
+
+      - name: Record validation outcome
+        if: always()
+        working-directory: bridge
+        env:
+          RESULT: ${{ job.status }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_REF: ${{ env.SOURCE_REF }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation
+          printf 'result=%s\nrun_id=%s\nsource_ref=%s\n' "$RESULT" "$RUN_ID" "$SOURCE_REF" > validation/99-9-ios-crashlog-fast-result.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add validation/99-9-ios-crashlog-fast-result.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Record 99.9 iOS crashlog fast validation result"
+            git push origin HEAD:main
+          fi
