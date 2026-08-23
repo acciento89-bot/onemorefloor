@@ -10,7 +10,7 @@ permissions:
 
 env:
   SOURCE_REPO: acciento89-bot/99-9
-  SOURCE_REF: 1e9531a699ae5d960dbe1c305f1c69dac7d92ebc
+  SOURCE_REF: 5a6929b47d510a3b13ae68c29ff78b6ea05a9e7b
   GODOT_VERSION: '4.7.2'
   GODOT_TAG: '4.7.2-stable'
   TEAM_ID: 'TKG684N5GL'
@@ -59,6 +59,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_REF"
+          grep -Fq 'GodotIapPlugin="*res://addons/godot-iap/godot_iap_ios_safe.gd"' project.godot
+          grep -Fq 'add_autoload_singleton(AUTOLOAD_NAME, "res://addons/godot-iap/godot_iap_ios_safe.gd")' addons/godot-iap/godot_iap_plugin.gd
+          ! grep -Fq 'add_autoload_singleton(AUTOLOAD_NAME, "res://addons/godot-iap/godot_iap.gd")' addons/godot-iap/godot_iap_plugin.gd
           grep -q 'res://scripts/iap_service_ios_safe.gd' scenes/main.tscn
           grep -q 'get_node_or_null("/root/GodotIapPlugin")' scripts/iap_service_ios_safe.gd
           grep -q 'iap = autoload_iap' scripts/iap_service_ios_safe.gd
@@ -81,16 +84,6 @@ jobs:
           import re
           from pathlib import Path
 
-          # iOS artifact only: make the plugin-created autoload use the
-          # lambda-safe wrapper. The source repository and non-iOS config stay unchanged.
-          plugin = Path('addons/godot-iap/godot_iap_plugin.gd')
-          text = plugin.read_text()
-          old = 'add_autoload_singleton(AUTOLOAD_NAME, "res://addons/godot-iap/godot_iap.gd")'
-          new = 'add_autoload_singleton(AUTOLOAD_NAME, "res://addons/godot-iap/godot_iap_ios_safe.gd")'
-          if old not in text:
-              raise SystemExit('Expected GodotIap autoload line not found')
-          plugin.write_text(text.replace(old, new, 1))
-
           preset = Path('export_presets.cfg')
           ptext = preset.read_text()
           ptext, count = re.subn(r'application/version="[0-9]+"', 'application/version="16"', ptext, count=1)
@@ -98,9 +91,6 @@ jobs:
               raise SystemExit('Could not set iOS build number')
           preset.write_text(ptext)
           PY
-
-          grep -q 'add_autoload_singleton(AUTOLOAD_NAME, "res://addons/godot-iap/godot_iap_ios_safe.gd")' addons/godot-iap/godot_iap_plugin.gd
-          ! grep -q 'add_autoload_singleton(AUTOLOAD_NAME, "res://addons/godot-iap/godot_iap.gd")' addons/godot-iap/godot_iap_plugin.gd
 
       - name: Prepare App Store Connect key
         env:
