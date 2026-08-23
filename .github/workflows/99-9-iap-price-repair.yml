@@ -1,0 +1,134 @@
+name: 99.9 IAP Price Repair
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-iap-price-repair.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  statuses: write
+
+env:
+  BUNDLE_ID: de.kamilunavo.ninenine
+  BASE_TERRITORY: DEU
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Publish pending status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          B=$(jq -n --arg u "$U" '{state:"pending",description:"Repairing 99.9% IAP prices",target_url:$u,context:"99-9/iap-price-repair"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
+
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
+          chmod 600 "$KEY"
+          export ASC_KEY_PATH="$KEY"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Restore base prices
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.appstoreconnect.apple.com'
+          H=(-H "Authorization: Bearer $ASC_TOKEN")
+          APPS=$(curl -fsSL -G "${H[@]}" --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'limit=10' "$API/v1/apps")
+          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS"); test -n "$APP_ID"
+          PRODUCTS=$(curl -fsSL "${H[@]}" "$API/v1/apps/$APP_ID/inAppPurchasesV2?limit=200")
+          : > /tmp/iap-price-repair.txt
+          printf 'app_id=%s\nbundle=%s\nbase_territory=%s\n' "$APP_ID" "$BUNDLE_ID" "$BASE_TERRITORY" >> /tmp/iap-price-repair.txt
+
+          ensure_price() {
+            local sku="$1" target="$2" iid current have points pp ref body verify final
+            iid=$(jq -r --arg sku "$sku" '.data[]? | select(.attributes.productId==$sku) | .id' <<<"$PRODUCTS" | head -1)
+            test -n "$iid"
+
+            current=$(curl -sS "${H[@]}" "$API/v1/inAppPurchasePriceSchedules/$iid/manualPrices?filter%5Bterritory%5D=$BASE_TERRITORY&include=inAppPurchasePricePoint&limit=50" || true)
+            have=$(jq -r --arg price "$target" '[.included[]? | select(.type=="inAppPurchasePricePoints") | select((.attributes.customerPrice|tostring)==$price)] | length' <<<"${current:-{}}" 2>/dev/null || echo 0)
+            if [[ "$have" -eq 0 ]]; then
+              existing_count=$(jq -r '.data | length // 0' <<<"${current:-{}}" 2>/dev/null || echo 0)
+              if [[ "$existing_count" -gt 0 ]]; then
+                echo "Unexpected existing DEU price for $sku; refusing destructive overwrite." >&2
+                echo "product=$sku id=$iid expected=$target status=unexpected-existing-price" >> /tmp/iap-price-repair.txt
+                return 1
+              fi
+              points=$(curl --fail-with-body -sS -G "${H[@]}" --data-urlencode "filter[territory]=$BASE_TERRITORY" --data-urlencode 'limit=8000' "$API/v2/inAppPurchases/$iid/pricePoints")
+              pp=$(jq -r --arg price "$target" '.data[]? | select((.attributes.customerPrice|tostring)==$price) | .id' <<<"$points" | head -1)
+              test -n "$pp"
+              ref='${price1}'
+              body=$(jq -n --arg iid "$iid" --arg pp "$pp" --arg ref "$ref" --arg territory "$BASE_TERRITORY" '{data:{type:"inAppPurchasePriceSchedules",relationships:{inAppPurchase:{data:{type:"inAppPurchases",id:$iid}},baseTerritory:{data:{type:"territories",id:$territory}},manualPrices:{data:[{type:"inAppPurchasePrices",id:$ref}]}}},included:[{type:"inAppPurchasePrices",id:$ref,attributes:{startDate:null},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}},inAppPurchasePricePoint:{data:{type:"inAppPurchasePricePoints",id:$pp}}}}]}')
+              curl --fail-with-body -sS -X POST "${H[@]}" -H 'Content-Type: application/json' -d "$body" "$API/v1/inAppPurchasePriceSchedules" >/dev/null
+            fi
+
+            verify=$(curl --fail-with-body -sS "${H[@]}" "$API/v1/inAppPurchasePriceSchedules/$iid/manualPrices?filter%5Bterritory%5D=$BASE_TERRITORY&include=inAppPurchasePricePoint&limit=50")
+            final=$(jq -r '.included[]? | select(.type=="inAppPurchasePricePoints") | .attributes.customerPrice' <<<"$verify" | head -1)
+            test "$final" = "$target"
+            echo "product=$sku id=$iid price_DEU=$final status=ok" >> /tmp/iap-price-repair.txt
+          }
+
+          ensure_price 'de.kamilunavo.ninenine.theme.neon' '0.99'
+          ensure_price 'de.kamilunavo.ninenine.theme.gold' '0.99'
+          ensure_price 'de.kamilunavo.ninenine.theme.aurora' '0.99'
+          ensure_price 'de.kamilunavo.ninenine.removeads' '3.99'
+          cat /tmp/iap-price-repair.txt
+
+          CONTENT=$(base64 -w0 /tmp/iap-price-repair.txt)
+          OUT="https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/validation/99-9-iap-price-repair-result.txt"
+          EXISTING=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$OUT")
+          SHA=$(jq -r '.sha // empty' <<<"$EXISTING")
+          PAYLOAD=$(jq -n --arg message 'Record 99.9 IAP price repair result' --arg content "$CONTENT" --arg sha "$SHA" '{message:$message,content:$content,branch:"main"} + (if $sha!="" then {sha:$sha} else {} end)')
+          curl --fail-with-body -sS -X PUT -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'Content-Type: application/json' -d "$PAYLOAD" "$OUT" >/dev/null
+
+      - name: Publish success status
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          B=$(jq -n --arg u "$U" '{state:"success",description:"99.9% IAP prices restored",target_url:$u,context:"99-9/iap-price-repair"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
+
+      - name: Publish failure status
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          B=$(jq -n --arg u "$U" '{state:"failure",description:"99.9% IAP price repair failed",target_url:$u,context:"99-9/iap-price-repair"}')
+          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$B" >/dev/null
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
