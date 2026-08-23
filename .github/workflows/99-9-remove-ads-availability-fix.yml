@@ -1,0 +1,66 @@
+name: 99.9 Remove Ads Availability Fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-remove-ads-availability-fix.yml'
+      - 'bridge/99-9-remove-ads.trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: de.kamilunavo.ninenine
+  PRODUCT_ID: de.kamilunavo.ninenine.removeads
+
+jobs:
+  availability:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
+          chmod 600 "$KEY"
+          export ASC_KEY_PATH="$KEY"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+1200,aud:'appstoreconnect-v1'}))
+          s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s))
+          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Enable Remove Ads in all App Store territories
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=https://api.appstoreconnect.apple.com
+          APPS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode limit=10 "$BASE/v1/apps")
+          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS"); test -n "$APP_ID"
+          IAPS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/apps/$APP_ID/inAppPurchasesV2?limit=100")
+          IAP_ID=$(jq -r --arg p "$PRODUCT_ID" '.data[]? | select(.attributes.productId==$p) | .id' <<<"$IAPS" | head -1)
+          test -n "$IAP_ID"
+
+          BODY=$(jq -n --arg id "$IAP_ID" '{data:{type:"inAppPurchases",id:$id,attributes:{availableInAllTerritories:true}}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v2/inAppPurchases/$IAP_ID" >/dev/null
+
+          CHECK=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v2/inAppPurchases/$IAP_ID")
+          test "$(jq -r '.data.attributes.availableInAllTerritories' <<<"$CHECK")" = true
+          echo "Remove Ads availability enabled for all territories: $IAP_ID"
