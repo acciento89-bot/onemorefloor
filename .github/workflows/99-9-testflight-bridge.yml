@@ -1,4 +1,4 @@
-name: 99.9 TestFlight Bridge
+name: 99.9 iOS TestFlight Bridge
 
 on:
   push:
@@ -11,15 +11,14 @@ on:
       build:
         description: 'App Store Connect build number'
         required: false
-        default: '8'
+        default: '9'
 
 permissions:
   contents: read
-  statuses: write
 
 env:
   SOURCE_REPO: acciento89-bot/99-9
-  SOURCE_REF: f075306e63d63ff3dc4beebac8adabd27c6010cb
+  SOURCE_REF: f0eff88ec6315cadc88ea930075ecf98c956ba97
   GODOT_VERSION: '4.7.2'
   GODOT_TAG: '4.7.2-stable'
   TEAM_ID: 'TKG684N5GL'
@@ -27,12 +26,11 @@ env:
   APP_VERSION: '1.0.0'
 
 jobs:
-  testflight:
+  ios-testflight:
     runs-on: macos-26
     timeout-minutes: 55
     steps:
-      - name: Check bridge credentials
-        id: creds
+      - name: Check iOS bridge credentials
         env:
           REPO_TOKEN: ${{ secrets.NINENINE_REPO_TOKEN }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -41,55 +39,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "$REPO_TOKEN" ]]; then
-            echo 'ready=false' >> "$GITHUB_OUTPUT"
-            echo 'reason=missing_repo_token' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if [[ -z "$ASC_ISSUER_ID" || -z "$ASC_KEY_ID" || -z "$ASC_PRIVATE_KEY_B64" ]]; then
-            echo 'ready=false' >> "$GITHUB_OUTPUT"
-            echo 'reason=missing_asc_secrets' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo 'ready=true' >> "$GITHUB_OUTPUT"
-          echo 'reason=ready' >> "$GITHUB_OUTPUT"
+          test -n "$REPO_TOKEN"
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
 
-      - name: Publish blocked status
-        if: steps.creds.outputs.ready != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REASON: ${{ steps.creds.outputs.reason }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          if [[ "$REASON" == missing_repo_token ]]; then
-            DESC='Add NINENINE_REPO_TOKEN with read-only access to private 99-9'
-          else
-            DESC='App Store Connect signing secrets are missing'
-          fi
-          BODY=$(jq -n --arg d "$DESC" --arg u "$U" '{state:"failure",description:$d,target_url:$u,context:"99-9/testflight-bridge"}')
-          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
-
-      - name: Stop cleanly while bridge is blocked
-        if: steps.creds.outputs.ready != 'true'
-        shell: bash
-        run: exit 0
-
-      - name: Publish pending status
-        if: steps.creds.outputs.ready == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          BODY=$(jq -n --arg u "$U" '{state:"pending",description:"Building and uploading 99.9% Build 8 to TestFlight",target_url:$u,context:"99-9/testflight-bridge"}')
-          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
-
-      - name: Checkout private 99-9 source
-        if: steps.creds.outputs.ready == 'true'
+      - name: Checkout locked 99.9 iOS source
         uses: actions/checkout@v5
         with:
           repository: ${{ env.SOURCE_REPO }}
@@ -98,24 +53,25 @@ jobs:
           path: source
           persist-credentials: false
 
-      - name: Verify locked Build 8 source
-        if: steps.creds.outputs.ready == 'true'
+      - name: Verify final-three source
         working-directory: source
         shell: bash
         run: |
           set -euo pipefail
-          ACTUAL=$(git rev-parse HEAD)
-          test "$ACTUAL" = "$SOURCE_REF"
-          echo "Locked 99.9 source: $ACTUAL"
+          test "$(git rev-parse HEAD)" = "$SOURCE_REF"
+          grep -q 'res://scripts/main_v9.gd' scenes/main.tscn
+          grep -q 'ACHIEVEMENTS' scripts/main_v8.gd
+          grep -q 'SHARE RESULT' scripts/main_v8.gd
+          grep -q 'AVG HIT' scripts/main_v8.gd
+          echo "Locked iOS source: $SOURCE_REF"
 
-      - name: Resolve build number
-        if: steps.creds.outputs.ready == 'true'
-        shell: bash
+      - name: Resolve iOS build number
         env:
           REQUESTED_BUILD: ${{ inputs.build }}
+        shell: bash
         run: |
           set -euo pipefail
-          BUILD="${REQUESTED_BUILD:-8}"
+          BUILD="${REQUESTED_BUILD:-9}"
           [[ "$BUILD" =~ ^[0-9]+$ ]]
           echo "EFFECTIVE_BUILD=$BUILD" >> "$GITHUB_ENV"
           export BUILD
@@ -126,13 +82,13 @@ jobs:
           text=p.read_text()
           build=os.environ['BUILD']
           text,count=re.subn(r'application/version="[0-9]+"',f'application/version="{build}"',text,count=1)
-          if count != 1: raise SystemExit('Could not set iOS build number')
+          if count != 1:
+              raise SystemExit('Could not set iOS build number')
           p.write_text(text)
           print(f'iOS build number set to {build}')
           PY
 
       - name: Prepare App Store Connect API key
-        if: steps.creds.outputs.ready == 'true'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
@@ -148,8 +104,7 @@ jobs:
           cp "$KEY_PATH" "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
           chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
 
-      - name: Verify App Store Connect app record exists
-        if: steps.creds.outputs.ready == 'true'
+      - name: Verify App Store Connect app record
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -160,8 +115,11 @@ jobs:
           require 'openssl'; require 'base64'; require 'json'
           def b(v); Base64.urlsafe_encode64(v,padding:false); end
           key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
-          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
-          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'}))
+          s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s))
+          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
           puts "#{s}.#{b(raw)}"
           RUBY
           )
@@ -169,14 +127,10 @@ jobs:
             --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'limit=10' \
             'https://api.appstoreconnect.apple.com/v1/apps')
           APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS")
-          if [[ -z "$APP_ID" ]]; then
-            echo 'App Store Connect app record for de.kamilunavo.ninenine does not exist.'
-            exit 1
-          fi
+          test -n "$APP_ID"
           echo "ASC_APP_ID=$APP_ID" >> "$GITHUB_ENV"
 
-      - name: Download Godot 4.7.2 for macOS
-        if: steps.creds.outputs.ready == 'true'
+      - name: Install Godot 4.7.2 and iOS templates
         shell: bash
         run: |
           set -euo pipefail
@@ -186,14 +140,8 @@ jobs:
           unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
           GODOT="$RUNNER_TEMP/godot/Godot.app/Contents/MacOS/Godot"
           test -x "$GODOT"
-          "$GODOT" --version
           echo "GODOT=$GODOT" >> "$GITHUB_ENV"
 
-      - name: Install Godot iOS export template
-        if: steps.creds.outputs.ready == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
           T="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
           mkdir -p "$T" "$RUNNER_TEMP/templates"
           curl -L --fail --retry 3 -o "$RUNNER_TEMP/templates.tpz" \
@@ -202,17 +150,19 @@ jobs:
           cp -R "$RUNNER_TEMP/templates/templates/." "$T/"
           test -f "$T/ios.zip"
 
-      - name: Install AdMob iOS native template
-        if: steps.creds.outputs.ready == 'true'
+      - name: Install iOS AdMob and native Share packages
         working-directory: source
         shell: bash
         run: |
           set -euo pipefail
           bash scripts/ci_install_admob.sh ios
+          bash scripts/ci_install_share_ios.sh
           test -f addons/admob/ios/bin/ads/poing_godot_admob_ads.gd
+          test -f ios/plugins/share/share.gdip
+          test -f ios/plugins/share/share.release.a
+          grep -q 'plugins/Share=true' export_presets.cfg
 
-      - name: Import project, export Xcode project and verify IAP plus AdMob
-        if: steps.creds.outputs.ready == 'true'
+      - name: Export and verify iOS Xcode project
         shell: bash
         run: |
           set -euo pipefail
@@ -228,11 +178,11 @@ jobs:
           grep -q 'GodotIap.framework' build/ios/NineNine.xcodeproj/project.pbxproj
           grep -R -q 'ca-app-pub-3940256099942544~1458002511' build/ios
           grep -R -q 'GoogleMobileAds' build/ios
-          echo 'GodotIap + AdMob demo App ID + GoogleMobileAds verified in iOS export'
+          grep -Ei -q 'share(\.release)?\.a|share\.a' build/ios/NineNine.xcodeproj/project.pbxproj
           echo "XCODE_PROJECT=$PWD/build/ios/NineNine.xcodeproj" >> "$GITHUB_ENV"
+          echo 'Achievements + sharing + stats source, IAP, AdMob test config and native Share verified.'
 
       - name: Resolve generated Xcode scheme
-        if: steps.creds.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -246,8 +196,7 @@ jobs:
           test -n "$SCHEME"
           echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
 
-      - name: Create unsigned Build 8 release archive
-        if: steps.creds.outputs.ready == 'true'
+      - name: Create unsigned iOS release archive
         shell: bash
         run: |
           set -euo pipefail
@@ -264,38 +213,30 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             archive
-          test -f "$RUNNER_TEMP/NineNine.xcarchive/Info.plist"
           APP="$RUNNER_TEMP/NineNine.xcarchive/Products/Applications/NineNine.app"
           test -d "$APP"
           test -d "$APP/Frameworks/GoogleMobileAds.framework"
           test -d "$APP/Frameworks/UserMessagingPlatform.framework"
           echo "ARCHIVE_APP=$APP" >> "$GITHUB_ENV"
 
-      - name: Prime embedded frameworks for Apple cloud re-signing
-        if: steps.creds.outputs.ready == 'true'
+      - name: Prime embedded iOS code for cloud signing
         shell: bash
         run: |
           set -euo pipefail
           COUNT=0
           while IFS= read -r -d '' FW; do
-            echo "Ad-hoc priming: $FW"
             codesign --force --sign - --timestamp=none "$FW"
             codesign --verify --strict --verbose=2 "$FW"
             COUNT=$((COUNT + 1))
           done < <(find "$ARCHIVE_APP/Frameworks" -maxdepth 1 -type d -name '*.framework' -print0)
           while IFS= read -r -d '' DYLIB; do
-            echo "Ad-hoc priming: $DYLIB"
             codesign --force --sign - --timestamp=none "$DYLIB"
             codesign --verify --strict --verbose=2 "$DYLIB"
             COUNT=$((COUNT + 1))
           done < <(find "$ARCHIVE_APP/Frameworks" -maxdepth 1 -type f -name '*.dylib' -print0)
           test "$COUNT" -gt 0
-          codesign --verify --strict --verbose=2 "$ARCHIVE_APP/Frameworks/GoogleMobileAds.framework"
-          codesign --verify --strict --verbose=2 "$ARCHIVE_APP/Frameworks/UserMessagingPlatform.framework"
-          echo "Primed $COUNT embedded code objects for cloud distribution re-signing."
 
       - name: Create TestFlight export options
-        if: steps.creds.outputs.ready == 'true'
         shell: bash
         run: |
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
@@ -311,9 +252,8 @@ jobs:
           </dict></plist>
           PLIST
 
-      - name: Cloud-sign Build 8 IPA
+      - name: Cloud-sign iOS IPA
         id: cloudsign
-        if: steps.creds.outputs.ready == 'true'
         continue-on-error: true
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -338,7 +278,7 @@ jobs:
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
           exit "$STATUS"
 
-      - name: Verify Apple Distribution signatures in exported IPA
+      - name: Verify Apple Distribution signatures
         if: steps.cloudsign.outputs.status == '0'
         shell: bash
         run: |
@@ -349,20 +289,17 @@ jobs:
           mkdir -p "$RUNNER_TEMP/SignedPayload"
           unzip -q "$IPA" -d "$RUNNER_TEMP/SignedPayload"
           SIGNED_APP=$(find "$RUNNER_TEMP/SignedPayload/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)
-          test -n "$SIGNED_APP" -a -d "$SIGNED_APP"
+          test -d "$SIGNED_APP"
           for FW in GoogleMobileAds.framework UserMessagingPlatform.framework; do
             P="$SIGNED_APP/Frameworks/$FW"
-            test -d "$P"
             codesign --verify --strict --verbose=2 "$P"
             INFO=$(codesign -dvv "$P" 2>&1)
-            echo "$INFO"
             grep -q '^Authority=Apple Distribution' <<<"$INFO"
           done
           codesign --verify --deep --strict --verbose=2 "$SIGNED_APP"
           echo "SIGNED_IPA=$IPA" >> "$GITHUB_ENV"
-          echo 'GoogleMobileAds and UserMessagingPlatform are Apple Distribution signed.'
 
-      - name: Upload signed Build 8 IPA to TestFlight
+      - name: Upload Build 9 to TestFlight
         id: upload
         if: steps.cloudsign.outputs.status == '0'
         continue-on-error: true
@@ -380,32 +317,8 @@ jobs:
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
           exit "$STATUS"
 
-      - name: Publish final status
-        if: always() && steps.creds.outputs.ready == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          CLOUDSIGN_STATUS: ${{ steps.cloudsign.outputs.status }}
-          UPLOAD_STATUS: ${{ steps.upload.outputs.status }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          U="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          if [[ "$CLOUDSIGN_STATUS" == 0 && "$UPLOAD_STATUS" == 0 ]]; then
-            STATE=success
-            DESC="99.9% ${APP_VERSION} (${EFFECTIVE_BUILD}) uploaded to TestFlight"
-          elif [[ "$CLOUDSIGN_STATUS" != 0 ]]; then
-            STATE=failure
-            DESC='99.9% Build 8 cloud distribution signing failed'
-          else
-            STATE=failure
-            DESC='99.9% Build 8 TestFlight upload failed'
-          fi
-          BODY=$(jq -n --arg s "$STATE" --arg d "$DESC" --arg u "$U" '{state:$s,description:$d,target_url:$u,context:"99-9/testflight-bridge"}')
-          curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$BODY" >/dev/null
-
-      - name: Fail if cloud signing or TestFlight upload failed
-        if: always() && steps.creds.outputs.ready == 'true' && (steps.cloudsign.outputs.status != '0' || steps.upload.outputs.status != '0')
+      - name: Fail if iOS signing or upload failed
+        if: always() && (steps.cloudsign.outputs.status != '0' || steps.upload.outputs.status != '0')
         shell: bash
         run: |
           echo "Cloud signing status: ${{ steps.cloudsign.outputs.status }}"
