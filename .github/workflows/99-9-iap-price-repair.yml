@@ -1,3 +1,4 @@
+# retrigger 2026-08-23T18:13+02:00
 name: 99.9 IAP Price Repair
 
 on:
@@ -69,7 +70,7 @@ jobs:
           printf 'app_id=%s\nbundle=%s\nbase_territory=%s\n' "$APP_ID" "$BUNDLE_ID" "$BASE_TERRITORY" >> /tmp/iap-price-repair.txt
 
           ensure_price() {
-            local sku="$1" target="$2" iid current have points pp ref body verify final
+            local sku="$1" target="$2" iid current have points pp ref body verify final existing_count
             iid=$(jq -r --arg sku "$sku" '.data[]? | select(.attributes.productId==$sku) | .id' <<<"$PRODUCTS" | head -1)
             test -n "$iid"
 
