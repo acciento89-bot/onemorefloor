@@ -1,0 +1,33 @@
+name: 99.9 iOS Release Ready Result
+
+on:
+  workflow_run:
+    workflows: ["99.9 iOS Release Ready Validate"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - name: Record run result
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation
+          printf 'run_id=%s\nconclusion=%s\nhead_sha=%s\n' "$RUN_ID" "$CONCLUSION" "$HEAD_SHA" > validation/99-9-ios-release-ready-observer.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add validation/99-9-ios-release-ready-observer.txt
+          git commit -m "Observe 99.9 iOS release-ready validation" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
