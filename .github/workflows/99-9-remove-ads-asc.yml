@@ -1,0 +1,122 @@
+name: 99.9 Remove Ads App Store Setup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-remove-ads-asc.yml'
+      - 'bridge/99-9-remove-ads.trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: de.kamilunavo.ninenine
+  PRODUCT_ID: de.kamilunavo.ninenine.removeads
+  TARGET_PRICE_DE: '1.99'
+
+jobs:
+  configure:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
+          chmod 600 "$KEY"
+          export ASC_KEY_PATH="$KEY"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v,padding:false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'})); p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+1200,aud:'appstoreconnect-v1'})); s="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s)); raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{s}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Create or resolve Remove Ads non-consumable
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=https://api.appstoreconnect.apple.com
+          APPS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode limit=10 "$BASE/v1/apps")
+          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS"); test -n "$APP_ID"
+          IAPS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/apps/$APP_ID/inAppPurchasesV2?limit=50")
+          IAP_ID=$(jq -r --arg p "$PRODUCT_ID" '.data[]? | select(.attributes.productId==$p) | .id' <<<"$IAPS" | head -1)
+          if [[ -z "$IAP_ID" ]]; then
+            BODY=$(jq -n --arg app "$APP_ID" --arg pid "$PRODUCT_ID" '{data:{type:"inAppPurchases",attributes:{name:"Remove Ads",productId:$pid,inAppPurchaseType:"NON_CONSUMABLE",familySharable:false,reviewNote:"One-time purchase in Settings that permanently disables all interstitial advertising. Restore Purchases restores the entitlement."},relationships:{app:{data:{type:"apps",id:$app}}}}}')
+            CREATED=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v2/inAppPurchases")
+            IAP_ID=$(jq -r '.data.id' <<<"$CREATED")
+          fi
+          test -n "$IAP_ID"
+          echo "ASC_APP_ID=$APP_ID" >> "$GITHUB_ENV"
+          echo "REMOVE_ADS_IAP_ID=$IAP_ID" >> "$GITHUB_ENV"
+          echo "Remove Ads IAP: $IAP_ID"
+
+      - name: Configure German 1.99 EUR base price
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=https://api.appstoreconnect.apple.com
+          set +e
+          CURRENT=$(curl -sS -o "$RUNNER_TEMP/current-price.json" -w '%{http_code}' -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/inAppPurchasePriceSchedules/$REMOVE_ADS_IAP_ID/manualPrices?filter%5Bterritory%5D=DEU&include=inAppPurchasePricePoint&limit=50")
+          set -e
+          if [[ "$CURRENT" == 200 ]] && [[ $(jq '.data|length' "$RUNNER_TEMP/current-price.json") -gt 0 ]]; then
+            echo 'Price schedule already exists; leaving it unchanged.'
+            exit 0
+          fi
+          POINTS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode 'filter[territory]=DEU' --data-urlencode 'include=territory' --data-urlencode 'limit=8000' "$BASE/v2/inAppPurchases/$REMOVE_ADS_IAP_ID/pricePoints")
+          POINT_ID=$(jq -r --arg price "$TARGET_PRICE_DE" '.data[]? | select(.attributes.customerPrice==$price) | .id' <<<"$POINTS" | head -1)
+          test -n "$POINT_ID"
+          PRICE_ID="removeads-de-base"
+          BODY=$(jq -n --arg iap "$REMOVE_ADS_IAP_ID" --arg pp "$POINT_ID" --arg pid "$PRICE_ID" '{data:{type:"inAppPurchasePriceSchedules",relationships:{inAppPurchase:{data:{type:"inAppPurchases",id:$iap}},manualPrices:{data:[{type:"inAppPurchasePrices",id:$pid}]}}},included:[{type:"inAppPurchasePrices",id:$pid,attributes:{startDate:null},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iap}},inAppPurchasePricePoint:{data:{type:"inAppPurchasePricePoints",id:$pp}}}}]}')
+          curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v1/inAppPurchasePriceSchedules" >/dev/null
+          echo "Remove Ads base price configured: €$TARGET_PRICE_DE"
+
+      - name: Create current IAP version and localizations
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=https://api.appstoreconnect.apple.com
+          VERSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v2/inAppPurchases/$REMOVE_ADS_IAP_ID/versions?limit=50")
+          VER_ID=$(jq -r '.data[]? | select(.attributes.state=="PREPARE_FOR_SUBMISSION") | .id' <<<"$VERSIONS" | head -1)
+          if [[ -z "$VER_ID" ]]; then
+            BODY=$(jq -n --arg iap "$REMOVE_ADS_IAP_ID" '{data:{type:"inAppPurchaseVersions",relationships:{inAppPurchase:{data:{type:"inAppPurchases",id:$iap}}}}}')
+            VER=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v1/inAppPurchaseVersions")
+            VER_ID=$(jq -r '.data.id' <<<"$VER")
+          fi
+          test -n "$VER_ID"
+          LOCS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v1/inAppPurchaseVersions/$VER_ID/localizations?limit=50")
+          for LOCALE in de-DE en-US; do
+            HAVE=$(jq -r --arg l "$LOCALE" '[.data[]? | select(.attributes.locale==$l)] | length' <<<"$LOCS")
+            if [[ "$HAVE" -gt 0 ]]; then continue; fi
+            if [[ "$LOCALE" == de-DE ]]; then NAME='Werbung entfernen'; DESC='Entfernt Werbeunterbrechungen dauerhaft mit einem einmaligen Kauf.'; else NAME='Remove Ads'; DESC='Permanently removes interstitial advertising with a one-time purchase.'; fi
+            BODY=$(jq -n --arg v "$VER_ID" --arg l "$LOCALE" --arg n "$NAME" --arg d "$DESC" '{data:{type:"inAppPurchaseLocalizations",attributes:{locale:$l,name:$n,description:$d},relationships:{version:{data:{type:"inAppPurchaseVersions",id:$v}}}}}')
+            curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v2/inAppPurchaseLocalizations" >/dev/null
+          done
+          echo "REMOVE_ADS_VERSION_ID=$VER_ID" >> "$GITHUB_ENV"
+          echo "Remove Ads version ready for review metadata: $VER_ID"
+
+      - name: Report review screenshot requirement
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=https://api.appstoreconnect.apple.com
+          SHOT=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$BASE/v2/inAppPurchases/$REMOVE_ADS_IAP_ID/appStoreReviewScreenshot")
+          SHOT_ID=$(jq -r '.data.id // empty' <<<"$SHOT")
+          if [[ -z "$SHOT_ID" ]]; then
+            echo 'REMOVE ADS STORE ITEM IS CONFIGURED, BUT APPLE STILL REQUIRES ONE REAL IN-APP REVIEW SCREENSHOT BEFORE REVIEW SUBMISSION.'
+            exit 0
+          fi
+          echo "Review screenshot present: $SHOT_ID"
