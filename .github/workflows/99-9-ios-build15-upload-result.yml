@@ -1,0 +1,33 @@
+name: 99.9 iOS Build 15 Upload Result
+
+on:
+  workflow_run:
+    workflows: ["99.9 iOS Build 15 Upload"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - name: Record upload result
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation
+          printf 'run_id=%s\nconclusion=%s\nhead_sha=%s\nbuild=15\nbundle=de.kamilunavo.ninenine\n' "$RUN_ID" "$CONCLUSION" "$HEAD_SHA" > validation/99-9-ios-build15-upload-result.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add validation/99-9-ios-build15-upload-result.txt
+          git commit -m "Record 99.9 iOS Build 15 upload result" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
