@@ -1,0 +1,7 @@
+app_id=6804225589
+bundle=de.kamilunavo.ninenine
+base_territory=DEU
+product=de.kamilunavo.ninenine.theme.neon id=6804244794 price_DEU=0.99 status=ok
+product=de.kamilunavo.ninenine.theme.gold id=6804244879 price_DEU=0.99 status=ok
+product=de.kamilunavo.ninenine.theme.aurora id=6804244823 price_DEU=0.99 status=ok
+product=de.kamilunavo.ninenine.removeads id=6804408039 price_DEU=3.99 status=ok
