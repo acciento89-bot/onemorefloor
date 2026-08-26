@@ -1,0 +1,47 @@
+name: 99.9 Download Current iPad Screenshot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-download-current-ipad-screenshot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - name: Download current App Store iPad screenshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation/99-9-current-screenshots
+          url='https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/e4/5b/2f/e45b2fa2-6894-92b5-564b-e5111ee698db/99-9-ipad-129.png/2048x2732bb.png'
+          curl -L --fail --retry 3 -o validation/99-9-current-screenshots/ipad-129-current.png "$url"
+          file validation/99-9-current-screenshots/ipad-129-current.png
+          python3 - <<'PY'
+          from PIL import Image
+          p='validation/99-9-current-screenshots/ipad-129-current.png'
+          im=Image.open(p)
+          print('size=', im.size)
+          if im.size != (2048,2732):
+              raise SystemExit(f'Unexpected screenshot size: {im.size}')
+          PY
+      - name: Commit downloaded screenshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Kamilunavo Release Bot'
+          git config user.email 'acciento89@gmail.com'
+          git add validation/99-9-current-screenshots/ipad-129-current.png
+          if ! git diff --cached --quiet; then
+            git commit -m 'Capture current 99.9 App Store iPad screenshot'
+            git push origin HEAD:main
+          fi
