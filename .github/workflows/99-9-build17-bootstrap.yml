@@ -1,0 +1,28 @@
+name: 99.9 Build 17 Bootstrap
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-build17-bootstrap.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch-build17:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch locked Build 17 release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api \
+            --method POST \
+            repos/${{ github.repository }}/actions/workflows/99-9-ios-build17-app-review.yml/dispatches \
+            -f ref=main
+          echo 'Build 17 App Review workflow dispatched.'
