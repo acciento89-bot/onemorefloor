@@ -26,3 +26,5 @@ jobs:
             repos/${{ github.repository }}/actions/workflows/99-9-ios-build17-app-review.yml/dispatches \
             -f ref=main
           echo 'Build 17 App Review workflow dispatched.'
+
+# Merge-trigger refresh for Build 17 release.
