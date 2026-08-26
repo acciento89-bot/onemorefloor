@@ -1,0 +1,41 @@
+name: 99.9 iPad Screenshot Thumbnail
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-ipad-screenshot-thumbnail.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  thumbnail:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - name: Create compact inspection thumbnail
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC='validation/99-9-current-screenshots/ipad-129-current.png'
+          test -f "$SRC"
+          mkdir -p validation/99-9-current-screenshots
+          sips -Z 600 -s format jpeg -s formatOptions 55 "$SRC" --out validation/99-9-current-screenshots/ipad-129-current-thumb.jpg >/dev/null
+          file validation/99-9-current-screenshots/ipad-129-current-thumb.jpg
+          test -s validation/99-9-current-screenshots/ipad-129-current-thumb.jpg
+      - name: Commit thumbnail
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Kamilunavo Release Bot'
+          git config user.email 'acciento89@gmail.com'
+          git add validation/99-9-current-screenshots/ipad-129-current-thumb.jpg
+          if ! git diff --cached --quiet; then
+            git commit -m 'Add compact 99.9 iPad screenshot inspection thumbnail'
+            git push origin HEAD:main
+          fi
