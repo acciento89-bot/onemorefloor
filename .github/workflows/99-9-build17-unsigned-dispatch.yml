@@ -1,5 +1,6 @@
 name: Dispatch 99.9 Build 17 Unsigned Bridge
 
+# Retry marker: false-positive pipefail verification fixed.
 on:
   push:
     branches: [main]
