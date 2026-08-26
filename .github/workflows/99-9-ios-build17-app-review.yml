@@ -202,17 +202,29 @@ jobs:
 
           APP="$RUNNER_TEMP/NineNine.xcarchive/Products/Applications/NineNine.app"
           test -d "$APP"
+          echo 'Verified app bundle exists'
           test -d "$APP/Frameworks/GoogleMobileAds.framework"
+          echo 'Verified GoogleMobileAds.framework'
           test -d "$APP/Frameworks/UserMessagingPlatform.framework"
+          echo 'Verified UserMessagingPlatform.framework'
           test -d "$APP/Frameworks/GodotIap.framework"
+          echo 'Verified GodotIap.framework'
           test -d "$APP/Frameworks/SwiftGodotRuntime.framework"
-          strings "$APP/Frameworks/GodotIap.framework/GodotIap" | grep -q 'godot_iap_entry_point'
+          echo 'Verified SwiftGodotRuntime.framework'
+          strings "$APP/Frameworks/GodotIap.framework/GodotIap" | grep -F 'godot_iap_entry_point' >/dev/null
+          echo 'Verified Godot IAP entry point'
           /usr/libexec/PlistBuddy -c 'Print :NSUserTrackingUsageDescription' "$APP/Info.plist" | grep -q 'advertising identifier'
+          echo 'Verified ATT usage description'
           test "$(/usr/libexec/PlistBuddy -c 'Print :ITSAppUsesNonExemptEncryption' "$APP/Info.plist")" = "false"
+          echo 'Verified export compliance flag'
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -qx "$BUNDLE_ID"
+          echo 'Verified bundle identifier'
           /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -qx "$APP_VERSION"
+          echo 'Verified app version'
           /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -qx "$BUILD_NUMBER"
+          echo 'Verified build number'
           ! codesign -dv "$APP" >/dev/null 2>&1
+          echo 'Verified app bundle is unsigned'
 
           echo "Unsigned archive verified: $APP"
           echo "Export compliance verified: ITSAppUsesNonExemptEncryption=false"
