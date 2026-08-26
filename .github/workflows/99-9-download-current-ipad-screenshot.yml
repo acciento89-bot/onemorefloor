@@ -25,15 +25,7 @@ jobs:
           mkdir -p validation/99-9-current-screenshots
           url='https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/e4/5b/2f/e45b2fa2-6894-92b5-564b-e5111ee698db/99-9-ipad-129.png/2048x2732bb.png'
           curl -L --fail --retry 3 -o validation/99-9-current-screenshots/ipad-129-current.png "$url"
-          file validation/99-9-current-screenshots/ipad-129-current.png
-          python3 - <<'PY'
-          from PIL import Image
-          p='validation/99-9-current-screenshots/ipad-129-current.png'
-          im=Image.open(p)
-          print('size=', im.size)
-          if im.size != (2048,2732):
-              raise SystemExit(f'Unexpected screenshot size: {im.size}')
-          PY
+          file validation/99-9-current-screenshots/ipad-129-current.png | grep -F 'PNG image data, 2048 x 2732'
       - name: Commit downloaded screenshot
         shell: bash
         run: |
