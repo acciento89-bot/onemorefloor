@@ -1,0 +1,111 @@
+name: 99.9 Build 17 Screenshot Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/99-9-build17-screenshot-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Install App Store Connect dependencies
+        run: python3 -m pip install --quiet pyjwt cryptography requests
+
+      - name: Probe 99.9 screenshot sets and assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation
+          python3 - <<'PY'
+          import os, time, base64, json
+          import jwt, requests
+
+          BASE='https://api.appstoreconnect.apple.com/v1'
+          BUNDLE='de.kamilunavo.ninenine'
+          raw=os.environ['ASC_PRIVATE_KEY_B64']
+          key=base64.b64decode(raw).decode()
+          now=int(time.time())
+          token=jwt.encode(
+              {'iss':os.environ['ASC_ISSUER_ID'],'iat':now,'exp':now+1100,'aud':'appstoreconnect-v1'},
+              key,
+              algorithm='ES256',
+              headers={'kid':os.environ['ASC_KEY_ID'],'typ':'JWT'}
+          )
+          H={'Authorization':f'Bearer {token}'}
+
+          def get(path, params=None):
+              r=requests.get(BASE+path,headers=H,params=params,timeout=60)
+              r.raise_for_status()
+              return r.json()
+
+          apps=get('/apps',{'filter[bundleId]':BUNDLE,'limit':'5'})['data']
+          if len(apps)!=1:
+              raise SystemExit(f'Expected one app for {BUNDLE}, got {len(apps)}')
+          app_id=apps[0]['id']
+
+          versions=get(f'/apps/{app_id}/appStoreVersions',{
+              'filter[platform]':'IOS','limit':'50','fields[appStoreVersions]':'versionString,appVersionState'
+          })['data']
+          matches=[v for v in versions if v.get('attributes',{}).get('versionString') in ('1.0','1.0.0')]
+          if not matches:
+              raise SystemExit('App Store version 1.0 not found')
+          version=matches[0]
+          version_id=version['id']
+
+          result={
+              'bundle_id':BUNDLE,
+              'app_id':app_id,
+              'version_id':version_id,
+              'version':version.get('attributes',{}),
+              'localizations':[]
+          }
+
+          locs=get(f'/appStoreVersions/{version_id}/appStoreVersionLocalizations',{'limit':'50'})['data']
+          for loc in locs:
+              lid=loc['id']; locale=loc.get('attributes',{}).get('locale')
+              entry={'locale':locale,'localization_id':lid,'sets':[]}
+              sets=get(f'/appStoreVersionLocalizations/{lid}/appScreenshotSets',{'limit':'100'})['data']
+              for s in sets:
+                  sid=s['id']; display=s.get('attributes',{}).get('screenshotDisplayType')
+                  shots=get(f'/appScreenshotSets/{sid}/appScreenshots',{'limit':'100'})['data']
+                  entry['sets'].append({
+                      'display_type':display,
+                      'set_id':sid,
+                      'screenshots':[
+                          {'id':shot['id'], **shot.get('attributes',{})}
+                          for shot in shots
+                      ]
+                  })
+              result['localizations'].append(entry)
+
+          with open('validation/99-9-build17-screenshot-probe.json','w',encoding='utf-8') as f:
+              json.dump(result,f,indent=2,ensure_ascii=False)
+          print(json.dumps(result,indent=2,ensure_ascii=False))
+          PY
+
+      - name: Record probe result
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Kamilunavo Release Bot'
+          git config user.email 'acciento89@gmail.com'
+          git add validation/99-9-build17-screenshot-probe.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record 99.9 Build 17 screenshot probe'
+            git push origin HEAD:main
+          fi
