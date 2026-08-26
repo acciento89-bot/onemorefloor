@@ -4,131 +4,21 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-
-env:
-  BUNDLE_ID: de.kamilunavo.ninenine
-  BUILD_NUMBER: '15'
-  PRODUCT_ID: de.kamilunavo.ninenine.removeads
+  actions: write
+  contents: read
 
 jobs:
-  finalize:
+  dispatch-build17:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
-      - name: Prepare App Store Connect token
+      - name: Dispatch locked Build 17 App Review workflow
         env:
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
-          KEY="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
-          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY"
-          chmod 600 "$KEY"
-          export ASC_KEY_PATH="$KEY"
-          JWT=$(ruby <<'RUBY'
-          require 'openssl'; require 'base64'; require 'json'
-          def b(v); Base64.urlsafe_encode64(v,padding:false); end
-          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
-          h=b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
-          p=b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+1200,aud:'appstoreconnect-v1'}))
-          s="#{h}.#{p}"
-          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,s))
-          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
-          puts "#{s}.#{b(raw)}"
-          RUBY
-          )
-          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
-
-      - name: Attach Build 15 and validate Remove Ads
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          BASE=https://api.appstoreconnect.apple.com
-          auth=(-H "Authorization: Bearer $ASC_TOKEN")
-
-          APPS=$(curl --fail-with-body -sS -G "${auth[@]}" --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode limit=10 "$BASE/v1/apps")
-          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS")
-          test -n "$APP_ID"
-          echo "APP_ID=$APP_ID"
-
-          VERS=$(curl --fail-with-body -sS -G "${auth[@]}" --data-urlencode 'filter[platform]=IOS' --data-urlencode limit=50 "$BASE/v1/apps/$APP_ID/appStoreVersions")
-          echo 'App Store versions:'
-          jq -r '.data[]? | "  \(.id) version=\(.attributes.versionString) state=\(.attributes.appStoreState)"' <<<"$VERS"
-          VERSION_ID=$(jq -r '[.data[]? | select(.attributes.versionString=="1.0.0")][0].id // [.data[]? | select(.attributes.versionString=="1.0")][0].id // [.data[]? | select(.attributes.appStoreState=="PREPARE_FOR_SUBMISSION" or .attributes.appStoreState=="DEVELOPER_REJECTED")][0].id // empty' <<<"$VERS")
-          test -n "$VERSION_ID"
-          VERSION_ACTUAL=$(jq -r --arg id "$VERSION_ID" '.data[] | select(.id==$id) | .attributes.versionString' <<<"$VERS")
-          VERSION_STATE=$(jq -r --arg id "$VERSION_ID" '.data[] | select(.id==$id) | .attributes.appStoreState' <<<"$VERS")
-          echo "VERSION_ID=$VERSION_ID VERSION=$VERSION_ACTUAL STATE=$VERSION_STATE"
-
-          BUILDS=$(curl --fail-with-body -sS -G "${auth[@]}" --data-urlencode "filter[app]=$APP_ID" --data-urlencode "filter[version]=$BUILD_NUMBER" --data-urlencode 'sort=-uploadedDate' --data-urlencode limit=20 "$BASE/v1/builds")
-          echo 'Build candidates:'
-          jq -r '.data[]? | "  \(.id) build=\(.attributes.version) state=\(.attributes.processingState) uploaded=\(.attributes.uploadedDate)"' <<<"$BUILDS"
-          BUILD_ID=$(jq -r '[.data[]? | select(.attributes.version=="15" and .attributes.processingState=="VALID")][0].id // empty' <<<"$BUILDS")
-          test -n "$BUILD_ID"
-          echo "BUILD_ID=$BUILD_ID"
-
-          BODY=$(jq -n --arg id "$BUILD_ID" '{data:{type:"builds",id:$id}}')
-          curl --fail-with-body -sS -X PATCH "${auth[@]}" -H 'Content-Type: application/json' -d "$BODY" "$BASE/v1/appStoreVersions/$VERSION_ID/relationships/build" >/dev/null
-          echo 'Build 15 attached to App Store version.'
-
-          IAPS=$(curl --fail-with-body -sS -G "${auth[@]}" --data-urlencode "filter[productId]=$PRODUCT_ID" --data-urlencode limit=20 "$BASE/v1/apps/$APP_ID/inAppPurchasesV2")
-          IAP_ID=$(jq -r '.data[0].id // empty' <<<"$IAPS")
-          test -n "$IAP_ID"
-          IAP=$(curl --fail-with-body -sS "${auth[@]}" "$BASE/v2/inAppPurchases/$IAP_ID")
-          IAP_STATE=$(jq -r '.data.attributes.state // empty' <<<"$IAP")
-          IAP_TYPE=$(jq -r '.data.attributes.inAppPurchaseType // empty' <<<"$IAP")
-          IAP_ALL_TERRITORIES=$(jq -r '.data.attributes.availableInAllTerritories // false' <<<"$IAP")
-          echo "IAP_ID=$IAP_ID TYPE=$IAP_TYPE STATE=$IAP_STATE ALL_TERRITORIES=$IAP_ALL_TERRITORIES"
-          test "$IAP_TYPE" = NON_CONSUMABLE
-          case "$IAP_STATE" in READY_TO_SUBMIT|WAITING_FOR_REVIEW|IN_REVIEW|PENDING_BINARY_APPROVAL|APPROVED) ;; *) echo "Remove Ads not ready: $IAP_STATE"; exit 1;; esac
-
-          SHOT_ID=''
-          SHOT_STATE=''
-          REL=$(curl -sS "${auth[@]}" "$BASE/v1/inAppPurchases/$IAP_ID/appStoreReviewScreenshot" || true)
-          SHOT_ID=$(jq -r '.data.id // empty' <<<"$REL" 2>/dev/null || true)
-          if [[ -n "$SHOT_ID" ]]; then
-            SHOT=$(curl --fail-with-body -sS "${auth[@]}" "$BASE/v1/inAppPurchaseAppStoreReviewScreenshots/$SHOT_ID")
-            SHOT_STATE=$(jq -r '.data.attributes.assetDeliveryState.state // empty' <<<"$SHOT")
-          else
-            WITH_SHOT=$(curl --fail-with-body -sS -G "${auth[@]}" --data-urlencode "filter[productId]=$PRODUCT_ID" --data-urlencode 'include=appStoreReviewScreenshot' --data-urlencode limit=20 "$BASE/v1/apps/$APP_ID/inAppPurchasesV2")
-            SHOT_ID=$(jq -r '.included[]? | select(.type=="inAppPurchaseAppStoreReviewScreenshots") | .id' <<<"$WITH_SHOT" | head -1)
-            SHOT_STATE=$(jq -r '.included[]? | select(.type=="inAppPurchaseAppStoreReviewScreenshots") | .attributes.assetDeliveryState.state // empty' <<<"$WITH_SHOT" | head -1)
-          fi
-          test -n "$SHOT_ID"
-          test "$SHOT_STATE" = COMPLETE
-          echo "REMOVE_ADS_REVIEW_SCREENSHOT=$SHOT_ID STATE=$SHOT_STATE"
-
-          cat > /tmp/finalize.txt <<EOF
-          app_id=$APP_ID
-          bundle=$BUNDLE_ID
-          version_id=$VERSION_ID
-          version=$VERSION_ACTUAL
-          version_state=$VERSION_STATE
-          build_id=$BUILD_ID
-          build=$BUILD_NUMBER
-          build_state=VALID
-          iap_id=$IAP_ID
-          iap_product=$PRODUCT_ID
-          iap_type=$IAP_TYPE
-          iap_state=$IAP_STATE
-          iap_available_in_all_territories=$IAP_ALL_TERRITORIES
-          iap_review_screenshot_id=$SHOT_ID
-          iap_review_screenshot_state=$SHOT_STATE
-          build_attached=true
-          api_submit_performed=false
-          final_submit_requires_appstoreconnect_ui_for_first_non_consumable=true
-          EOF
-          cat /tmp/finalize.txt
-
-          CONTENT=$(base64 -w0 /tmp/finalize.txt)
-          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/validation/99-9-appstore-finalize-result.txt"
-          EXISTING=$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H 'Accept: application/vnd.github+json' "$API")
-          SHA=$(jq -r '.sha // empty' <<<"$EXISTING")
-          PAYLOAD=$(jq -n --arg message 'Record 99.9 App Store finalization preflight' --arg content "$CONTENT" --arg sha "$SHA" '{message:$message,content:$content,branch:"main"} + (if $sha!="" then {sha:$sha} else {} end)')
-          curl --fail-with-body -sS -X PUT -H "Authorization: Bearer $GITHUB_TOKEN" -H 'Accept: application/vnd.github+json' -H 'Content-Type: application/json' -d "$PAYLOAD" "$API" >/dev/null
+          gh api \
+            --method POST \
+            repos/${{ github.repository }}/actions/workflows/99-9-ios-build17-app-review.yml/dispatches \
+            -f ref=main
+          echo 'Build 17 App Review pipeline dispatched.'
