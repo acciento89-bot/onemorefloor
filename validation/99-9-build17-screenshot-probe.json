@@ -1,0 +1,105 @@
+{
+  "bundle_id": "de.kamilunavo.ninenine",
+  "app_id": "6804225589",
+  "version_id": "6cd3692e-3f0b-424b-a369-f6d8012446ec",
+  "version": {
+    "versionString": "1.0",
+    "appVersionState": "REJECTED"
+  },
+  "localizations": [
+    {
+      "locale": "en-US",
+      "localization_id": "5943aa74-9a2b-4090-a49b-b621a985b866",
+      "sets": [
+        {
+          "display_type": "APP_IPHONE_67",
+          "set_id": "eaf9b977-b4dd-45fe-9baf-a51aabbf142b",
+          "screenshots": [
+            {
+              "id": "e58e4224-1e1b-4968-92df-a568053e7d32",
+              "fileSize": 241446,
+              "fileName": "IMG_7827.PNG",
+              "sourceFileChecksum": "4e61243a24228b45df8b7b0b7f4e62b0",
+              "imageAsset": {
+                "templateUrl": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/b3/b3/45/b3b3454f-187a-3e3b-61af-93bd393d2c32/IMG_7827.PNG/{w}x{h}bb.{f}",
+                "width": 1320,
+                "height": 2868
+              },
+              "assetToken": "PurpleSource211/v4/b3/b3/45/b3b3454f-187a-3e3b-61af-93bd393d2c32/IMG_7827.PNG",
+              "assetType": "SortedD74ScreenShot",
+              "uploadOperations": null,
+              "assetDeliveryState": {
+                "errors": [],
+                "warnings": null,
+                "state": "COMPLETE"
+              }
+            },
+            {
+              "id": "9b589882-4d83-4362-9690-ed0f4d1b9d23",
+              "fileSize": 206705,
+              "fileName": "IMG_7829.PNG",
+              "sourceFileChecksum": "a186264c8f8ed939dfb9dc460ccff1e6",
+              "imageAsset": {
+                "templateUrl": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/d7/ae/29/d7ae29d7-49a5-0dad-8bb0-f34a94aa7d15/IMG_7829.PNG/{w}x{h}bb.{f}",
+                "width": 1320,
+                "height": 2868
+              },
+              "assetToken": "PurpleSource211/v4/d7/ae/29/d7ae29d7-49a5-0dad-8bb0-f34a94aa7d15/IMG_7829.PNG",
+              "assetType": "SortedD74ScreenShot",
+              "uploadOperations": null,
+              "assetDeliveryState": {
+                "errors": [],
+                "warnings": null,
+                "state": "COMPLETE"
+              }
+            },
+            {
+              "id": "d46d1889-dab0-4c0d-b65c-2e92a8310c89",
+              "fileSize": 215759,
+              "fileName": "IMG_7828.PNG",
+              "sourceFileChecksum": "4d85e9fae304aee3be36efa416db0581",
+              "imageAsset": {
+                "templateUrl": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/0e/bc/77/0ebc7772-99c0-0724-fed6-a1ff9396e8a2/IMG_7828.PNG/{w}x{h}bb.{f}",
+                "width": 1320,
+                "height": 2868
+              },
+              "assetToken": "PurpleSource211/v4/0e/bc/77/0ebc7772-99c0-0724-fed6-a1ff9396e8a2/IMG_7828.PNG",
+              "assetType": "SortedD74ScreenShot",
+              "uploadOperations": null,
+              "assetDeliveryState": {
+                "errors": [],
+                "warnings": null,
+                "state": "COMPLETE"
+              }
+            }
+          ]
+        },
+        {
+          "display_type": "APP_IPAD_PRO_3GEN_129",
+          "set_id": "edff689b-7aee-4f33-a37d-b023b13123e0",
+          "screenshots": [
+            {
+              "id": "00db3436-34fa-48fd-a209-90470003d417",
+              "fileSize": 519643,
+              "fileName": "99-9-ipad-129.png",
+              "sourceFileChecksum": "84fd7fce7c03c9fdbaac63ecd4b234d6",
+              "imageAsset": {
+                "templateUrl": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/e4/5b/2f/e45b2fa2-6894-92b5-564b-e5111ee698db/99-9-ipad-129.png/{w}x{h}bb.{f}",
+                "width": 2048,
+                "height": 2732
+              },
+              "assetToken": "PurpleSource211/v4/e4/5b/2f/e45b2fa2-6894-92b5-564b-e5111ee698db/99-9-ipad-129.png",
+              "assetType": "SortedJ320ScreenShot",
+              "uploadOperations": null,
+              "assetDeliveryState": {
+                "errors": [],
+                "warnings": null,
+                "state": "COMPLETE"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
