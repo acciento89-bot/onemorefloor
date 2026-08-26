@@ -2,11 +2,9 @@ name: 99.9 iOS Build 17 App Review
 
 on:
   workflow_dispatch:
-  issues:
-    types: [opened]
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   SOURCE_REPO: acciento89-bot/99-9
@@ -19,30 +17,23 @@ env:
   BUILD_NUMBER: '17'
 
 jobs:
-  ios-build17:
-    if: github.event_name == 'workflow_dispatch' || github.event.issue.title == 'RUN 99.9 IOS BUILD 17 APP REVIEW'
+  ios-build17-unsigned:
     runs-on: macos-26
     timeout-minutes: 70
     steps:
-      - name: Checkout bridge for result recording
+      - name: Checkout bridge
         uses: actions/checkout@v5
         with:
           ref: main
           path: bridge
 
-      - name: Verify credentials
+      - name: Verify source credential
         env:
           REPO_TOKEN: ${{ secrets.NINENINE_REPO_TOKEN }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
         shell: bash
         run: |
           set -euo pipefail
           test -n "$REPO_TOKEN"
-          test -n "$ASC_ISSUER_ID"
-          test -n "$ASC_KEY_ID"
-          test -n "$ASC_PRIVATE_KEY_B64"
 
       - name: Checkout locked Build 17 source
         uses: actions/checkout@v5
@@ -88,22 +79,6 @@ jobs:
               raise SystemExit('Could not set iOS build number')
           p.write_text(text)
           PY
-
-      - name: Prepare App Store Connect key
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
-          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
-          chmod 600 "$KEY_PATH"
-          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
-          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
-          mkdir -p "$HOME/.appstoreconnect/private_keys"
-          cp "$KEY_PATH" "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
-          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
 
       - name: Install Godot and iOS templates
         shell: bash
@@ -179,6 +154,10 @@ jobs:
           test -f "$INFO_PLIST"
           /usr/libexec/PlistBuddy -c 'Print :NSUserTrackingUsageDescription' "$INFO_PLIST" | grep -q 'advertising identifier'
 
+          /usr/libexec/PlistBuddy -c 'Delete :ITSAppUsesNonExemptEncryption' "$INFO_PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c 'Add :ITSAppUsesNonExemptEncryption bool false' "$INFO_PLIST"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :ITSAppUsesNonExemptEncryption' "$INFO_PLIST")" = "false"
+
           PCK=$(find build/ios -type f -name 'NineNine.pck' -print -quit)
           test -n "$PCK" -a -s "$PCK"
           ! strings "$PCK" | grep -F 'iOS + ANDROID'
@@ -200,12 +179,27 @@ jobs:
           test -n "$SCHEME"
           echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
 
-      - name: Create unsigned iOS archive
+      - name: Create unsigned iOS archive with export compliance
         shell: bash
         run: |
           set -euo pipefail
+          set -o pipefail
           rm -rf "$RUNNER_TEMP/NineNine.xcarchive"
-          xcodebuild -project "$XCODE_PROJECT" -scheme "$SCHEME" -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NineNine.xcarchive" DEVELOPMENT_TEAM="$TEAM_ID" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" MARKETING_VERSION="$APP_VERSION" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" archive
+          xcodebuild -project "$XCODE_PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/NineNine.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            MARKETING_VERSION="$APP_VERSION" \
+            INFOPLIST_KEY_ITSAppUsesNonExemptEncryption=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive 2>&1 | tee "$RUNNER_TEMP/xcodebuild-archive.log"
+
           APP="$RUNNER_TEMP/NineNine.xcarchive/Products/Applications/NineNine.app"
           test -d "$APP"
           test -d "$APP/Frameworks/GoogleMobileAds.framework"
@@ -214,121 +208,29 @@ jobs:
           test -d "$APP/Frameworks/SwiftGodotRuntime.framework"
           strings "$APP/Frameworks/GodotIap.framework/GodotIap" | grep -q 'godot_iap_entry_point'
           /usr/libexec/PlistBuddy -c 'Print :NSUserTrackingUsageDescription' "$APP/Info.plist" | grep -q 'advertising identifier'
-          echo "ARCHIVE_APP=$APP" >> "$GITHUB_ENV"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :ITSAppUsesNonExemptEncryption' "$APP/Info.plist")" = "false"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -qx "$BUNDLE_ID"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -qx "$APP_VERSION"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -qx "$BUILD_NUMBER"
+          ! codesign -dv "$APP" >/dev/null 2>&1
 
-      - name: Prime embedded frameworks for cloud signing
-        shell: bash
-        run: |
-          set -euo pipefail
-          COUNT=0
-          while IFS= read -r -d '' FW; do
-            codesign --force --sign - --timestamp=none "$FW"
-            codesign --verify --strict --verbose=2 "$FW"
-            COUNT=$((COUNT + 1))
-          done < <(find "$ARCHIVE_APP/Frameworks" -maxdepth 1 -type d -name '*.framework' -print0)
-          while IFS= read -r -d '' DYLIB; do
-            codesign --force --sign - --timestamp=none "$DYLIB"
-            codesign --verify --strict --verbose=2 "$DYLIB"
-            COUNT=$((COUNT + 1))
-          done < <(find "$ARCHIVE_APP/Frameworks" -maxdepth 1 -type f -name '*.dylib' -print0)
-          test "$COUNT" -ge 4
+          echo "Unsigned archive verified: $APP"
+          echo "Export compliance verified: ITSAppUsesNonExemptEncryption=false"
 
-      - name: Create App Store export options
-        shell: bash
-        run: |
-          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict>
-          <key>method</key><string>app-store-connect</string>
-          <key>destination</key><string>export</string>
-          <key>signingStyle</key><string>automatic</string>
-          <key>teamID</key><string>$TEAM_ID</string>
-          <key>uploadSymbols</key><true/>
-          <key>manageAppVersionAndBuildNumber</key><false/>
-          </dict></plist>
-          PLIST
-
-      - name: Cloud-sign Build 17 IPA
-        env:
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf "$RUNNER_TEMP/Build17Export"
-          mkdir -p "$RUNNER_TEMP/Build17Export"
-          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/NineNine.xcarchive" -exportPath "$RUNNER_TEMP/Build17Export" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
-          IPA=$(find "$RUNNER_TEMP/Build17Export" -maxdepth 2 -type f -name '*.ipa' -print -quit)
-          test -n "$IPA" -a -s "$IPA"
-          echo "SIGNED_IPA=$IPA" >> "$GITHUB_ENV"
-
-      - name: Verify signed Build 17 identity and signatures
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf "$RUNNER_TEMP/SignedPayload"
-          mkdir -p "$RUNNER_TEMP/SignedPayload"
-          unzip -q "$SIGNED_IPA" -d "$RUNNER_TEMP/SignedPayload"
-          SIGNED_APP=$(find "$RUNNER_TEMP/SignedPayload/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)
-          test -d "$SIGNED_APP"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$SIGNED_APP/Info.plist" | grep -qx "$BUNDLE_ID"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$SIGNED_APP/Info.plist" | grep -qx "$APP_VERSION"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$SIGNED_APP/Info.plist" | grep -qx "$BUILD_NUMBER"
-          /usr/libexec/PlistBuddy -c 'Print :NSUserTrackingUsageDescription' "$SIGNED_APP/Info.plist" | grep -q 'advertising identifier'
-          for FW in GoogleMobileAds.framework UserMessagingPlatform.framework GodotIap.framework SwiftGodotRuntime.framework; do
-            P="$SIGNED_APP/Frameworks/$FW"
-            test -d "$P"
-            codesign --verify --strict --verbose=2 "$P"
-            INFO=$(codesign -dvv "$P" 2>&1)
-            grep -q '^Authority=Apple Distribution' <<<"$INFO"
-          done
-          codesign --verify --deep --strict --verbose=2 "$SIGNED_APP"
-          cp "$SIGNED_IPA" "$GITHUB_WORKSPACE/NineNine-iOS-Build17-app-review.ipa"
-
-      - name: Upload Build 17 to App Store Connect
-        env:
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          xcrun altool --upload-app --file "$SIGNED_IPA" --type ios --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" --verbose
-
-      - name: Store Build 17 IPA artifact
+      - name: Store unsigned Build 17 archive
         uses: actions/upload-artifact@v4
         with:
-          name: NineNine-iOS-Build17-app-review
-          path: NineNine-iOS-Build17-app-review.ipa
+          name: NineNine-iOS-Build17-unsigned-xcarchive
+          path: ${{ runner.temp }}/NineNine.xcarchive
           if-no-files-found: error
           retention-days: 7
+          compression-level: 0
 
-      - name: Remove App Store Connect key
+      - name: Store Xcode archive log
         if: always()
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-        shell: bash
-        run: |
-          rm -f "$RUNNER_TEMP"/AuthKey_*.p8
-          if [[ -n "${ASC_KEY_ID:-}" ]]; then
-            rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
-          fi
-
-      - name: Record Build 17 result
-        if: always()
-        working-directory: bridge
-        env:
-          RESULT: ${{ job.status }}
-          RUN_ID: ${{ github.run_id }}
-          LOCKED_SOURCE: cb31a137e4e407feca0008f3345a89e9ca085652
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p validation
-          printf 'result=%s\nrun_id=%s\nsource_ref=%s\nbuild=17\nbundle=%s\natt_gate=true\nrestore_purchases=true\nios_copy_neutralized=true\ntestflight_upload_attempted=true\n' "$RESULT" "$RUN_ID" "$LOCKED_SOURCE" "$BUNDLE_ID" > validation/99-9-ios-build17-app-review-result.txt
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add validation/99-9-ios-build17-app-review-result.txt
-          git commit -m "Record 99.9 iOS Build 17 App Review result" || true
-          git pull --rebase origin main || true
-          git push origin HEAD:main || true
+        uses: actions/upload-artifact@v4
+        with:
+          name: NineNine-iOS-Build17-xcodebuild-archive-log
+          path: ${{ runner.temp }}/xcodebuild-archive.log
+          if-no-files-found: warn
+          retention-days: 7
