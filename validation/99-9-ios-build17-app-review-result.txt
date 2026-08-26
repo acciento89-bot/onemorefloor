@@ -1,0 +1,9 @@
+result=failure
+run_id=32989602867
+source_ref=cb31a137e4e407feca0008f3345a89e9ca085652
+build=17
+bundle=de.kamilunavo.ninenine
+att_gate=true
+restore_purchases=true
+ios_copy_neutralized=true
+testflight_upload_attempted=true
