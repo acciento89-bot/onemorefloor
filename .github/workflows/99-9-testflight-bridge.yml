@@ -1,4 +1,4 @@
-name: 99.9 Build 17 TestFlight Upload
+name: 99.9 Build 18 TestFlight Upload
 
 on:
   push:
@@ -13,13 +13,13 @@ permissions:
 
 env:
   SOURCE_REPO: acciento89-bot/99-9
-  SOURCE_REF: 0c9b7dacce4b5132cbb98be30c140a2457d54ebd
+  SOURCE_REF: a511d7a18bcd5c45a25e8a7144c78082b8e46182
   GODOT_VERSION: '4.7.2'
   GODOT_TAG: '4.7.2-stable'
   TEAM_ID: 'TKG684N5GL'
   BUNDLE_ID: 'de.kamilunavo.ninenine'
   APP_VERSION: '1.0.0'
-  BUILD_NUMBER: '17'
+  BUILD_NUMBER: '18'
 
 jobs:
   ios-testflight:
@@ -40,7 +40,7 @@ jobs:
           test -n "$ASC_KEY_ID"
           test -n "$ASC_PRIVATE_KEY_B64"
 
-      - name: Checkout clean Build 17 source
+      - name: Checkout clean Build 18 source
         uses: actions/checkout@v5
         with:
           repository: ${{ env.SOURCE_REPO }}
@@ -49,7 +49,7 @@ jobs:
           path: source
           persist-credentials: false
 
-      - name: Verify Build 17 source
+      - name: Verify Build 18 source
         working-directory: source
         shell: bash
         run: |
@@ -58,11 +58,13 @@ jobs:
           grep -q 'res://scripts/main_v12_app_review.gd' scenes/main.tscn
           grep -q 'RESTORE PURCHASES' scripts/main_v12_app_review.gd
           grep -q 'restore_theme_purchases' scripts/main_v12_app_review.gd
+          grep -q 'var theme_request = Types.ProductRequest.new()' scripts/iap_service_ios_safe.gd
+          grep -q 'var remove_request = Types.ProductRequest.new()' scripts/iap_service_ios_safe.gd
           grep -q 'Engine.has_singleton("GodotxATT")' scripts/ads_service_ios_safe.gd
           grep -q 'ATT_AUTHORIZED' scripts/ads_service_ios_safe.gd
           grep -q 'NSUserTrackingUsageDescription' export_presets.cfg
           grep -q 'plugins/GodotxATT=true' export_presets.cfg
-          grep -q 'application/version="17"' export_presets.cfg
+          grep -q 'application/version="18"' export_presets.cfg
           grep -q 'GodotIapPlugin="\*res://addons/godot-iap/godot_iap_ios_safe.gd"' project.godot
           ! grep -q 'com.kamilunavo.game999' project.godot scripts/*.gd export_presets.cfg
 
@@ -151,7 +153,7 @@ jobs:
           "$GODOT" --headless --path . --quit-after 3 2>&1 | tee "$RUNNER_TEMP/smoke.log"
           if grep -E 'SCRIPT ERROR|Parse Error|Compile Error|Failed to load script' "$RUNNER_TEMP/smoke.log"; then exit 1; fi
 
-      - name: Export Build 17 Xcode project
+      - name: Export Build 18 Xcode project
         working-directory: source
         shell: bash
         run: |
@@ -173,7 +175,7 @@ jobs:
           grep -Ei -q 'share(\.release)?\.a|share\.a' "$PBX"
           grep -q 'GodotxATT' "$PBX"
           grep -Fq "$BUNDLE_ID" "$PBX"
-          grep -Eq 'CURRENT_PROJECT_VERSION = 17;' "$PBX"
+          grep -Eq 'CURRENT_PROJECT_VERSION = 18;' "$PBX"
           /usr/libexec/PlistBuddy -c 'Print :NSUserTrackingUsageDescription' "$INFO_PLIST" | grep -q 'advertising identifier'
 
           PCK=$(find build/ios -type f -name 'NineNine.pck' -print -quit)
@@ -247,11 +249,11 @@ jobs:
           echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
           xcodebuild -resolvePackageDependencies -project "$XCODE_PROJECT" -scheme "$SCHEME"
 
-      - name: Create unsigned Build 17 archive
+      - name: Create unsigned Build 18 archive
         shell: bash
         run: |
           set -euo pipefail
-          ARCHIVE="$RUNNER_TEMP/NineNine-Build17.xcarchive"
+          ARCHIVE="$RUNNER_TEMP/NineNine-Build18.xcarchive"
           rm -rf "$ARCHIVE"
           xcodebuild \
             -project "$XCODE_PROJECT" \
@@ -315,7 +317,7 @@ jobs:
           </dict></plist>
           PLIST
 
-      - name: Cloud-sign Build 17 IPA
+      - name: Cloud-sign Build 18 IPA
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -353,7 +355,7 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$SIGNED_APP/Info.plist" | grep -Fx "$BUNDLE_ID"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$SIGNED_APP/Info.plist" | grep -Fx "$BUILD_NUMBER"
 
-      - name: Upload Build 17 to App Store Connect
+      - name: Upload Build 18 to App Store Connect
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -363,7 +365,7 @@ jobs:
           xcrun altool --upload-app --type ios -f "$SIGNED_IPA" --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" 2>&1 | tee "$RUNNER_TEMP/altool-upload.log"
           grep -Ei 'UPLOAD SUCCEEDED|successfully uploaded|No errors uploading' "$RUNNER_TEMP/altool-upload.log" >/dev/null || true
 
-      - name: Confirm Build 17 reached App Store Connect
+      - name: Confirm Build 18 reached App Store Connect
         env:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -390,12 +392,12 @@ jobs:
             COUNT=$(jq '.data | length' <<<"$BUILDS")
             if [ "$COUNT" -gt 0 ]; then
               STATE=$(jq -r '.data[0].attributes.processingState // "UNKNOWN"' <<<"$BUILDS")
-              echo "Build 17 found in App Store Connect: $STATE"
+              echo "Build 18 found in App Store Connect: $STATE"
               exit 0
             fi
             sleep 10
           done
-          echo 'Build 17 upload was accepted but is not visible through the API yet.'
+          echo 'Build 18 upload was accepted but is not visible through the API yet.'
           exit 1
 
       - name: Remove App Store Connect key
