@@ -113,9 +113,8 @@ jobs:
           if [[ "$HAVE" -eq 0 ]]; then
             POINTS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[territory]=$BASE_TERRITORY" --data-urlencode limit=8000 "$API/v2/inAppPurchases/$IAP_ID/pricePoints")
             POINT_ID=$(jq -r --arg price "$TARGET_PRICE" '.data[]? | select((.attributes.customerPrice|tostring)==$price) | .id' <<<"$POINTS" | head -1); test -n "$POINT_ID"
-            PRICE_ID="arbeitsklar-pro-399-${GITHUB_RUN_ID}"
-            START=$(date -u +%F)
-            BODY=$(jq -n --arg iid "$IAP_ID" --arg pp "$POINT_ID" --arg pid "$PRICE_ID" --arg start "$START" --arg territory "$BASE_TERRITORY" '{data:{type:"inAppPurchasePriceSchedules",relationships:{inAppPurchase:{data:{type:"inAppPurchases",id:$iid}},baseTerritory:{data:{type:"territories",id:$territory}},manualPrices:{data:[{type:"inAppPurchasePrices",id:$pid}]}}},included:[{type:"inAppPurchasePrices",id:$pid,attributes:{startDate:$start},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}},inAppPurchasePricePoint:{data:{type:"inAppPurchasePricePoints",id:$pp}}}}]}')
+            PRICE_ID='${price1}'
+            BODY=$(jq -n --arg iid "$IAP_ID" --arg pp "$POINT_ID" --arg pid "$PRICE_ID" --arg territory "$BASE_TERRITORY" '{data:{type:"inAppPurchasePriceSchedules",relationships:{inAppPurchase:{data:{type:"inAppPurchases",id:$iid}},baseTerritory:{data:{type:"territories",id:$territory}},manualPrices:{data:[{type:"inAppPurchasePrices",id:$pid}]}}},included:[{type:"inAppPurchasePrices",id:$pid,attributes:{startDate:null},relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}},inAppPurchasePricePoint:{data:{type:"inAppPurchasePricePoints",id:$pp}}}}]}')
             curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/inAppPurchasePriceSchedules" >/dev/null
           fi
 
