@@ -102,15 +102,10 @@ jobs:
           test -n "$DE_LOC"; test -n "$EN_LOC"
           echo "DE_LOC=$DE_LOC" >> "$GITHUB_ENV"; echo "EN_LOC=$EN_LOC" >> "$GITHUB_ENV"
 
-      - name: Assign productivity category and Build 2
+      - name: Assign Build 2
         run: |
           set -euo pipefail
           API=https://api.appstoreconnect.apple.com
-          CATS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode 'filter[platforms]=IOS' --data-urlencode 'limit=200' "$API/v1/appCategories")
-          CAT=$(jq -r '.data[]? | select(.id=="PRODUCTIVITY") | .id' <<<"$CATS" | head -1); test -n "$CAT"
-          BODY=$(jq -n --arg id "$CAT" '{data:{type:"appCategories",id:$id}}')
-          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appInfos/$INFO_ID/relationships/primaryCategory" >/dev/null
-
           BUILD_ID=''
           for _ in $(seq 1 60); do
             B=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[app]=$APP_ID" --data-urlencode "filter[version]=$BUILD_NUMBER" --data-urlencode 'sort=-uploadedDate' --data-urlencode 'limit=10' "$API/v1/builds")
