@@ -85,9 +85,7 @@ jobs:
             <<<"$GROUPS" | head -1)
           test -n "$GROUP_ID"
 
-          CURRENT=$(curl --fail-with-body -sS "${AUTH[@]}" \
-            "$API/betaGroups/$GROUP_ID/relationships/builds")
-          if jq -e --arg id "$BUILD_ID" '.data[] | select(.id == $id)' <<<"$CURRENT" >/dev/null; then
+          if test "$INTERNAL_STATE" = 'IN_BETA_TESTING'; then
             echo "Build $BUILD_NUMBER is already assigned to group $BETA_GROUP_NAME."
           else
             BODY=$(jq -n --arg id "$BUILD_ID" '{data:[{type:"builds",id:$id}]}')
