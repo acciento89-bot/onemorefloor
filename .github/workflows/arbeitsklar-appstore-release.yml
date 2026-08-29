@@ -101,7 +101,7 @@ jobs:
           test -n "$DE_LOC"; test -n "$EN_LOC"
           echo "DE_LOC=$DE_LOC" >> "$GITHUB_ENV"; echo "EN_LOC=$EN_LOC" >> "$GITHUB_ENV"
 
-          BODY=$(jq -n --arg id "$VERSION_ID" '{data:{type:"appStoreVersions",id:$id,attributes:{copyright:"2026 Piotr Kaminski – Kamilunavo",releaseType:"AFTER_APPROVAL"}}}')
+          BODY=$(jq -n --arg id "$VERSION_ID" '{data:{type:"appStoreVersions",id:$id,attributes:{copyright:"2026 Piotr Kaminski – Kamilunavo"}}}')
           patch "/v1/appStoreVersions/$VERSION_ID" "$BODY"
 
       - name: Assign productivity category and Build 2
