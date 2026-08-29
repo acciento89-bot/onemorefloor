@@ -105,8 +105,8 @@ jobs:
             INVITE_TYPE=$(jq -r '.attributes.inviteType // "UNKNOWN"' <<<"$TESTER")
             echo "Tester status: state=$TESTER_STATE inviteType=$INVITE_TYPE"
             if test "$TESTER_STATE" = 'NOT_INVITED'; then
-              INVITE_BODY=$(jq -n --arg id "$TESTER_ID" \
-                '{data:{type:"betaTesterInvitations",relationships:{betaTester:{data:{type:"betaTesters",id:$id}}}}}')
+              INVITE_BODY=$(jq -n --arg tester "$TESTER_ID" --arg app "$APP_ID" \
+                '{data:{type:"betaTesterInvitations",relationships:{betaTester:{data:{type:"betaTesters",id:$tester}},app:{data:{type:"apps",id:$app}}}}}')
               INVITE_FILE="$RUNNER_TEMP/invite-response.json"
               INVITE_HTTP=$(curl -sS -o "$INVITE_FILE" -w '%{http_code}' -X POST \
                 "${AUTH[@]}" -H 'Content-Type: application/json' \
