@@ -147,7 +147,8 @@ jobs:
           PY
             MD5=$(md5sum "$FILE" | awk '{print $1}')
             BODY=$(jq -n --arg id "$SID" --arg md5 "$MD5" '{data:{type:"appScreenshots",id:$id,attributes:{uploaded:true,sourceFileChecksum:$md5}}}')
-            curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshots/$SID" >/dev/null
+            HTTP=$(curl -sS -o "$RUNNER_TEMP/screenshot-commit.json" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshots/$SID")
+            if [[ "$HTTP" != 200 ]]; then cat "$RUNNER_TEMP/screenshot-commit.json"; exit 1; fi
           fi
 
       - name: Configure review contact and notes
