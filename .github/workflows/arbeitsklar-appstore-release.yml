@@ -53,6 +53,7 @@ jobs:
           patch(){ echo "PATCH $1" >&2; curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$2" "$API$1" >/dev/null; }
 
           VERS=$(get "/v1/apps/$APP_ID/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50")
+          jq -c '.data[]? | {id,attributes}' <<<"$VERS" >&2
           VERSION_ID=$(jq -r --arg v "$VERSION" '.data[]? | select(.attributes.versionString==$v) | .id' <<<"$VERS" | head -1)
           if [[ -z "$VERSION_ID" ]]; then
             BODY=$(jq -n --arg app "$APP_ID" --arg v "$VERSION" '{data:{type:"appStoreVersions",attributes:{platform:"IOS",versionString:$v},relationships:{app:{data:{type:"apps",id:$app}}}}}')
