@@ -12,7 +12,7 @@ permissions:
 
 env:
   BUNDLE_ID: de.kamilunavo.arbeitsklar
-  BUILD_NUMBER: '1'
+  BUILD_NUMBER: '2'
   BETA_GROUP_NAME: Test
 
 jobs:
