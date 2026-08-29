@@ -19,7 +19,7 @@ jobs:
   capture:
     name: Capture authentic iPhone screenshots
     runs-on: macos-26
-    timeout-minutes: 35
+    timeout-minutes: 30
     steps:
       - name: Checkout exact WärmeTakt source
         uses: actions/checkout@v5
@@ -42,6 +42,7 @@ jobs:
           set -euo pipefail
           npm ci
           npm run typecheck
+          npm uninstall expo-dev-client
 
       - name: Generate simulator project
         working-directory: source
@@ -62,20 +63,23 @@ jobs:
           set -euo pipefail
           WORKSPACE=$(find ios -maxdepth 1 -type d -name '*.xcworkspace' -print -quit)
           SCHEME=$(basename "$WORKSPACE" .xcworkspace)
-          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES build
 
       - name: Boot iPhone 16 Pro Max and capture
         working-directory: source
         run: |
           set -euo pipefail
-          UDID=$(xcrun simctl list devices available -j | jq -r '.devices[][] | select(.name == "iPhone 16 Pro Max") | .udid' | head -1)
-          if [[ -z "$UDID" ]]; then
-            RUNTIME=$(xcrun simctl list runtimes available -j | jq -r '.runtimes[] | select(.platform == "iOS") | .identifier' | tail -1)
-            UDID=$(xcrun simctl create "WärmeTakt Capture" "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max" "$RUNTIME")
-          fi
-          xcrun simctl boot "$UDID" || true
-          open -a Simulator
-          xcrun simctl bootstatus "$UDID" -b
+          RUNTIME=$(xcrun simctl list runtimes available -j | jq -r '[.runtimes[] | select(.platform == "iOS" and .isAvailable)] | last | .identifier')
+          test -n "$RUNTIME"
+          UDID=$(xcrun simctl create "WärmeTakt Capture" "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max" "$RUNTIME")
+          xcrun simctl boot "$UDID"
+          STATE=""
+          for _ in $(seq 1 90); do
+            STATE=$(xcrun simctl list devices -j | jq -r --arg id "$UDID" '.devices[][] | select(.udid == $id) | .state')
+            [[ "$STATE" == "Booted" ]] && break
+            sleep 2
+          done
+          test "$STATE" = "Booted"
           xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4
           APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphonesimulator" -maxdepth 1 -type d -name '*.app' -print -quit)
           test -d "$APP"
@@ -99,6 +103,8 @@ jobs:
           capture tests en en-02-analysis.png
           capture history en en-03-history.png
           capture pro de iap-review-de.png
+          xcrun simctl shutdown "$UDID" || true
+          xcrun simctl delete "$UDID" || true
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4
