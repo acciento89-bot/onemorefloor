@@ -132,8 +132,25 @@ jobs:
               --data-urlencode "filter[identifier]=$IDENTIFIER" \
               --data-urlencode 'limit=10' \
               'https://api.appstoreconnect.apple.com/v1/bundleIds')
-            test "$(jq '.data | length' <<<"$RESPONSE")" -gt 0
-            echo "Bundle identifier found: $IDENTIFIER"
+            if test "$(jq '.data | length' <<<"$RESPONSE")" -gt 0; then
+              echo "Bundle identifier found: $IDENTIFIER"
+              continue
+            fi
+            test "$IDENTIFIER" = "$EXTENSION_BUNDLE_ID"
+            BODY=$(jq -n --arg identifier "$IDENTIFIER" \
+              '{data:{type:"bundleIds",attributes:{identifier:$identifier,name:"ArbeitsKlar Live Activity",platform:"IOS"}}}')
+            CREATE_FILE="$RUNNER_TEMP/bundle-create.json"
+            CREATE_HTTP=$(curl -sS -o "$CREATE_FILE" -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer $JWT" \
+              -H 'Content-Type: application/json' \
+              -d "$BODY" \
+              'https://api.appstoreconnect.apple.com/v1/bundleIds')
+            if test "$CREATE_HTTP" != '201'; then
+              echo "Apple bundle identifier creation failed: HTTP $CREATE_HTTP"
+              jq . "$CREATE_FILE" 2>/dev/null || cat "$CREATE_FILE"
+              exit 1
+            fi
+            echo "Bundle identifier created: $IDENTIFIER"
           done
 
       - name: Build simulator release gate
