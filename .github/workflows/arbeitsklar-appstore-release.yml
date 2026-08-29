@@ -49,8 +49,8 @@ jobs:
           set -euo pipefail
           API=https://api.appstoreconnect.apple.com
           get(){ curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API$1"; }
-          post(){ curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$2" "$API$1"; }
-          patch(){ curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$2" "$API$1" >/dev/null; }
+          post(){ echo "POST $1" >&2; curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$2" "$API$1"; }
+          patch(){ echo "PATCH $1" >&2; curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$2" "$API$1" >/dev/null; }
 
           VERS=$(get "/v1/apps/$APP_ID/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50")
           VERSION_ID=$(jq -r --arg v "$VERSION" '.data[]? | select(.attributes.versionString==$v) | .id' <<<"$VERS" | head -1)
