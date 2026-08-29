@@ -1,0 +1,89 @@
+name: Family Life OS StoreKit Review Info PR
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/family-life-os-storekit-review-info-pr.yml'
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: 'de.kamilunavo.familyprototype'
+  GROUP_NAME: 'Family Pro'
+  MONTHLY_ID: 'de.kamilunavo.family.familypro.monthly'
+  ANNUAL_ID: 'de.kamilunavo.family.familypro.annual'
+
+jobs:
+  review-info:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Prepare App Store Connect credentials
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"; test -n "$ASC_KEY_ID"; test -n "$ASC_PRIVATE_KEY_B64"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8" >> "$GITHUB_ENV"
+
+      - name: Configure review notes and inspect screenshot linkage
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v); Base64.urlsafe_encode64(v, padding: false); end
+          key=OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH'))); now=Time.now.to_i
+          h=b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p=b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'})); input="#{h}.#{p}"
+          seq=OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input))
+          raw=seq.value.map{|i|[i.value.to_i.to_s(16).rjust(64,'0')].pack('H*')}.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+          AUTH="Authorization: Bearer $JWT"; API='https://api.appstoreconnect.apple.com/v1'; TMP="$RUNNER_TEMP/asc.json"
+
+          curl --fail-with-body --silent --show-error --get -H "$AUTH" --data-urlencode "filter[bundleId]=$BUNDLE_ID" "$API/apps" -o "$TMP"
+          APP_ID=$(jq -r '.data[0].id // empty' "$TMP"); test -n "$APP_ID"
+          curl --fail-with-body --silent --show-error --get -H "$AUTH" --data-urlencode "filter[referenceName]=$GROUP_NAME" --data-urlencode 'include=subscriptions' --data-urlencode 'fields[subscriptionGroups]=referenceName,subscriptions' --data-urlencode 'fields[subscriptions]=name,productId,state,subscriptionPeriod,reviewNote' "$API/apps/$APP_ID/subscriptionGroups" -o "$TMP"
+          MONTHLY=$(jq -r --arg id "$MONTHLY_ID" '.included[]? | select(.type=="subscriptions" and .attributes.productId==$id) | .id' "$TMP" | head -1)
+          ANNUAL=$(jq -r --arg id "$ANNUAL_ID" '.included[]? | select(.type=="subscriptions" and .attributes.productId==$id) | .id' "$TMP" | head -1)
+          test -n "$MONTHLY"; test -n "$ANNUAL"
+
+          set_note() {
+            local sid="$1" label="$2"
+            local note='Family Pro unlocks higher AI import allowance, advanced family automation, additional storage and extended history. Open Settings > Family Pro to view the subscription options and purchase. Restore Purchases is available in the same section. No external payment method is used.'
+            local body code
+            body=$(jq -nc --arg id "$sid" --arg note "$note" '{data:{type:"subscriptions",id:$id,attributes:{reviewNote:$note}}}')
+            code=$(curl --silent --show-error -H "$AUTH" -H 'Content-Type: application/json' -X PATCH -d "$body" -o "$TMP" -w '%{http_code}' "$API/subscriptions/$sid")
+            if [[ "$code" != 200 ]]; then
+              echo "$label review-note PATCH failed HTTP $code" | tee -a "$GITHUB_STEP_SUMMARY"
+              jq -r '.errors[]? | "- \(.code // ""): \(.detail // .title // "")"' "$TMP" | tee -a "$GITHUB_STEP_SUMMARY" || true
+              exit 1
+            fi
+            echo "$label review note configured." | tee -a "$GITHUB_STEP_SUMMARY"
+
+            code=$(curl --silent --show-error --get -H "$AUTH" "$API/subscriptions/$sid/appStoreReviewScreenshot" -o "$TMP" -w '%{http_code}')
+            if [[ "$code" == 200 && "$(jq -r '.data.id // empty' "$TMP")" != '' ]]; then
+              echo "$label review screenshot linkage: PRESENT ($(jq -r '.data.id' "$TMP"))" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "$label review screenshot linkage: MISSING" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          }
+
+          set_note "$MONTHLY" 'Monthly'
+          set_note "$ANNUAL" 'Annual'
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8

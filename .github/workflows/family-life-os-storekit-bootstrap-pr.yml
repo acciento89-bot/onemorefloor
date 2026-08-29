@@ -1,0 +1,153 @@
+name: Family Life OS StoreKit Bootstrap PR
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/family-life-os-storekit-bootstrap-pr.yml'
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: 'de.kamilunavo.familyprototype'
+  GROUP_NAME: 'Family Pro'
+  MONTHLY_ID: 'de.kamilunavo.family.familypro.monthly'
+  ANNUAL_ID: 'de.kamilunavo.family.familypro.annual'
+
+jobs:
+  bootstrap:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Prepare App Store Connect credentials
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          grep -q 'BEGIN PRIVATE KEY' "$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8" >> "$GITHUB_ENV"
+
+      - name: Create Family Pro group and products if missing
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b64url(v); Base64.urlsafe_encode64(v, padding: false); end
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          header = b64url(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          payload = b64url(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+600,aud:'appstoreconnect-v1'}))
+          input = "#{header}.#{payload}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{input}.#{b64url(raw)}"
+          RUBY
+          )
+          AUTH="Authorization: Bearer $JWT"
+          API='https://api.appstoreconnect.apple.com/v1'
+          APP_JSON="$RUNNER_TEMP/app.json"
+          GROUPS_JSON="$RUNNER_TEMP/groups.json"
+          CREATE_JSON="$RUNNER_TEMP/create.json"
+
+          api_post() {
+            local endpoint="$1"
+            local body="$2"
+            local output="$3"
+            local code
+            code=$(curl --silent --show-error -H "$AUTH" -H 'Content-Type: application/json' -X POST -d "$body" -o "$output" -w '%{http_code}' "$API/$endpoint")
+            if [[ "$code" != '201' ]]; then
+              echo "App Store Connect POST $endpoint failed (HTTP $code)." | tee -a "$GITHUB_STEP_SUMMARY"
+              jq -r '.errors[]? | "- \(.status // "?") \(.code // ""): \(.title // "") — \(.detail // "")"' "$output" | tee -a "$GITHUB_STEP_SUMMARY" || true
+              exit 1
+            fi
+          }
+
+          curl --fail-with-body --silent --show-error --get -H "$AUTH" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
+            --data-urlencode 'fields[apps]=name,bundleId' \
+            "$API/apps" -o "$APP_JSON"
+          APP_ID=$(jq -r '.data[0].id // empty' "$APP_JSON")
+          APP_NAME=$(jq -r '.data[0].attributes.name // empty' "$APP_JSON")
+          test -n "$APP_ID"
+
+          curl --fail-with-body --silent --show-error --get -H "$AUTH" \
+            --data-urlencode 'include=subscriptions' \
+            --data-urlencode 'fields[subscriptionGroups]=referenceName,subscriptions' \
+            --data-urlencode 'fields[subscriptions]=name,productId,state,subscriptionPeriod,groupLevel' \
+            --data-urlencode 'limit=200' \
+            --data-urlencode 'limit[subscriptions]=50' \
+            "$API/apps/$APP_ID/subscriptionGroups" -o "$GROUPS_JSON"
+
+          GROUP_ID=$(jq -r --arg name "$GROUP_NAME" '.data[]? | select(.attributes.referenceName==$name) | .id' "$GROUPS_JSON" | head -1)
+          if [[ -z "$GROUP_ID" ]]; then
+            GROUP_BODY=$(jq -nc --arg name "$GROUP_NAME" --arg app "$APP_ID" '{data:{type:"subscriptionGroups",attributes:{referenceName:$name},relationships:{app:{data:{type:"apps",id:$app}}}}}')
+            api_post 'subscriptionGroups' "$GROUP_BODY" "$CREATE_JSON"
+            GROUP_ID=$(jq -r '.data.id' "$CREATE_JSON")
+            echo "Created subscription group: $GROUP_NAME ($GROUP_ID)" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Subscription group already exists: $GROUP_NAME ($GROUP_ID)" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+          curl --fail-with-body --silent --show-error --get -H "$AUTH" \
+            --data-urlencode 'fields[subscriptions]=name,productId,state,subscriptionPeriod,groupLevel' \
+            --data-urlencode 'limit=200' \
+            "$API/subscriptionGroups/$GROUP_ID/subscriptions" -o "$GROUPS_JSON"
+
+          create_subscription() {
+            local product_id="$1"
+            local name="$2"
+            local period="$3"
+            local existing
+            existing=$(jq -r --arg id "$product_id" '.data[]? | select(.attributes.productId==$id) | .id' "$GROUPS_JSON" | head -1)
+            if [[ -n "$existing" ]]; then
+              echo "Subscription already exists: $product_id ($existing)" | tee -a "$GITHUB_STEP_SUMMARY"
+              return
+            fi
+            BODY=$(jq -nc --arg name "$name" --arg product "$product_id" --arg period "$period" --arg group "$GROUP_ID" '{data:{type:"subscriptions",attributes:{name:$name,productId:$product,subscriptionPeriod:$period,groupLevel:1},relationships:{group:{data:{type:"subscriptionGroups",id:$group}}}}}')
+            api_post 'subscriptions' "$BODY" "$CREATE_JSON"
+            echo "Created subscription: $product_id ($(jq -r '.data.id' "$CREATE_JSON"))" | tee -a "$GITHUB_STEP_SUMMARY"
+            curl --fail-with-body --silent --show-error --get -H "$AUTH" \
+              --data-urlencode 'fields[subscriptions]=name,productId,state,subscriptionPeriod,groupLevel' \
+              --data-urlencode 'limit=200' \
+              "$API/subscriptionGroups/$GROUP_ID/subscriptions" -o "$GROUPS_JSON"
+          }
+
+          create_subscription "$MONTHLY_ID" 'Family Pro Monthly' 'ONE_MONTH'
+          create_subscription "$ANNUAL_ID" 'Family Pro Annual' 'ONE_YEAR'
+
+          curl --fail-with-body --silent --show-error --get -H "$AUTH" \
+            --data-urlencode 'fields[subscriptions]=name,productId,state,subscriptionPeriod,groupLevel' \
+            --data-urlencode 'limit=200' \
+            "$API/subscriptionGroups/$GROUP_ID/subscriptions" -o "$GROUPS_JSON"
+
+          MONTHLY=$(jq -c --arg id "$MONTHLY_ID" '.data[]? | select(.attributes.productId==$id)' "$GROUPS_JSON" | head -1)
+          ANNUAL=$(jq -c --arg id "$ANNUAL_ID" '.data[]? | select(.attributes.productId==$id)' "$GROUPS_JSON" | head -1)
+          test -n "$MONTHLY"
+          test -n "$ANNUAL"
+
+          {
+            echo '## Family Life OS StoreKit bootstrap'
+            echo "- App: $APP_NAME ($BUNDLE_ID)"
+            echo "- Group: $GROUP_NAME ($GROUP_ID)"
+            echo "- Monthly: $(jq -r '.attributes.state' <<<"$MONTHLY") / $(jq -r '.attributes.subscriptionPeriod' <<<"$MONTHLY") — $MONTHLY_ID"
+            echo "- Annual: $(jq -r '.attributes.state' <<<"$ANNUAL") / $(jq -r '.attributes.subscriptionPeriod' <<<"$ANNUAL") — $ANNUAL_ID"
+            echo '- Product records are now present. Pricing/localizations/review metadata remain separate release gates.'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8

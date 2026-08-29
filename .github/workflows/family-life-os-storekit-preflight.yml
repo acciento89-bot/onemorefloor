@@ -1,0 +1,157 @@
+name: Family Life OS StoreKit Preflight
+
+on:
+  push:
+    branches:
+      - agent/family-life-os-storekit-preflight
+    paths:
+      - '.github/workflows/family-life-os-storekit-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: 'de.kamilunavo.familyprototype'
+  MONTHLY_ID: 'de.kamilunavo.family.familypro.monthly'
+  ANNUAL_ID: 'de.kamilunavo.family.familypro.annual'
+
+jobs:
+  app-store-connect-preflight:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Verify App Store Connect secrets
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+
+      - name: Prepare App Store Connect API key
+        shell: bash
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Check Family Pro subscriptions
+        shell: bash
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'
+          require 'base64'
+          require 'json'
+
+          def b64url(value)
+            Base64.urlsafe_encode64(value, padding: false)
+          end
+
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          header = b64url(JSON.generate({ alg: 'ES256', kid: ENV.fetch('ASC_KEY_ID'), typ: 'JWT' }))
+          payload = b64url(JSON.generate({ iss: ENV.fetch('ASC_ISSUER_ID'), iat: now, exp: now + 600, aud: 'appstoreconnect-v1' }))
+          signing_input = "#{header}.#{payload}"
+          der = key.sign(OpenSSL::Digest::SHA256.new, signing_input)
+          sequence = OpenSSL::ASN1.decode(der)
+          raw = sequence.value.map do |integer|
+            hex = integer.value.to_i.to_s(16).rjust(64, '0')
+            [hex].pack('H*')
+          end.join
+          puts "#{signing_input}.#{b64url(raw)}"
+          RUBY
+          )
+
+          AUTH_HEADER="Authorization: Bearer $JWT"
+          APP_JSON="$RUNNER_TEMP/family-app.json"
+          SUBS_JSON="$RUNNER_TEMP/family-subscriptions.json"
+
+          curl --fail-with-body --silent --show-error --get \
+            -H "$AUTH_HEADER" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" \
+            --data-urlencode 'fields[apps]=name,bundleId' \
+            'https://api.appstoreconnect.apple.com/v1/apps' \
+            -o "$APP_JSON"
+
+          APP_ID=$(jq -r '.data[0].id // empty' "$APP_JSON")
+          APP_NAME=$(jq -r '.data[0].attributes.name // empty' "$APP_JSON")
+          if [[ -z "$APP_ID" ]]; then
+            echo "App Store Connect app record missing for $BUNDLE_ID" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          curl --fail-with-body --silent --show-error --get \
+            -H "$AUTH_HEADER" \
+            --data-urlencode 'include=subscriptions' \
+            --data-urlencode 'fields[subscriptionGroups]=referenceName,subscriptions' \
+            --data-urlencode 'fields[subscriptions]=name,productId,state,subscriptionPeriod,familySharable' \
+            --data-urlencode 'limit=200' \
+            --data-urlencode 'limit[subscriptions]=50' \
+            "https://api.appstoreconnect.apple.com/v1/apps/$APP_ID/subscriptionGroups" \
+            -o "$SUBS_JSON"
+
+          MONTHLY=$(jq -c --arg id "$MONTHLY_ID" '.included // [] | map(select(.type == "subscriptions" and .attributes.productId == $id)) | first // empty' "$SUBS_JSON")
+          ANNUAL=$(jq -c --arg id "$ANNUAL_ID" '.included // [] | map(select(.type == "subscriptions" and .attributes.productId == $id)) | first // empty' "$SUBS_JSON")
+
+          {
+            echo '## Family Life OS StoreKit preflight'
+            echo "- App: $APP_NAME ($BUNDLE_ID)"
+            echo "- Subscription groups: $(jq '.data | length' "$SUBS_JSON")"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ -z "$MONTHLY" ]]; then
+            echo "- Monthly: MISSING — $MONTHLY_ID" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Monthly: $(jq -r '.attributes.state' <<<"$MONTHLY") / $(jq -r '.attributes.subscriptionPeriod' <<<"$MONTHLY") — $MONTHLY_ID" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [[ -z "$ANNUAL" ]]; then
+            echo "- Annual: MISSING — $ANNUAL_ID" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Annual: $(jq -r '.attributes.state' <<<"$ANNUAL") / $(jq -r '.attributes.subscriptionPeriod' <<<"$ANNUAL") — $ANNUAL_ID" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          test -n "$MONTHLY"
+          test -n "$ANNUAL"
+
+          MONTHLY_PERIOD=$(jq -r '.attributes.subscriptionPeriod' <<<"$MONTHLY")
+          ANNUAL_PERIOD=$(jq -r '.attributes.subscriptionPeriod' <<<"$ANNUAL")
+          [[ "$MONTHLY_PERIOD" == 'ONE_MONTH' ]]
+          [[ "$ANNUAL_PERIOD" == 'ONE_YEAR' ]]
+
+          bad_state() {
+            case "$1" in
+              MISSING_METADATA|DEVELOPER_ACTION_NEEDED|REJECTED|DEVELOPER_REMOVED_FROM_SALE|REMOVED_FROM_SALE) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          MONTHLY_STATE=$(jq -r '.attributes.state' <<<"$MONTHLY")
+          ANNUAL_STATE=$(jq -r '.attributes.state' <<<"$ANNUAL")
+          if bad_state "$MONTHLY_STATE" || bad_state "$ANNUAL_STATE"; then
+            echo '- Result: BLOCKED — at least one subscription is not release-ready.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo '- Result: GREEN — both expected Family Pro products exist with monthly/yearly periods and no blocking state.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove App Store Connect key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
