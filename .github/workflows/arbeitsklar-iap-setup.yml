@@ -99,8 +99,8 @@ jobs:
             BODY=$(jq -n --arg vid "$VERSION_ID" --arg locale "$locale" --arg name "$name" --arg description "$description" '{data:{type:"inAppPurchaseLocalizations",attributes:{locale:$locale,name:$name,description:$description},relationships:{version:{data:{type:"inAppPurchaseVersions",id:$vid}}}}}')
             curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v2/inAppPurchaseLocalizations" >/dev/null
           }
-          ensure_loc de-DE 'ArbeitsKlar Pro' 'Schaltet alle Pro-Funktionen dauerhaft frei. Einmalkauf, kein Abonnement.'
-          ensure_loc en-US 'ArbeitsKlar Pro' 'Permanently unlocks every Pro feature. One-time purchase, no subscription.'
+          ensure_loc de-DE 'ArbeitsKlar Pro' 'Alle Pro-Funktionen dauerhaft freischalten.'
+          ensure_loc en-US 'ArbeitsKlar Pro' 'Permanently unlock all Pro features.'
 
       - name: Set EUR 3.99 base price
         shell: bash
