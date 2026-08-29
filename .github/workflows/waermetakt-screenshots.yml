@@ -12,7 +12,7 @@ permissions:
 
 env:
   SOURCE_REPO: acciento89-bot/w-rmetakt
-  SOURCE_REF: 2e0836006f7a4a8a87795ab1f3c55bedcf31867c
+  SOURCE_REF: c0ee30d4324e287f6a7e7fada8946e8d0ac29e39
   BUNDLE_ID: de.kamilunavo.waermetakt
 
 jobs:
@@ -83,16 +83,17 @@ jobs:
           xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4
           APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphonesimulator" -maxdepth 1 -type d -name '*.app' -print -quit)
           test -d "$APP"
-          xcrun simctl install "$UDID" "$APP"
           mkdir -p screenshots
-          xcrun simctl launch "$UDID" "$BUNDLE_ID"
-          sleep 7
           capture() {
             local route="$1"
             local lang="$2"
             local output="$3"
-            xcrun simctl openurl "$UDID" "waermetakt://$route?lang=$lang"
-            sleep 3
+            EXPO_PUBLIC_SCREENSHOT_MODE=1 EXPO_PUBLIC_SCREENSHOT_ROUTE="$route" EXPO_PUBLIC_SCREENSHOT_LANG="$lang" npx expo export:embed --platform ios --dev false --entry-file index.ts --bundle-output "$APP/main.jsbundle" --assets-dest "$APP"
+            xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
+            xcrun simctl uninstall "$UDID" "$BUNDLE_ID" || true
+            xcrun simctl install "$UDID" "$APP"
+            xcrun simctl launch "$UDID" "$BUNDLE_ID"
+            sleep 5
             xcrun simctl io "$UDID" screenshot "screenshots/$output"
             sips -g pixelWidth -g pixelHeight "screenshots/$output"
           }
