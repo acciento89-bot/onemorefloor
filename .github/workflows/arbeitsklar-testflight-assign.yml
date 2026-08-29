@@ -78,11 +78,11 @@ jobs:
           EXTERNAL_STATE=$(jq -r '.data.attributes.externalBuildState // "UNKNOWN"' <<<"$DETAIL")
           echo "Build states before assignment: internal=$INTERNAL_STATE external=$EXTERNAL_STATE"
 
-          GROUPS=$(curl --fail-with-body -sS -G "${AUTH[@]}" \
+          BETA_GROUPS=$(curl --fail-with-body -sS -G "${AUTH[@]}" \
             --data-urlencode "filter[app]=$APP_ID" --data-urlencode 'limit=200' "$API/betaGroups")
           GROUP_ID=$(jq -r --arg name "$BETA_GROUP_NAME" \
             '.data[] | select(.attributes.name == $name and .attributes.isInternalGroup == true) | .id' \
-            <<<"$GROUPS" | head -1)
+            <<<"$BETA_GROUPS" | head -1)
           test -n "$GROUP_ID"
 
           if test "$INTERNAL_STATE" = 'IN_BETA_TESTING'; then
