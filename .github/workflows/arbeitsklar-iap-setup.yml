@@ -108,7 +108,8 @@ jobs:
           set -euo pipefail
           API=https://api.appstoreconnect.apple.com
           CURRENT=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/inAppPurchasePriceSchedules/$IAP_ID/manualPrices?filter%5Bterritory%5D=DEU&include=inAppPurchasePricePoint&limit=50" || true)
-          HAVE=$(jq -r --arg price "$TARGET_PRICE" '[.included[]? | select(.type=="inAppPurchasePricePoints") | select((.attributes.customerPrice|tostring)==$price)] | length' <<<"${CURRENT:-{}}" 2>/dev/null || echo 0)
+          HAVE=$(jq -r --arg price "$TARGET_PRICE" '[.included[]? | select(.type=="inAppPurchasePricePoints") | select((.attributes.customerPrice|tostring)==$price)] | length' <<<"${CURRENT:-{}}" 2>/dev/null || true)
+          [[ "$HAVE" =~ ^[0-9]+$ ]] || HAVE=0
           if [[ "$HAVE" -eq 0 ]]; then
             POINTS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[territory]=$BASE_TERRITORY" --data-urlencode limit=8000 "$API/v2/inAppPurchases/$IAP_ID/pricePoints")
             POINT_ID=$(jq -r --arg price "$TARGET_PRICE" '.data[]? | select((.attributes.customerPrice|tostring)==$price) | .id' <<<"$POINTS" | head -1); test -n "$POINT_ID"
