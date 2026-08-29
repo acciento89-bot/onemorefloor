@@ -100,9 +100,17 @@ jobs:
           TESTER_COUNT=$(jq '.data | length' <<<"$TESTERS")
           test "$TESTER_COUNT" -gt 0
           while read -r TESTER; do
+            TESTER_ID=$(jq -r '.id' <<<"$TESTER")
             TESTER_STATE=$(jq -r '.attributes.state // "UNKNOWN"' <<<"$TESTER")
             INVITE_TYPE=$(jq -r '.attributes.inviteType // "UNKNOWN"' <<<"$TESTER")
             echo "Tester status: state=$TESTER_STATE inviteType=$INVITE_TYPE"
+            if test "$TESTER_STATE" = 'NOT_INVITED'; then
+              INVITE_BODY=$(jq -n --arg id "$TESTER_ID" \
+                '{data:{type:"betaTesterInvitations",relationships:{betaTester:{data:{type:"betaTesters",id:$id}}}}}')
+              curl --fail-with-body -sS -X POST "${AUTH[@]}" -H 'Content-Type: application/json' \
+                -d "$INVITE_BODY" "$API/betaTesterInvitations" >/dev/null
+              echo 'TestFlight invitation sent.'
+            fi
           done < <(jq -c '.data[]' <<<"$TESTERS")
           echo "Internal group $BETA_GROUP_NAME now has build $BUILD_NUMBER and $TESTER_COUNT tester(s)."
 
