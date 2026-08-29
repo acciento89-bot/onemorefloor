@@ -107,9 +107,17 @@ jobs:
             if test "$TESTER_STATE" = 'NOT_INVITED'; then
               INVITE_BODY=$(jq -n --arg id "$TESTER_ID" \
                 '{data:{type:"betaTesterInvitations",relationships:{betaTester:{data:{type:"betaTesters",id:$id}}}}}')
-              curl --fail-with-body -sS -X POST "${AUTH[@]}" -H 'Content-Type: application/json' \
-                -d "$INVITE_BODY" "$API/betaTesterInvitations" >/dev/null
-              echo 'TestFlight invitation sent.'
+              INVITE_FILE="$RUNNER_TEMP/invite-response.json"
+              INVITE_HTTP=$(curl -sS -o "$INVITE_FILE" -w '%{http_code}' -X POST \
+                "${AUTH[@]}" -H 'Content-Type: application/json' \
+                -d "$INVITE_BODY" "$API/betaTesterInvitations")
+              if test "$INVITE_HTTP" = '201'; then
+                echo 'TestFlight invitation sent.'
+              else
+                echo "TestFlight invitation response: HTTP $INVITE_HTTP"
+                jq . "$INVITE_FILE" 2>/dev/null || cat "$INVITE_FILE"
+                exit 1
+              fi
             fi
           done < <(jq -c '.data[]' <<<"$TESTERS")
           echo "Internal group $BETA_GROUP_NAME now has build $BUILD_NUMBER and $TESTER_COUNT tester(s)."
