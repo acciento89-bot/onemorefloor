@@ -120,6 +120,7 @@ jobs:
       - name: Upload German iPhone screenshot
         run: |
           set -euo pipefail
+          # Reuse an existing reservation on idempotent release runs.
           API=https://api.appstoreconnect.apple.com
           FILE=.github/assets/arbeitsklar-pro-review.png
           test -s "$FILE"
