@@ -1,0 +1,108 @@
+name: Assign ArbeitsKlar TestFlight Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/arbeitsklar-testflight-assign.yml'
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: de.kamilunavo.arbeitsklar
+  BUILD_NUMBER: '1'
+  BETA_GROUP_NAME: Test
+
+jobs:
+  assign:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Prepare App Store Connect key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Assign processed build to internal group
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v, padding: false); end
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          h = b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p = b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'}))
+          input = "#{h}.#{p}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{input}.#{b(raw)}"
+          RUBY
+          )
+          AUTH=(-H "Authorization: Bearer $JWT")
+          API='https://api.appstoreconnect.apple.com/v1'
+
+          APPS=$(curl --fail-with-body -sS -G "${AUTH[@]}" \
+            --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'limit=10' "$API/apps")
+          APP_ID=$(jq -r '.data[0].id // empty' <<<"$APPS")
+          test -n "$APP_ID"
+
+          BUILDS=$(curl --fail-with-body -sS -G "${AUTH[@]}" \
+            --data-urlencode "filter[app]=$APP_ID" \
+            --data-urlencode "filter[version]=$BUILD_NUMBER" \
+            --data-urlencode 'sort=-uploadedDate' \
+            --data-urlencode 'limit=10' "$API/builds")
+          BUILD_ID=$(jq -r '.data[0].id // empty' <<<"$BUILDS")
+          PROCESSING=$(jq -r '.data[0].attributes.processingState // "UNKNOWN"' <<<"$BUILDS")
+          test -n "$BUILD_ID"
+          test "$PROCESSING" = 'VALID'
+
+          DETAIL=$(curl --fail-with-body -sS "${AUTH[@]}" "$API/builds/$BUILD_ID/buildBetaDetail")
+          INTERNAL_STATE=$(jq -r '.data.attributes.internalBuildState // "UNKNOWN"' <<<"$DETAIL")
+          EXTERNAL_STATE=$(jq -r '.data.attributes.externalBuildState // "UNKNOWN"' <<<"$DETAIL")
+          echo "Build states before assignment: internal=$INTERNAL_STATE external=$EXTERNAL_STATE"
+
+          GROUPS=$(curl --fail-with-body -sS -G "${AUTH[@]}" \
+            --data-urlencode "filter[app]=$APP_ID" --data-urlencode 'limit=200' "$API/betaGroups")
+          GROUP_ID=$(jq -r --arg name "$BETA_GROUP_NAME" \
+            '.data[] | select(.attributes.name == $name and .attributes.isInternalGroup == true) | .id' \
+            <<<"$GROUPS" | head -1)
+          test -n "$GROUP_ID"
+
+          CURRENT=$(curl --fail-with-body -sS -G "${AUTH[@]}" \
+            --data-urlencode 'limit=200' "$API/betaGroups/$GROUP_ID/builds")
+          if jq -e --arg id "$BUILD_ID" '.data[] | select(.id == $id)' <<<"$CURRENT" >/dev/null; then
+            echo "Build $BUILD_NUMBER is already assigned to group $BETA_GROUP_NAME."
+          else
+            BODY=$(jq -n --arg id "$BUILD_ID" '{data:[{type:"builds",id:$id}]}')
+            curl --fail-with-body -sS -X POST "${AUTH[@]}" -H 'Content-Type: application/json' \
+              -d "$BODY" "$API/betaGroups/$GROUP_ID/relationships/builds" >/dev/null
+            echo "Build $BUILD_NUMBER assigned to group $BETA_GROUP_NAME."
+          fi
+
+          TESTERS=$(curl --fail-with-body -sS -G "${AUTH[@]}" \
+            --data-urlencode 'limit=200' "$API/betaGroups/$GROUP_ID/betaTesters")
+          TESTER_COUNT=$(jq '.data | length' <<<"$TESTERS")
+          test "$TESTER_COUNT" -gt 0
+          echo "Internal group $BETA_GROUP_NAME now has build $BUILD_NUMBER and $TESTER_COUNT tester(s)."
+
+      - name: Remove key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
