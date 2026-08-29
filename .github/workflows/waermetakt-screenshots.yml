@@ -1,0 +1,109 @@
+name: WärmeTakt App Store Screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/waermetakt-screenshots.yml'
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_REPO: acciento89-bot/w-rmetakt
+  SOURCE_REF: 2e0836006f7a4a8a87795ab1f3c55bedcf31867c
+  BUNDLE_ID: de.kamilunavo.waermetakt
+
+jobs:
+  capture:
+    name: Capture authentic iPhone screenshots
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact WärmeTakt source
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.SOURCE_REPO }}
+          ref: ${{ env.SOURCE_REF }}
+          path: source
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: source/package-lock.json
+
+      - name: Install and verify
+        working-directory: source
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run typecheck
+
+      - name: Generate simulator project
+        working-directory: source
+        env:
+          CI: '1'
+          EXPO_PUBLIC_SCREENSHOT_MODE: '1'
+        run: |
+          set -euo pipefail
+          npx expo prebuild --platform ios --clean
+          cd ios
+          pod install --repo-update
+
+      - name: Build screenshot app
+        working-directory: source
+        env:
+          EXPO_PUBLIC_SCREENSHOT_MODE: '1'
+        run: |
+          set -euo pipefail
+          WORKSPACE=$(find ios -maxdepth 1 -type d -name '*.xcworkspace' -print -quit)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO build
+
+      - name: Boot iPhone 16 Pro Max and capture
+        working-directory: source
+        run: |
+          set -euo pipefail
+          UDID=$(xcrun simctl list devices available -j | jq -r '.devices[][] | select(.name == "iPhone 16 Pro Max") | .udid' | head -1)
+          if [[ -z "$UDID" ]]; then
+            RUNTIME=$(xcrun simctl list runtimes available -j | jq -r '.runtimes[] | select(.platform == "iOS") | .identifier' | tail -1)
+            UDID=$(xcrun simctl create "WärmeTakt Capture" "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max" "$RUNTIME")
+          fi
+          xcrun simctl boot "$UDID" || true
+          open -a Simulator
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4
+          APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphonesimulator" -maxdepth 1 -type d -name '*.app' -print -quit)
+          test -d "$APP"
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p screenshots
+          xcrun simctl launch "$UDID" "$BUNDLE_ID"
+          sleep 7
+          capture() {
+            local route="$1"
+            local lang="$2"
+            local output="$3"
+            xcrun simctl openurl "$UDID" "waermetakt://$route?lang=$lang"
+            sleep 3
+            xcrun simctl io "$UDID" screenshot "screenshots/$output"
+            sips -g pixelWidth -g pixelHeight "screenshots/$output"
+          }
+          capture home de de-01-dashboard.png
+          capture tests de de-02-analyse.png
+          capture history de de-03-verlauf.png
+          capture home en en-01-dashboard.png
+          capture tests en en-02-analysis.png
+          capture history en en-03-history.png
+          capture pro de iap-review-de.png
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: waermetakt-app-store-screenshots
+          path: source/screenshots/*.png
+          if-no-files-found: error
+          retention-days: 14
