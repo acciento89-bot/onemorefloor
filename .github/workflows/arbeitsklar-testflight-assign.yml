@@ -85,8 +85,8 @@ jobs:
             <<<"$GROUPS" | head -1)
           test -n "$GROUP_ID"
 
-          CURRENT=$(curl --fail-with-body -sS -G "${AUTH[@]}" \
-            --data-urlencode 'limit=200' "$API/betaGroups/$GROUP_ID/builds")
+          CURRENT=$(curl --fail-with-body -sS "${AUTH[@]}" \
+            "$API/betaGroups/$GROUP_ID/relationships/builds")
           if jq -e --arg id "$BUILD_ID" '.data[] | select(.id == $id)' <<<"$CURRENT" >/dev/null; then
             echo "Build $BUILD_NUMBER is already assigned to group $BETA_GROUP_NAME."
           else
@@ -96,10 +96,16 @@ jobs:
             echo "Build $BUILD_NUMBER assigned to group $BETA_GROUP_NAME."
           fi
 
-          TESTERS=$(curl --fail-with-body -sS -G "${AUTH[@]}" \
-            --data-urlencode 'limit=200' "$API/betaGroups/$GROUP_ID/betaTesters")
+          TESTERS=$(curl --fail-with-body -sS "${AUTH[@]}" \
+            "$API/betaGroups/$GROUP_ID/relationships/betaTesters")
           TESTER_COUNT=$(jq '.data | length' <<<"$TESTERS")
           test "$TESTER_COUNT" -gt 0
+          while read -r TESTER_ID; do
+            TESTER=$(curl --fail-with-body -sS "${AUTH[@]}" "$API/betaTesters/$TESTER_ID")
+            TESTER_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' <<<"$TESTER")
+            INVITE_TYPE=$(jq -r '.data.attributes.inviteType // "UNKNOWN"' <<<"$TESTER")
+            echo "Tester status: state=$TESTER_STATE inviteType=$INVITE_TYPE"
+          done < <(jq -r '.data[].id' <<<"$TESTERS")
           echo "Internal group $BETA_GROUP_NAME now has build $BUILD_NUMBER and $TESTER_COUNT tester(s)."
 
       - name: Remove key
