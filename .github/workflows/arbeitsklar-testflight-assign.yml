@@ -94,16 +94,16 @@ jobs:
             echo "Build $BUILD_NUMBER assigned to group $BETA_GROUP_NAME."
           fi
 
-          TESTERS=$(curl --fail-with-body -sS "${AUTH[@]}" \
-            "$API/betaGroups/$GROUP_ID/relationships/betaTesters")
+          TESTERS=$(curl --fail-with-body -sS -G "${AUTH[@]}" \
+            --data-urlencode "filter[betaGroups]=$GROUP_ID" \
+            --data-urlencode 'limit=200' "$API/betaTesters")
           TESTER_COUNT=$(jq '.data | length' <<<"$TESTERS")
           test "$TESTER_COUNT" -gt 0
-          while read -r TESTER_ID; do
-            TESTER=$(curl --fail-with-body -sS "${AUTH[@]}" "$API/betaTesters/$TESTER_ID")
-            TESTER_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' <<<"$TESTER")
-            INVITE_TYPE=$(jq -r '.data.attributes.inviteType // "UNKNOWN"' <<<"$TESTER")
+          while read -r TESTER; do
+            TESTER_STATE=$(jq -r '.attributes.state // "UNKNOWN"' <<<"$TESTER")
+            INVITE_TYPE=$(jq -r '.attributes.inviteType // "UNKNOWN"' <<<"$TESTER")
             echo "Tester status: state=$TESTER_STATE inviteType=$INVITE_TYPE"
-          done < <(jq -r '.data[].id' <<<"$TESTERS")
+          done < <(jq -c '.data[]' <<<"$TESTERS")
           echo "Internal group $BETA_GROUP_NAME now has build $BUILD_NUMBER and $TESTER_COUNT tester(s)."
 
       - name: Remove key
