@@ -12,7 +12,7 @@ permissions:
 
 env:
   SOURCE_REPO: acciento89-bot/w-rmetakt
-  SOURCE_REF: c0ee30d4324e287f6a7e7fada8946e8d0ac29e39
+  SOURCE_REF: 4a793a330fcc24e2209986ad0322a1a9d2c72d36
   BUNDLE_ID: de.kamilunavo.waermetakt
 
 jobs:
@@ -83,15 +83,15 @@ jobs:
           xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4
           APP=$(find "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphonesimulator" -maxdepth 1 -type d -name '*.app' -print -quit)
           test -d "$APP"
+          xcrun simctl install "$UDID" "$APP"
           mkdir -p screenshots
           capture() {
             local route="$1"
             local lang="$2"
             local output="$3"
-            EXPO_PUBLIC_SCREENSHOT_MODE=1 EXPO_PUBLIC_SCREENSHOT_ROUTE="$route" EXPO_PUBLIC_SCREENSHOT_LANG="$lang" npx expo export:embed --platform ios --dev false --entry-file index.ts --bundle-output "$APP/main.jsbundle" --assets-dest "$APP"
             xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
-            xcrun simctl uninstall "$UDID" "$BUNDLE_ID" || true
-            xcrun simctl install "$UDID" "$APP"
+            xcrun simctl spawn "$UDID" defaults write "$BUNDLE_ID" ScreenshotRoute "$route"
+            xcrun simctl spawn "$UDID" defaults write "$BUNDLE_ID" ScreenshotLanguage "$lang"
             xcrun simctl launch "$UDID" "$BUNDLE_ID"
             sleep 5
             xcrun simctl io "$UDID" screenshot "screenshots/$output"
