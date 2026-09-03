@@ -21,7 +21,7 @@ concurrency:
 
 env:
   SOURCE_REPO: acciento89-bot/navopass
-  SOURCE_REF: 0bc6ed60f894a19854b463d30713b40adb312752
+  SOURCE_REF: 9498f9f92c228abe3cdf8ab4c7e1119b9abdbc60
   TEAM_ID: TKG684N5GL
   BUNDLE_ID: de.kamilunavo.navopass
   ASC_APP_ID: '6808345429'
