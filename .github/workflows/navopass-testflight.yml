@@ -6,7 +6,7 @@ on:
       build:
         description: App Store Connect build number
         required: true
-        default: '1'
+        default: '2'
   push:
     branches: [main]
     paths:
@@ -21,7 +21,7 @@ concurrency:
 
 env:
   SOURCE_REPO: acciento89-bot/navopass
-  SOURCE_REF: d62c07305739d0f9aaa937a72cd731d3fb0a148e
+  SOURCE_REF: 0bc6ed60f894a19854b463d30713b40adb312752
   TEAM_ID: TKG684N5GL
   BUNDLE_ID: de.kamilunavo.navopass
   ASC_APP_ID: '6808345429'
@@ -39,7 +39,7 @@ jobs:
           REQUESTED_BUILD: ${{ inputs.build }}
         run: |
           set -euo pipefail
-          BUILD_NUMBER="${REQUESTED_BUILD:-1}"
+          BUILD_NUMBER="${REQUESTED_BUILD:-2}"
           [[ "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
 
@@ -239,7 +239,7 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
         run: |
           set -euo pipefail
-          for _ in $(seq 1 30); do
+          for _ in $(seq 1 60); do
             JWT=$(ruby <<'RUBY'
           require 'openssl'; require 'base64'; require 'json'
           def b(v); Base64.urlsafe_encode64(v, padding: false); end
