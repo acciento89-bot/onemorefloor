@@ -95,10 +95,713 @@ jobs:
             fi
             echo "$id"
           }
-          DE_DESC=$'ArbeitsKlar macht Arbeitszeit sichtbar – live, klar und motivierend. Starte deine Schicht und sieh sekundengenau, wie viel du bereits verdient hast.\n\n• Live-Verdienst-Ticker während der Schicht\n• Schichtplaner mit Pausen und Zuschlägen\n• Trinkgeld und Überstunden erfassen\n• Verlauf und verständliche Auswertungen\n• Monatslohn mit der Abrechnung vergleichen\n• Live Activity auf Sperrbildschirm und Dynamic Island\n• Funktioniert ohne Konto und ohne Werbung\n\nArbeitsKlar Pro ist ein einmaliger In-App-Kauf. Kein Abonnement.'
-          EN_DESC=$'ArbeitsKlar makes work time visible, clear and motivating. Start your shift and see your earnings update live, down to the second.\n\n• Live earnings ticker during your shift\n• Shift planner with breaks and premiums\n• Track tips and overtime\n• History and clear analytics\n• Compare monthly earnings with your payslip\n• Live Activity on the Lock Screen and Dynamic Island\n• No account and no advertising\n\nArbeitsKlar Pro is a one-time in-app purchase. No subscription.'
-          DE_LOC=$(ensure_version_loc de-DE "$DE_DESC" 'arbeitszeit,schichtplan,lohn,gehalt,stundenlohn,überstunden,trinkgeld,zeiterfassung' 'Sieh live, was du gerade verdienst – direkt auf Sperrbildschirm und Dynamic Island.')
-          EN_LOC=$(ensure_version_loc en-US "$EN_DESC" 'work hours,shift planner,wage,salary,overtime,tips,time tracker,paycheck' 'See what you earn live – right on the Lock Screen and Dynamic Island.')
+          DE_DESC=
+          test -n "$DE_LOC"; test -n "$EN_LOC"
+          echo "DE_LOC=$DE_LOC" >> "$GITHUB_ENV"; echo "EN_LOC=$EN_LOC" >> "$GITHUB_ENV"
+
+      - name: Assign Build 3
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          BUILD_ID=''
+          for _ in $(seq 1 60); do
+            B=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[app]=$APP_ID" --data-urlencode "filter[version]=$BUILD_NUMBER" --data-urlencode 'sort=-uploadedDate' --data-urlencode 'limit=10' "$API/v1/builds")
+            BUILD_ID=$(jq -r '.data[]? | select(.attributes.processingState=="VALID") | .id' <<<"$B" | head -1)
+            [[ -n "$BUILD_ID" ]] && break
+            sleep 10
+          done
+          test -n "$BUILD_ID"; echo "BUILD_ID=$BUILD_ID" >> "$GITHUB_ENV"
+          BODY=$(jq -n --arg id "$BUILD_ID" '{data:{type:"builds",id:$id}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreVersions/$VERSION_ID/relationships/build" >/dev/null
+
+      - name: Upload German iPhone screenshot
+        # A rejected version can retain an Apple-side upload reservation that
+        # returns 409 while the public screenshot collection is temporarily
+        # empty. Screenshots are already present; do not block build/IAP repair.
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          # Reuse an existing reservation on idempotent release runs.
+          API=https://api.appstoreconnect.apple.com
+          FILE=.github/assets/arbeitsklar-pro-review.png
+          test -s "$FILE"
+          SETS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersionLocalizations/$DE_LOC/appScreenshotSets?limit=100")
+          SET_ID=$(jq -r '.data[]? | select(.attributes.screenshotDisplayType=="APP_IPHONE_69") | .id' <<<"$SETS" | head -1)
+          if [[ -z "$SET_ID" ]]; then
+            BODY=$(jq -n --arg lid "$DE_LOC" '{data:{type:"appScreenshotSets",attributes:{screenshotDisplayType:"APP_IPHONE_69"},relationships:{appStoreVersionLocalization:{data:{type:"appStoreVersionLocalizations",id:$lid}}}}}')
+            SET_ID=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshotSets" | jq -r '.data.id')
+          fi
+          EXIST=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appScreenshotSets/$SET_ID/appScreenshots?limit=100")
+          if [[ "$(jq '.data|length' <<<"$EXIST")" -eq 0 ]]; then
+            SIZE=$(stat -c%s "$FILE"); FN=$(basename "$FILE")
+            BODY=$(jq -n --arg sid "$SET_ID" --arg fn "$FN" --argjson size "$SIZE" '{data:{type:"appScreenshots",attributes:{fileName:$fn,fileSize:$size},relationships:{appScreenshotSet:{data:{type:"appScreenshotSets",id:$sid}}}}}')
+            RES=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshots")
+            SID=$(jq -r '.data.id' <<<"$RES"); printf '%s' "$RES" > "$RUNNER_TEMP/reserve.json"
+            python3 - "$RUNNER_TEMP/reserve.json" "$FILE" <<'PY'
+          import json,sys,urllib.request
+          o=json.load(open(sys.argv[1])); data=open(sys.argv[2],'rb').read()
+          for op in o['data']['attributes']['uploadOperations']:
+              chunk=data[int(op['offset']):int(op['offset'])+int(op['length'])]
+              req=urllib.request.Request(op['url'],data=chunk,method=op.get('method','PUT'))
+              for h in op.get('requestHeaders',[]): req.add_header(h['name'],h['value'])
+              with urllib.request.urlopen(req,timeout=120) as r: assert 200 <= r.status < 300
+          PY
+            MD5=$(md5sum "$FILE" | awk '{print $1}')
+            BODY=$(jq -n --arg id "$SID" --arg md5 "$MD5" '{data:{type:"appScreenshots",id:$id,attributes:{uploaded:true,sourceFileChecksum:$md5}}}')
+            HTTP=$(curl -sS -o "$RUNNER_TEMP/screenshot-commit.json" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshots/$SID")
+            if [[ "$HTTP" != 200 ]]; then cat "$RUNNER_TEMP/screenshot-commit.json"; exit 1; fi
+          fi
+
+      - name: Configure review contact and notes
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          APPS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps?limit=200")
+          CONTACT=''
+          while read -r aid; do
+            [[ -z "$aid" || "$aid" == "$APP_ID" ]] && continue
+            VERS=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$aid/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50" || true)
+            while read -r vid; do
+              D=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$vid/appStoreReviewDetail" || true)
+              F=$(jq -r '.data.attributes.contactFirstName // empty' <<<"$D" 2>/dev/null || true); L=$(jq -r '.data.attributes.contactLastName // empty' <<<"$D" 2>/dev/null || true); P=$(jq -r '.data.attributes.contactPhone // empty' <<<"$D" 2>/dev/null || true); E=$(jq -r '.data.attributes.contactEmail // empty' <<<"$D" 2>/dev/null || true)
+              if [[ -n "$F" && -n "$L" && -n "$P" && -n "$E" ]]; then CONTACT=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" '{f:$f,l:$l,p:$p,e:$e}'); break 2; fi
+            done < <(jq -r '.data[]?.id' <<<"$VERS")
+          done < <(jq -r '.data[]?.id' <<<"$APPS")
+          test -n "$CONTACT"
+          NOTES=
+          F=$(jq -r .f <<<"$CONTACT"); L=$(jq -r .l <<<"$CONTACT"); P=$(jq -r .p <<<"$CONTACT"); E=$(jq -r .e <<<"$CONTACT")
+          ATTR=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" --arg n "$NOTES" '{contactFirstName:$f,contactLastName:$l,contactPhone:$p,contactEmail:$e,demoAccountRequired:false,notes:$n}')
+          OLD=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID/appStoreReviewDetail" || true); RID=$(jq -r '.data.id // empty' <<<"$OLD" 2>/dev/null || true)
+          if [[ -n "$RID" ]]; then BODY=$(jq -n --arg id "$RID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",id:$id,attributes:$a}}'); curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreReviewDetails/$RID" >/dev/null
+          else BODY=$(jq -n --arg vid "$VERSION_ID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",attributes:$a,relationships:{appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}'); curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreReviewDetails" >/dev/null; fi
+
+      - name: Verify release metadata
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          V=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID")
+          REL=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID/relationships/build")
+          IAP=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
+          test "$(jq -r '.data.attributes.versionString' <<<"$V")" = "$VERSION"
+          test "$(jq -r '.data.id' <<<"$REL")" = "$BUILD_ID"
+          test "$(jq -r '.data.attributes.productId' <<<"$IAP")" = 'de.kamilunavo.arbeitsklar.pro.lifetime'
+          echo 'ArbeitsKlar 1.0 metadata, Build 3, screenshot, review details and Pro IAP verified.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Inspect Pro IAP review membership
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          IAP=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
+          IAP_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' <<<"$IAP")
+          echo "ArbeitsKlar Pro state: $IAP_STATE"
+
+          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          IAP_VERSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID/versions?limit=50")
+          mapfile -t IAP_VERSION_IDS < <(jq -r '.data[]?.id' <<<"$IAP_VERSIONS")
+          jq -c '.data[]? | {id,state:.attributes.state,platform:.attributes.platform,submittedDate:.attributes.submittedDate}' <<<"$SUBMISSIONS"
+          FOUND_IAP=false
+          while read -r SUBMISSION_ID; do
+            [[ -z "$SUBMISSION_ID" ]] && continue
+            ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/reviewSubmissions/$SUBMISSION_ID/items?limit=200")
+            jq -c --arg submission "$SUBMISSION_ID" '.data[]? | {submission:$submission,id,attributes,relationships}' <<<"$ITEMS"
+            while read -r ITEM_ID; do
+              DECODED=$(python3 - "$ITEM_ID" <<'PY'
+          import base64, sys
+          value = sys.argv[1]
+          print(base64.urlsafe_b64decode(value + '=' * (-len(value) % 4)).decode())
+          PY
+              )
+              for VERSION_ID in "${IAP_VERSION_IDS[@]}"; do
+                [[ "$DECODED" == *"|$VERSION_ID" ]] && FOUND_IAP=true
+              done
+            done < <(jq -r '.data[]?.id' <<<"$ITEMS")
+          done < <(jq -r '.data[]?.id' <<<"$SUBMISSIONS")
+          echo "IAP_INCLUDED_IN_REVIEW_SUBMISSION=$FOUND_IAP"
+          echo "Pro state: $IAP_STATE; included in a review submission: $FOUND_IAP" >> "$GITHUB_STEP_SUMMARY"
+          test "$FOUND_IAP" = true
+
+      - name: Resubmit corrected app and Pro IAP
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          SUBMISSION_ID=$(jq -r '.data[]? | select(.attributes.state=="UNRESOLVED_ISSUES") | .id' <<<"$SUBMISSIONS" | head -1)
+          if [[ -z "$SUBMISSION_ID" ]]; then
+            echo 'No unresolved submission remains; nothing to resubmit.'
+            exit 0
+          fi
+
+          ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/reviewSubmissions/$SUBMISSION_ID/items?limit=200")
+          mapfile -t REJECTED_ITEM_IDS < <(jq -r '.data[]? | select(.attributes.state=="REJECTED") | .id' <<<"$ITEMS")
+          if [[ "${#REJECTED_ITEM_IDS[@]}" -ne 1 ]]; then
+            echo "Expected exactly one rejected review item, found ${#REJECTED_ITEM_IDS[@]}."
+            jq -c '.data[]? | {id,state:.attributes.state}' <<<"$ITEMS"
+            exit 1
+          fi
+
+          ITEM_ID=${REJECTED_ITEM_IDS[0]}
+          ITEM_BODY=$(jq -n --arg id "$ITEM_ID" '{data:{type:"reviewSubmissionItems",id:$id,attributes:{resolved:true}}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$ITEM_BODY" "$API/v1/reviewSubmissionItems/$ITEM_ID" >/dev/null
+          echo 'Rejected app version marked as resolved (Update Review).'
+
+          BODY=$(jq -n --arg id "$SUBMISSION_ID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
+          RESPONSE_FILE="$RUNNER_TEMP/review-resubmit.json"
+          HTTP=$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/reviewSubmissions/$SUBMISSION_ID")
+          if [[ "$HTTP" != 200 ]]; then
+            echo "Resubmitting corrected review failed: HTTP $HTTP"
+            jq . "$RESPONSE_FILE" 2>/dev/null || cat "$RESPONSE_FILE"
+            exit 1
+          fi
+          NEW_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' "$RESPONSE_FILE")
+          test "$NEW_STATE" != UNRESOLVED_ISSUES
+          echo "ArbeitsKlar review resubmitted: $NEW_STATE"
+          echo "Corrected app and Pro IAP resubmitted: $NEW_STATE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+ArbeitsKlar macht Arbeitszeit sichtbar – live, klar und motivierend. Starte deine Schicht und sieh in der App sekundengenau, wie viel du bereits verdient hast.\n\n• Live-Verdienst-Ticker während der Schicht\n• Schichtplaner mit Pausen und Zuschlägen\n• Trinkgeld und Überstunden erfassen\n• Verlauf und verständliche Auswertungen\n• Monatslohn mit der Abrechnung vergleichen\n• Live-Arbeitszeit und Schichtfortschritt auf Sperrbildschirm und Dynamic Island\n• Funktioniert ohne Konto und ohne Werbung\n\nArbeitsKlar Pro ist ein einmaliger In-App-Kauf. Kein Abonnement.'
+          EN_DESC=
+          test -n "$DE_LOC"; test -n "$EN_LOC"
+          echo "DE_LOC=$DE_LOC" >> "$GITHUB_ENV"; echo "EN_LOC=$EN_LOC" >> "$GITHUB_ENV"
+
+      - name: Assign Build 3
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          BUILD_ID=''
+          for _ in $(seq 1 60); do
+            B=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[app]=$APP_ID" --data-urlencode "filter[version]=$BUILD_NUMBER" --data-urlencode 'sort=-uploadedDate' --data-urlencode 'limit=10' "$API/v1/builds")
+            BUILD_ID=$(jq -r '.data[]? | select(.attributes.processingState=="VALID") | .id' <<<"$B" | head -1)
+            [[ -n "$BUILD_ID" ]] && break
+            sleep 10
+          done
+          test -n "$BUILD_ID"; echo "BUILD_ID=$BUILD_ID" >> "$GITHUB_ENV"
+          BODY=$(jq -n --arg id "$BUILD_ID" '{data:{type:"builds",id:$id}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreVersions/$VERSION_ID/relationships/build" >/dev/null
+
+      - name: Upload German iPhone screenshot
+        # A rejected version can retain an Apple-side upload reservation that
+        # returns 409 while the public screenshot collection is temporarily
+        # empty. Screenshots are already present; do not block build/IAP repair.
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          # Reuse an existing reservation on idempotent release runs.
+          API=https://api.appstoreconnect.apple.com
+          FILE=.github/assets/arbeitsklar-pro-review.png
+          test -s "$FILE"
+          SETS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersionLocalizations/$DE_LOC/appScreenshotSets?limit=100")
+          SET_ID=$(jq -r '.data[]? | select(.attributes.screenshotDisplayType=="APP_IPHONE_69") | .id' <<<"$SETS" | head -1)
+          if [[ -z "$SET_ID" ]]; then
+            BODY=$(jq -n --arg lid "$DE_LOC" '{data:{type:"appScreenshotSets",attributes:{screenshotDisplayType:"APP_IPHONE_69"},relationships:{appStoreVersionLocalization:{data:{type:"appStoreVersionLocalizations",id:$lid}}}}}')
+            SET_ID=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshotSets" | jq -r '.data.id')
+          fi
+          EXIST=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appScreenshotSets/$SET_ID/appScreenshots?limit=100")
+          if [[ "$(jq '.data|length' <<<"$EXIST")" -eq 0 ]]; then
+            SIZE=$(stat -c%s "$FILE"); FN=$(basename "$FILE")
+            BODY=$(jq -n --arg sid "$SET_ID" --arg fn "$FN" --argjson size "$SIZE" '{data:{type:"appScreenshots",attributes:{fileName:$fn,fileSize:$size},relationships:{appScreenshotSet:{data:{type:"appScreenshotSets",id:$sid}}}}}')
+            RES=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshots")
+            SID=$(jq -r '.data.id' <<<"$RES"); printf '%s' "$RES" > "$RUNNER_TEMP/reserve.json"
+            python3 - "$RUNNER_TEMP/reserve.json" "$FILE" <<'PY'
+          import json,sys,urllib.request
+          o=json.load(open(sys.argv[1])); data=open(sys.argv[2],'rb').read()
+          for op in o['data']['attributes']['uploadOperations']:
+              chunk=data[int(op['offset']):int(op['offset'])+int(op['length'])]
+              req=urllib.request.Request(op['url'],data=chunk,method=op.get('method','PUT'))
+              for h in op.get('requestHeaders',[]): req.add_header(h['name'],h['value'])
+              with urllib.request.urlopen(req,timeout=120) as r: assert 200 <= r.status < 300
+          PY
+            MD5=$(md5sum "$FILE" | awk '{print $1}')
+            BODY=$(jq -n --arg id "$SID" --arg md5 "$MD5" '{data:{type:"appScreenshots",id:$id,attributes:{uploaded:true,sourceFileChecksum:$md5}}}')
+            HTTP=$(curl -sS -o "$RUNNER_TEMP/screenshot-commit.json" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshots/$SID")
+            if [[ "$HTTP" != 200 ]]; then cat "$RUNNER_TEMP/screenshot-commit.json"; exit 1; fi
+          fi
+
+      - name: Configure review contact and notes
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          APPS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps?limit=200")
+          CONTACT=''
+          while read -r aid; do
+            [[ -z "$aid" || "$aid" == "$APP_ID" ]] && continue
+            VERS=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$aid/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50" || true)
+            while read -r vid; do
+              D=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$vid/appStoreReviewDetail" || true)
+              F=$(jq -r '.data.attributes.contactFirstName // empty' <<<"$D" 2>/dev/null || true); L=$(jq -r '.data.attributes.contactLastName // empty' <<<"$D" 2>/dev/null || true); P=$(jq -r '.data.attributes.contactPhone // empty' <<<"$D" 2>/dev/null || true); E=$(jq -r '.data.attributes.contactEmail // empty' <<<"$D" 2>/dev/null || true)
+              if [[ -n "$F" && -n "$L" && -n "$P" && -n "$E" ]]; then CONTACT=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" '{f:$f,l:$l,p:$p,e:$e}'); break 2; fi
+            done < <(jq -r '.data[]?.id' <<<"$VERS")
+          done < <(jq -r '.data[]?.id' <<<"$APPS")
+          test -n "$CONTACT"
+          NOTES=$'ArbeitsKlar works without an account and stores shift data locally.\n\nReview path:\n1. Complete or skip onboarding.\n2. Today starts a shift and shows live earnings.\n3. Planner configures future shifts, breaks and premiums.\n4. History shows completed shifts; Pro unlocks analytics, editing, CSV export and payslip comparison.\n5. Settings > ArbeitsKlar Pro contains the one-time StoreKit purchase and Restore Purchases.\n\nProduct de.kamilunavo.arbeitsklar.pro.lifetime is a non-consumable one-time purchase. No subscription, external payment, advertising or tracking is used.'
+          F=$(jq -r .f <<<"$CONTACT"); L=$(jq -r .l <<<"$CONTACT"); P=$(jq -r .p <<<"$CONTACT"); E=$(jq -r .e <<<"$CONTACT")
+          ATTR=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" --arg n "$NOTES" '{contactFirstName:$f,contactLastName:$l,contactPhone:$p,contactEmail:$e,demoAccountRequired:false,notes:$n}')
+          OLD=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID/appStoreReviewDetail" || true); RID=$(jq -r '.data.id // empty' <<<"$OLD" 2>/dev/null || true)
+          if [[ -n "$RID" ]]; then BODY=$(jq -n --arg id "$RID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",id:$id,attributes:$a}}'); curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreReviewDetails/$RID" >/dev/null
+          else BODY=$(jq -n --arg vid "$VERSION_ID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",attributes:$a,relationships:{appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}'); curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreReviewDetails" >/dev/null; fi
+
+      - name: Verify release metadata
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          V=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID")
+          REL=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID/relationships/build")
+          IAP=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
+          test "$(jq -r '.data.attributes.versionString' <<<"$V")" = "$VERSION"
+          test "$(jq -r '.data.id' <<<"$REL")" = "$BUILD_ID"
+          test "$(jq -r '.data.attributes.productId' <<<"$IAP")" = 'de.kamilunavo.arbeitsklar.pro.lifetime'
+          echo 'ArbeitsKlar 1.0 metadata, Build 3, screenshot, review details and Pro IAP verified.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Inspect Pro IAP review membership
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          IAP=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
+          IAP_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' <<<"$IAP")
+          echo "ArbeitsKlar Pro state: $IAP_STATE"
+
+          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          IAP_VERSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID/versions?limit=50")
+          mapfile -t IAP_VERSION_IDS < <(jq -r '.data[]?.id' <<<"$IAP_VERSIONS")
+          jq -c '.data[]? | {id,state:.attributes.state,platform:.attributes.platform,submittedDate:.attributes.submittedDate}' <<<"$SUBMISSIONS"
+          FOUND_IAP=false
+          while read -r SUBMISSION_ID; do
+            [[ -z "$SUBMISSION_ID" ]] && continue
+            ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/reviewSubmissions/$SUBMISSION_ID/items?limit=200")
+            jq -c --arg submission "$SUBMISSION_ID" '.data[]? | {submission:$submission,id,attributes,relationships}' <<<"$ITEMS"
+            while read -r ITEM_ID; do
+              DECODED=$(python3 - "$ITEM_ID" <<'PY'
+          import base64, sys
+          value = sys.argv[1]
+          print(base64.urlsafe_b64decode(value + '=' * (-len(value) % 4)).decode())
+          PY
+              )
+              for VERSION_ID in "${IAP_VERSION_IDS[@]}"; do
+                [[ "$DECODED" == *"|$VERSION_ID" ]] && FOUND_IAP=true
+              done
+            done < <(jq -r '.data[]?.id' <<<"$ITEMS")
+          done < <(jq -r '.data[]?.id' <<<"$SUBMISSIONS")
+          echo "IAP_INCLUDED_IN_REVIEW_SUBMISSION=$FOUND_IAP"
+          echo "Pro state: $IAP_STATE; included in a review submission: $FOUND_IAP" >> "$GITHUB_STEP_SUMMARY"
+          test "$FOUND_IAP" = true
+
+      - name: Resubmit corrected app and Pro IAP
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          SUBMISSION_ID=$(jq -r '.data[]? | select(.attributes.state=="UNRESOLVED_ISSUES") | .id' <<<"$SUBMISSIONS" | head -1)
+          if [[ -z "$SUBMISSION_ID" ]]; then
+            echo 'No unresolved submission remains; nothing to resubmit.'
+            exit 0
+          fi
+
+          BODY=$(jq -n --arg id "$SUBMISSION_ID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
+          RESPONSE_FILE="$RUNNER_TEMP/review-resubmit.json"
+          HTTP=$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/reviewSubmissions/$SUBMISSION_ID")
+          if [[ "$HTTP" != 200 ]]; then
+            echo "Resubmitting corrected review failed: HTTP $HTTP"
+            jq . "$RESPONSE_FILE" 2>/dev/null || cat "$RESPONSE_FILE"
+            exit 1
+          fi
+          NEW_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' "$RESPONSE_FILE")
+          test "$NEW_STATE" != UNRESOLVED_ISSUES
+          echo "ArbeitsKlar review resubmitted: $NEW_STATE"
+          echo "Corrected app and Pro IAP resubmitted: $NEW_STATE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+ArbeitsKlar makes work time visible, clear and motivating. Start your shift and see your earnings update live in the app, down to the second.\n\n• Live earnings ticker during your shift\n• Shift planner with breaks and premiums\n• Track tips and overtime\n• History and clear analytics\n• Compare monthly earnings with your payslip\n• Live work time and shift progress on the Lock Screen and Dynamic Island\n• No account and no advertising\n\nArbeitsKlar Pro is a one-time in-app purchase. No subscription.'
+          DE_LOC=$(ensure_version_loc de-DE "$DE_DESC" 'arbeitszeit,schichtplan,lohn,gehalt,stundenlohn,überstunden,trinkgeld,zeiterfassung' 'Arbeitszeit und Schichtfortschritt live auf Sperrbildschirm und Dynamic Island.')
+          EN_LOC=$(ensure_version_loc en-US "$EN_DESC" 'work hours,shift planner,wage,salary,overtime,tips,time tracker,paycheck' 'Live work time and shift progress on the Lock Screen and Dynamic Island.')
+          test -n "$DE_LOC"; test -n "$EN_LOC"
+          echo "DE_LOC=$DE_LOC" >> "$GITHUB_ENV"; echo "EN_LOC=$EN_LOC" >> "$GITHUB_ENV"
+
+      - name: Assign Build 3
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          BUILD_ID=''
+          for _ in $(seq 1 60); do
+            B=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[app]=$APP_ID" --data-urlencode "filter[version]=$BUILD_NUMBER" --data-urlencode 'sort=-uploadedDate' --data-urlencode 'limit=10' "$API/v1/builds")
+            BUILD_ID=$(jq -r '.data[]? | select(.attributes.processingState=="VALID") | .id' <<<"$B" | head -1)
+            [[ -n "$BUILD_ID" ]] && break
+            sleep 10
+          done
+          test -n "$BUILD_ID"; echo "BUILD_ID=$BUILD_ID" >> "$GITHUB_ENV"
+          BODY=$(jq -n --arg id "$BUILD_ID" '{data:{type:"builds",id:$id}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreVersions/$VERSION_ID/relationships/build" >/dev/null
+
+      - name: Upload German iPhone screenshot
+        # A rejected version can retain an Apple-side upload reservation that
+        # returns 409 while the public screenshot collection is temporarily
+        # empty. Screenshots are already present; do not block build/IAP repair.
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          # Reuse an existing reservation on idempotent release runs.
+          API=https://api.appstoreconnect.apple.com
+          FILE=.github/assets/arbeitsklar-pro-review.png
+          test -s "$FILE"
+          SETS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersionLocalizations/$DE_LOC/appScreenshotSets?limit=100")
+          SET_ID=$(jq -r '.data[]? | select(.attributes.screenshotDisplayType=="APP_IPHONE_69") | .id' <<<"$SETS" | head -1)
+          if [[ -z "$SET_ID" ]]; then
+            BODY=$(jq -n --arg lid "$DE_LOC" '{data:{type:"appScreenshotSets",attributes:{screenshotDisplayType:"APP_IPHONE_69"},relationships:{appStoreVersionLocalization:{data:{type:"appStoreVersionLocalizations",id:$lid}}}}}')
+            SET_ID=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshotSets" | jq -r '.data.id')
+          fi
+          EXIST=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appScreenshotSets/$SET_ID/appScreenshots?limit=100")
+          if [[ "$(jq '.data|length' <<<"$EXIST")" -eq 0 ]]; then
+            SIZE=$(stat -c%s "$FILE"); FN=$(basename "$FILE")
+            BODY=$(jq -n --arg sid "$SET_ID" --arg fn "$FN" --argjson size "$SIZE" '{data:{type:"appScreenshots",attributes:{fileName:$fn,fileSize:$size},relationships:{appScreenshotSet:{data:{type:"appScreenshotSets",id:$sid}}}}}')
+            RES=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshots")
+            SID=$(jq -r '.data.id' <<<"$RES"); printf '%s' "$RES" > "$RUNNER_TEMP/reserve.json"
+            python3 - "$RUNNER_TEMP/reserve.json" "$FILE" <<'PY'
+          import json,sys,urllib.request
+          o=json.load(open(sys.argv[1])); data=open(sys.argv[2],'rb').read()
+          for op in o['data']['attributes']['uploadOperations']:
+              chunk=data[int(op['offset']):int(op['offset'])+int(op['length'])]
+              req=urllib.request.Request(op['url'],data=chunk,method=op.get('method','PUT'))
+              for h in op.get('requestHeaders',[]): req.add_header(h['name'],h['value'])
+              with urllib.request.urlopen(req,timeout=120) as r: assert 200 <= r.status < 300
+          PY
+            MD5=$(md5sum "$FILE" | awk '{print $1}')
+            BODY=$(jq -n --arg id "$SID" --arg md5 "$MD5" '{data:{type:"appScreenshots",id:$id,attributes:{uploaded:true,sourceFileChecksum:$md5}}}')
+            HTTP=$(curl -sS -o "$RUNNER_TEMP/screenshot-commit.json" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshots/$SID")
+            if [[ "$HTTP" != 200 ]]; then cat "$RUNNER_TEMP/screenshot-commit.json"; exit 1; fi
+          fi
+
+      - name: Configure review contact and notes
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          APPS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps?limit=200")
+          CONTACT=''
+          while read -r aid; do
+            [[ -z "$aid" || "$aid" == "$APP_ID" ]] && continue
+            VERS=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$aid/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50" || true)
+            while read -r vid; do
+              D=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$vid/appStoreReviewDetail" || true)
+              F=$(jq -r '.data.attributes.contactFirstName // empty' <<<"$D" 2>/dev/null || true); L=$(jq -r '.data.attributes.contactLastName // empty' <<<"$D" 2>/dev/null || true); P=$(jq -r '.data.attributes.contactPhone // empty' <<<"$D" 2>/dev/null || true); E=$(jq -r '.data.attributes.contactEmail // empty' <<<"$D" 2>/dev/null || true)
+              if [[ -n "$F" && -n "$L" && -n "$P" && -n "$E" ]]; then CONTACT=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" '{f:$f,l:$l,p:$p,e:$e}'); break 2; fi
+            done < <(jq -r '.data[]?.id' <<<"$VERS")
+          done < <(jq -r '.data[]?.id' <<<"$APPS")
+          test -n "$CONTACT"
+          NOTES=$'ArbeitsKlar works without an account and stores shift data locally.\n\nReview path:\n1. Complete or skip onboarding.\n2. Today starts a shift and shows live earnings.\n3. Planner configures future shifts, breaks and premiums.\n4. History shows completed shifts; Pro unlocks analytics, editing, CSV export and payslip comparison.\n5. Settings > ArbeitsKlar Pro contains the one-time StoreKit purchase and Restore Purchases.\n\nProduct de.kamilunavo.arbeitsklar.pro.lifetime is a non-consumable one-time purchase. No subscription, external payment, advertising or tracking is used.'
+          F=$(jq -r .f <<<"$CONTACT"); L=$(jq -r .l <<<"$CONTACT"); P=$(jq -r .p <<<"$CONTACT"); E=$(jq -r .e <<<"$CONTACT")
+          ATTR=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" --arg n "$NOTES" '{contactFirstName:$f,contactLastName:$l,contactPhone:$p,contactEmail:$e,demoAccountRequired:false,notes:$n}')
+          OLD=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID/appStoreReviewDetail" || true); RID=$(jq -r '.data.id // empty' <<<"$OLD" 2>/dev/null || true)
+          if [[ -n "$RID" ]]; then BODY=$(jq -n --arg id "$RID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",id:$id,attributes:$a}}'); curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreReviewDetails/$RID" >/dev/null
+          else BODY=$(jq -n --arg vid "$VERSION_ID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",attributes:$a,relationships:{appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}'); curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreReviewDetails" >/dev/null; fi
+
+      - name: Verify release metadata
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          V=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID")
+          REL=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID/relationships/build")
+          IAP=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
+          test "$(jq -r '.data.attributes.versionString' <<<"$V")" = "$VERSION"
+          test "$(jq -r '.data.id' <<<"$REL")" = "$BUILD_ID"
+          test "$(jq -r '.data.attributes.productId' <<<"$IAP")" = 'de.kamilunavo.arbeitsklar.pro.lifetime'
+          echo 'ArbeitsKlar 1.0 metadata, Build 3, screenshot, review details and Pro IAP verified.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Inspect Pro IAP review membership
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          IAP=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
+          IAP_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' <<<"$IAP")
+          echo "ArbeitsKlar Pro state: $IAP_STATE"
+
+          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          IAP_VERSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID/versions?limit=50")
+          mapfile -t IAP_VERSION_IDS < <(jq -r '.data[]?.id' <<<"$IAP_VERSIONS")
+          jq -c '.data[]? | {id,state:.attributes.state,platform:.attributes.platform,submittedDate:.attributes.submittedDate}' <<<"$SUBMISSIONS"
+          FOUND_IAP=false
+          while read -r SUBMISSION_ID; do
+            [[ -z "$SUBMISSION_ID" ]] && continue
+            ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/reviewSubmissions/$SUBMISSION_ID/items?limit=200")
+            jq -c --arg submission "$SUBMISSION_ID" '.data[]? | {submission:$submission,id,attributes,relationships}' <<<"$ITEMS"
+            while read -r ITEM_ID; do
+              DECODED=$(python3 - "$ITEM_ID" <<'PY'
+          import base64, sys
+          value = sys.argv[1]
+          print(base64.urlsafe_b64decode(value + '=' * (-len(value) % 4)).decode())
+          PY
+              )
+              for VERSION_ID in "${IAP_VERSION_IDS[@]}"; do
+                [[ "$DECODED" == *"|$VERSION_ID" ]] && FOUND_IAP=true
+              done
+            done < <(jq -r '.data[]?.id' <<<"$ITEMS")
+          done < <(jq -r '.data[]?.id' <<<"$SUBMISSIONS")
+          echo "IAP_INCLUDED_IN_REVIEW_SUBMISSION=$FOUND_IAP"
+          echo "Pro state: $IAP_STATE; included in a review submission: $FOUND_IAP" >> "$GITHUB_STEP_SUMMARY"
+          test "$FOUND_IAP" = true
+
+      - name: Resubmit corrected app and Pro IAP
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          SUBMISSION_ID=$(jq -r '.data[]? | select(.attributes.state=="UNRESOLVED_ISSUES") | .id' <<<"$SUBMISSIONS" | head -1)
+          if [[ -z "$SUBMISSION_ID" ]]; then
+            echo 'No unresolved submission remains; nothing to resubmit.'
+            exit 0
+          fi
+
+          BODY=$(jq -n --arg id "$SUBMISSION_ID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
+          RESPONSE_FILE="$RUNNER_TEMP/review-resubmit.json"
+          HTTP=$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/reviewSubmissions/$SUBMISSION_ID")
+          if [[ "$HTTP" != 200 ]]; then
+            echo "Resubmitting corrected review failed: HTTP $HTTP"
+            jq . "$RESPONSE_FILE" 2>/dev/null || cat "$RESPONSE_FILE"
+            exit 1
+          fi
+          NEW_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' "$RESPONSE_FILE")
+          test "$NEW_STATE" != UNRESOLVED_ISSUES
+          echo "ArbeitsKlar review resubmitted: $NEW_STATE"
+          echo "Corrected app and Pro IAP resubmitted: $NEW_STATE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+ArbeitsKlar works without an account and stores shift data locally.\n\nResolution for Guideline 2.1(b): Build 3 reloads the StoreKit product immediately before purchase and provides a retry if Apple\'s product lookup is temporarily unavailable. The non-consumable product is included in this same review submission.\n\nReview path:\n1. Complete or skip onboarding.\n2. Today starts a shift and shows live earnings in the foreground.\n3. The Lock Screen Live Activity uses Apple\'s native timer and timer-driven progress so work time continues while the app is suspended.\n4. Planner configures future shifts, breaks and premiums.\n5. History shows completed shifts; Pro unlocks analytics, editing, CSV export and payslip comparison.\n6. Settings > ArbeitsKlar Pro contains the one-time StoreKit purchase and Restore Purchases.\n\nProduct de.kamilunavo.arbeitsklar.pro.lifetime is a non-consumable one-time purchase. No subscription, external payment, advertising or tracking is used.'
+          F=$(jq -r .f <<<"$CONTACT"); L=$(jq -r .l <<<"$CONTACT"); P=$(jq -r .p <<<"$CONTACT"); E=$(jq -r .e <<<"$CONTACT")
+          ATTR=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" --arg n "$NOTES" '{contactFirstName:$f,contactLastName:$l,contactPhone:$p,contactEmail:$e,demoAccountRequired:false,notes:$n}')
+          OLD=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID/appStoreReviewDetail" || true); RID=$(jq -r '.data.id // empty' <<<"$OLD" 2>/dev/null || true)
+          if [[ -n "$RID" ]]; then BODY=$(jq -n --arg id "$RID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",id:$id,attributes:$a}}'); curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreReviewDetails/$RID" >/dev/null
+          else BODY=$(jq -n --arg vid "$VERSION_ID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",attributes:$a,relationships:{appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}'); curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreReviewDetails" >/dev/null; fi
+
+      - name: Verify release metadata
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          V=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID")
+          REL=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID/relationships/build")
+          IAP=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
+          test "$(jq -r '.data.attributes.versionString' <<<"$V")" = "$VERSION"
+          test "$(jq -r '.data.id' <<<"$REL")" = "$BUILD_ID"
+          test "$(jq -r '.data.attributes.productId' <<<"$IAP")" = 'de.kamilunavo.arbeitsklar.pro.lifetime'
+          echo 'ArbeitsKlar 1.0 metadata, Build 3, screenshot, review details and Pro IAP verified.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Inspect Pro IAP review membership
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          IAP=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
+          IAP_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' <<<"$IAP")
+          echo "ArbeitsKlar Pro state: $IAP_STATE"
+
+          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          IAP_VERSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID/versions?limit=50")
+          mapfile -t IAP_VERSION_IDS < <(jq -r '.data[]?.id' <<<"$IAP_VERSIONS")
+          jq -c '.data[]? | {id,state:.attributes.state,platform:.attributes.platform,submittedDate:.attributes.submittedDate}' <<<"$SUBMISSIONS"
+          FOUND_IAP=false
+          while read -r SUBMISSION_ID; do
+            [[ -z "$SUBMISSION_ID" ]] && continue
+            ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/reviewSubmissions/$SUBMISSION_ID/items?limit=200")
+            jq -c --arg submission "$SUBMISSION_ID" '.data[]? | {submission:$submission,id,attributes,relationships}' <<<"$ITEMS"
+            while read -r ITEM_ID; do
+              DECODED=$(python3 - "$ITEM_ID" <<'PY'
+          import base64, sys
+          value = sys.argv[1]
+          print(base64.urlsafe_b64decode(value + '=' * (-len(value) % 4)).decode())
+          PY
+              )
+              for VERSION_ID in "${IAP_VERSION_IDS[@]}"; do
+                [[ "$DECODED" == *"|$VERSION_ID" ]] && FOUND_IAP=true
+              done
+            done < <(jq -r '.data[]?.id' <<<"$ITEMS")
+          done < <(jq -r '.data[]?.id' <<<"$SUBMISSIONS")
+          echo "IAP_INCLUDED_IN_REVIEW_SUBMISSION=$FOUND_IAP"
+          echo "Pro state: $IAP_STATE; included in a review submission: $FOUND_IAP" >> "$GITHUB_STEP_SUMMARY"
+          test "$FOUND_IAP" = true
+
+      - name: Resubmit corrected app and Pro IAP
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          SUBMISSION_ID=$(jq -r '.data[]? | select(.attributes.state=="UNRESOLVED_ISSUES") | .id' <<<"$SUBMISSIONS" | head -1)
+          if [[ -z "$SUBMISSION_ID" ]]; then
+            echo 'No unresolved submission remains; nothing to resubmit.'
+            exit 0
+          fi
+
+          BODY=$(jq -n --arg id "$SUBMISSION_ID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
+          RESPONSE_FILE="$RUNNER_TEMP/review-resubmit.json"
+          HTTP=$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/reviewSubmissions/$SUBMISSION_ID")
+          if [[ "$HTTP" != 200 ]]; then
+            echo "Resubmitting corrected review failed: HTTP $HTTP"
+            jq . "$RESPONSE_FILE" 2>/dev/null || cat "$RESPONSE_FILE"
+            exit 1
+          fi
+          NEW_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' "$RESPONSE_FILE")
+          test "$NEW_STATE" != UNRESOLVED_ISSUES
+          echo "ArbeitsKlar review resubmitted: $NEW_STATE"
+          echo "Corrected app and Pro IAP resubmitted: $NEW_STATE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+ArbeitsKlar macht Arbeitszeit sichtbar – live, klar und motivierend. Starte deine Schicht und sieh in der App sekundengenau, wie viel du bereits verdient hast.\n\n• Live-Verdienst-Ticker während der Schicht\n• Schichtplaner mit Pausen und Zuschlägen\n• Trinkgeld und Überstunden erfassen\n• Verlauf und verständliche Auswertungen\n• Monatslohn mit der Abrechnung vergleichen\n• Live-Arbeitszeit und Schichtfortschritt auf Sperrbildschirm und Dynamic Island\n• Funktioniert ohne Konto und ohne Werbung\n\nArbeitsKlar Pro ist ein einmaliger In-App-Kauf. Kein Abonnement.'
+          EN_DESC=
+          test -n "$DE_LOC"; test -n "$EN_LOC"
+          echo "DE_LOC=$DE_LOC" >> "$GITHUB_ENV"; echo "EN_LOC=$EN_LOC" >> "$GITHUB_ENV"
+
+      - name: Assign Build 3
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          BUILD_ID=''
+          for _ in $(seq 1 60); do
+            B=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $ASC_TOKEN" --data-urlencode "filter[app]=$APP_ID" --data-urlencode "filter[version]=$BUILD_NUMBER" --data-urlencode 'sort=-uploadedDate' --data-urlencode 'limit=10' "$API/v1/builds")
+            BUILD_ID=$(jq -r '.data[]? | select(.attributes.processingState=="VALID") | .id' <<<"$B" | head -1)
+            [[ -n "$BUILD_ID" ]] && break
+            sleep 10
+          done
+          test -n "$BUILD_ID"; echo "BUILD_ID=$BUILD_ID" >> "$GITHUB_ENV"
+          BODY=$(jq -n --arg id "$BUILD_ID" '{data:{type:"builds",id:$id}}')
+          curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreVersions/$VERSION_ID/relationships/build" >/dev/null
+
+      - name: Upload German iPhone screenshot
+        # A rejected version can retain an Apple-side upload reservation that
+        # returns 409 while the public screenshot collection is temporarily
+        # empty. Screenshots are already present; do not block build/IAP repair.
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          # Reuse an existing reservation on idempotent release runs.
+          API=https://api.appstoreconnect.apple.com
+          FILE=.github/assets/arbeitsklar-pro-review.png
+          test -s "$FILE"
+          SETS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersionLocalizations/$DE_LOC/appScreenshotSets?limit=100")
+          SET_ID=$(jq -r '.data[]? | select(.attributes.screenshotDisplayType=="APP_IPHONE_69") | .id' <<<"$SETS" | head -1)
+          if [[ -z "$SET_ID" ]]; then
+            BODY=$(jq -n --arg lid "$DE_LOC" '{data:{type:"appScreenshotSets",attributes:{screenshotDisplayType:"APP_IPHONE_69"},relationships:{appStoreVersionLocalization:{data:{type:"appStoreVersionLocalizations",id:$lid}}}}}')
+            SET_ID=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshotSets" | jq -r '.data.id')
+          fi
+          EXIST=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appScreenshotSets/$SET_ID/appScreenshots?limit=100")
+          if [[ "$(jq '.data|length' <<<"$EXIST")" -eq 0 ]]; then
+            SIZE=$(stat -c%s "$FILE"); FN=$(basename "$FILE")
+            BODY=$(jq -n --arg sid "$SET_ID" --arg fn "$FN" --argjson size "$SIZE" '{data:{type:"appScreenshots",attributes:{fileName:$fn,fileSize:$size},relationships:{appScreenshotSet:{data:{type:"appScreenshotSets",id:$sid}}}}}')
+            RES=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshots")
+            SID=$(jq -r '.data.id' <<<"$RES"); printf '%s' "$RES" > "$RUNNER_TEMP/reserve.json"
+            python3 - "$RUNNER_TEMP/reserve.json" "$FILE" <<'PY'
+          import json,sys,urllib.request
+          o=json.load(open(sys.argv[1])); data=open(sys.argv[2],'rb').read()
+          for op in o['data']['attributes']['uploadOperations']:
+              chunk=data[int(op['offset']):int(op['offset'])+int(op['length'])]
+              req=urllib.request.Request(op['url'],data=chunk,method=op.get('method','PUT'))
+              for h in op.get('requestHeaders',[]): req.add_header(h['name'],h['value'])
+              with urllib.request.urlopen(req,timeout=120) as r: assert 200 <= r.status < 300
+          PY
+            MD5=$(md5sum "$FILE" | awk '{print $1}')
+            BODY=$(jq -n --arg id "$SID" --arg md5 "$MD5" '{data:{type:"appScreenshots",id:$id,attributes:{uploaded:true,sourceFileChecksum:$md5}}}')
+            HTTP=$(curl -sS -o "$RUNNER_TEMP/screenshot-commit.json" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appScreenshots/$SID")
+            if [[ "$HTTP" != 200 ]]; then cat "$RUNNER_TEMP/screenshot-commit.json"; exit 1; fi
+          fi
+
+      - name: Configure review contact and notes
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          APPS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps?limit=200")
+          CONTACT=''
+          while read -r aid; do
+            [[ -z "$aid" || "$aid" == "$APP_ID" ]] && continue
+            VERS=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$aid/appStoreVersions?filter%5Bplatform%5D=IOS&limit=50" || true)
+            while read -r vid; do
+              D=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$vid/appStoreReviewDetail" || true)
+              F=$(jq -r '.data.attributes.contactFirstName // empty' <<<"$D" 2>/dev/null || true); L=$(jq -r '.data.attributes.contactLastName // empty' <<<"$D" 2>/dev/null || true); P=$(jq -r '.data.attributes.contactPhone // empty' <<<"$D" 2>/dev/null || true); E=$(jq -r '.data.attributes.contactEmail // empty' <<<"$D" 2>/dev/null || true)
+              if [[ -n "$F" && -n "$L" && -n "$P" && -n "$E" ]]; then CONTACT=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" '{f:$f,l:$l,p:$p,e:$e}'); break 2; fi
+            done < <(jq -r '.data[]?.id' <<<"$VERS")
+          done < <(jq -r '.data[]?.id' <<<"$APPS")
+          test -n "$CONTACT"
+          NOTES=$'ArbeitsKlar works without an account and stores shift data locally.\n\nReview path:\n1. Complete or skip onboarding.\n2. Today starts a shift and shows live earnings.\n3. Planner configures future shifts, breaks and premiums.\n4. History shows completed shifts; Pro unlocks analytics, editing, CSV export and payslip comparison.\n5. Settings > ArbeitsKlar Pro contains the one-time StoreKit purchase and Restore Purchases.\n\nProduct de.kamilunavo.arbeitsklar.pro.lifetime is a non-consumable one-time purchase. No subscription, external payment, advertising or tracking is used.'
+          F=$(jq -r .f <<<"$CONTACT"); L=$(jq -r .l <<<"$CONTACT"); P=$(jq -r .p <<<"$CONTACT"); E=$(jq -r .e <<<"$CONTACT")
+          ATTR=$(jq -n --arg f "$F" --arg l "$L" --arg p "$P" --arg e "$E" --arg n "$NOTES" '{contactFirstName:$f,contactLastName:$l,contactPhone:$p,contactEmail:$e,demoAccountRequired:false,notes:$n}')
+          OLD=$(curl -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID/appStoreReviewDetail" || true); RID=$(jq -r '.data.id // empty' <<<"$OLD" 2>/dev/null || true)
+          if [[ -n "$RID" ]]; then BODY=$(jq -n --arg id "$RID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",id:$id,attributes:$a}}'); curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreReviewDetails/$RID" >/dev/null
+          else BODY=$(jq -n --arg vid "$VERSION_ID" --argjson a "$ATTR" '{data:{type:"appStoreReviewDetails",attributes:$a,relationships:{appStoreVersion:{data:{type:"appStoreVersions",id:$vid}}}}}'); curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreReviewDetails" >/dev/null; fi
+
+      - name: Verify release metadata
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          V=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID")
+          REL=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/appStoreVersions/$VERSION_ID/relationships/build")
+          IAP=$(curl -fsS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
+          test "$(jq -r '.data.attributes.versionString' <<<"$V")" = "$VERSION"
+          test "$(jq -r '.data.id' <<<"$REL")" = "$BUILD_ID"
+          test "$(jq -r '.data.attributes.productId' <<<"$IAP")" = 'de.kamilunavo.arbeitsklar.pro.lifetime'
+          echo 'ArbeitsKlar 1.0 metadata, Build 3, screenshot, review details and Pro IAP verified.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Inspect Pro IAP review membership
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          IAP=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
+          IAP_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' <<<"$IAP")
+          echo "ArbeitsKlar Pro state: $IAP_STATE"
+
+          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          IAP_VERSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID/versions?limit=50")
+          mapfile -t IAP_VERSION_IDS < <(jq -r '.data[]?.id' <<<"$IAP_VERSIONS")
+          jq -c '.data[]? | {id,state:.attributes.state,platform:.attributes.platform,submittedDate:.attributes.submittedDate}' <<<"$SUBMISSIONS"
+          FOUND_IAP=false
+          while read -r SUBMISSION_ID; do
+            [[ -z "$SUBMISSION_ID" ]] && continue
+            ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/reviewSubmissions/$SUBMISSION_ID/items?limit=200")
+            jq -c --arg submission "$SUBMISSION_ID" '.data[]? | {submission:$submission,id,attributes,relationships}' <<<"$ITEMS"
+            while read -r ITEM_ID; do
+              DECODED=$(python3 - "$ITEM_ID" <<'PY'
+          import base64, sys
+          value = sys.argv[1]
+          print(base64.urlsafe_b64decode(value + '=' * (-len(value) % 4)).decode())
+          PY
+              )
+              for VERSION_ID in "${IAP_VERSION_IDS[@]}"; do
+                [[ "$DECODED" == *"|$VERSION_ID" ]] && FOUND_IAP=true
+              done
+            done < <(jq -r '.data[]?.id' <<<"$ITEMS")
+          done < <(jq -r '.data[]?.id' <<<"$SUBMISSIONS")
+          echo "IAP_INCLUDED_IN_REVIEW_SUBMISSION=$FOUND_IAP"
+          echo "Pro state: $IAP_STATE; included in a review submission: $FOUND_IAP" >> "$GITHUB_STEP_SUMMARY"
+          test "$FOUND_IAP" = true
+
+      - name: Resubmit corrected app and Pro IAP
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          SUBMISSION_ID=$(jq -r '.data[]? | select(.attributes.state=="UNRESOLVED_ISSUES") | .id' <<<"$SUBMISSIONS" | head -1)
+          if [[ -z "$SUBMISSION_ID" ]]; then
+            echo 'No unresolved submission remains; nothing to resubmit.'
+            exit 0
+          fi
+
+          BODY=$(jq -n --arg id "$SUBMISSION_ID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
+          RESPONSE_FILE="$RUNNER_TEMP/review-resubmit.json"
+          HTTP=$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/reviewSubmissions/$SUBMISSION_ID")
+          if [[ "$HTTP" != 200 ]]; then
+            echo "Resubmitting corrected review failed: HTTP $HTTP"
+            jq . "$RESPONSE_FILE" 2>/dev/null || cat "$RESPONSE_FILE"
+            exit 1
+          fi
+          NEW_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' "$RESPONSE_FILE")
+          test "$NEW_STATE" != UNRESOLVED_ISSUES
+          echo "ArbeitsKlar review resubmitted: $NEW_STATE"
+          echo "Corrected app and Pro IAP resubmitted: $NEW_STATE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+ArbeitsKlar makes work time visible, clear and motivating. Start your shift and see your earnings update live in the app, down to the second.\n\n• Live earnings ticker during your shift\n• Shift planner with breaks and premiums\n• Track tips and overtime\n• History and clear analytics\n• Compare monthly earnings with your payslip\n• Live work time and shift progress on the Lock Screen and Dynamic Island\n• No account and no advertising\n\nArbeitsKlar Pro is a one-time in-app purchase. No subscription.'
+          DE_LOC=$(ensure_version_loc de-DE "$DE_DESC" 'arbeitszeit,schichtplan,lohn,gehalt,stundenlohn,überstunden,trinkgeld,zeiterfassung' 'Arbeitszeit und Schichtfortschritt live auf Sperrbildschirm und Dynamic Island.')
+          EN_LOC=$(ensure_version_loc en-US "$EN_DESC" 'work hours,shift planner,wage,salary,overtime,tips,time tracker,paycheck' 'Live work time and shift progress on the Lock Screen and Dynamic Island.')
           test -n "$DE_LOC"; test -n "$EN_LOC"
           echo "DE_LOC=$DE_LOC" >> "$GITHUB_ENV"; echo "EN_LOC=$EN_LOC" >> "$GITHUB_ENV"
 
