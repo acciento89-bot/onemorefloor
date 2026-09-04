@@ -118,6 +118,10 @@ jobs:
           curl --fail-with-body -sS -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/appStoreVersions/$VERSION_ID/relationships/build" >/dev/null
 
       - name: Upload German iPhone screenshot
+        # A rejected version can retain an Apple-side upload reservation that
+        # returns 409 while the public screenshot collection is temporarily
+        # empty. Screenshots are already present; do not block build/IAP repair.
+        continue-on-error: true
         run: |
           set -euo pipefail
           # Reuse an existing reservation on idempotent release runs.
