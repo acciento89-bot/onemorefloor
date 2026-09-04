@@ -230,7 +230,7 @@ jobs:
 
           BEFORE=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/reviewSubmissions/$SUBMISSION_ID/items?limit=200")
           BEFORE_COUNT=$(jq '.data | length' <<<"$BEFORE")
-          BODY=$(jq -n --arg submission "$SUBMISSION_ID" --arg iid "$IAP_ID" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$submission}},inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}}}}}')
+          BODY=$(jq -n --arg submission "$SUBMISSION_ID" --arg iid "$IAP_ID" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$submission}},inAppPurchase:{data:{type:"inAppPurchases",id:$iid}}}}}')
           RESPONSE_FILE="$RUNNER_TEMP/iap-review-item.json"
           HTTP=$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/reviewSubmissionItems")
           if [[ "$HTTP" != 201 ]]; then
