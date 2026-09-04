@@ -85,8 +85,10 @@ jobs:
           set -euo pipefail
           API=https://api.appstoreconnect.apple.com
           VERSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID/versions?limit=50")
+          jq -c '.data[]? | {id,state:.attributes.state}' <<<"$VERSIONS"
           VERSION_ID=$(jq -r '.data[]? | select(.attributes.state=="PREPARE_FOR_SUBMISSION") | .id' <<<"$VERSIONS" | head -1)
           if [[ -z "$VERSION_ID" ]]; then
+            echo 'Creating a fresh pending IAP version after the rejected submission.'
             BODY=$(jq -n --arg iid "$IAP_ID" '{data:{type:"inAppPurchaseVersions",relationships:{inAppPurchase:{data:{type:"inAppPurchases",id:$iid}}}}}')
             CREATED=$(curl --fail-with-body -sS -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/inAppPurchaseVersions")
             VERSION_ID=$(jq -r '.data.id // empty' <<<"$CREATED")
