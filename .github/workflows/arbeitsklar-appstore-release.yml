@@ -13,7 +13,7 @@ env:
   APP_ID: '6806348774'
   BUNDLE_ID: de.kamilunavo.arbeitsklar
   VERSION: '1.0'
-  BUILD_NUMBER: '2'
+  BUILD_NUMBER: '3'
   IAP_ID: '6806594872'
 
 jobs:
@@ -102,7 +102,7 @@ jobs:
           test -n "$DE_LOC"; test -n "$EN_LOC"
           echo "DE_LOC=$DE_LOC" >> "$GITHUB_ENV"; echo "EN_LOC=$EN_LOC" >> "$GITHUB_ENV"
 
-      - name: Assign Build 2
+      - name: Assign Build 3
         run: |
           set -euo pipefail
           API=https://api.appstoreconnect.apple.com
@@ -184,7 +184,29 @@ jobs:
           test "$(jq -r '.data.attributes.versionString' <<<"$V")" = "$VERSION"
           test "$(jq -r '.data.id' <<<"$REL")" = "$BUILD_ID"
           test "$(jq -r '.data.attributes.productId' <<<"$IAP")" = 'de.kamilunavo.arbeitsklar.pro.lifetime'
-          echo 'ArbeitsKlar 1.0 metadata, Build 2, screenshot, review details and Pro IAP verified.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'ArbeitsKlar 1.0 metadata, Build 3, screenshot, review details and Pro IAP verified.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Inspect Pro IAP review membership
+        run: |
+          set -euo pipefail
+          API=https://api.appstoreconnect.apple.com
+          IAP=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
+          IAP_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' <<<"$IAP")
+          echo "ArbeitsKlar Pro state: $IAP_STATE"
+
+          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          jq -c '.data[]? | {id,state:.attributes.state,platform:.attributes.platform,submittedDate:.attributes.submittedDate}' <<<"$SUBMISSIONS"
+          FOUND_IAP=false
+          while read -r SUBMISSION_ID; do
+            [[ -z "$SUBMISSION_ID" ]] && continue
+            ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/reviewSubmissions/$SUBMISSION_ID/items?limit=200")
+            jq -c --arg submission "$SUBMISSION_ID" '.data[]? | {submission:$submission,id,attributes,relationships}' <<<"$ITEMS"
+            if jq -e --arg iid "$IAP_ID" '.. | objects | select(.type? == "inAppPurchases" and .id? == $iid)' <<<"$ITEMS" >/dev/null; then
+              FOUND_IAP=true
+            fi
+          done < <(jq -r '.data[]?.id' <<<"$SUBMISSIONS")
+          echo "IAP_INCLUDED_IN_REVIEW_SUBMISSION=$FOUND_IAP"
+          echo "Pro state: $IAP_STATE; included in a review submission: $FOUND_IAP" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove key
         if: always()

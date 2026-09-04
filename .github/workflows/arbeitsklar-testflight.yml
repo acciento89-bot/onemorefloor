@@ -6,7 +6,7 @@ on:
       build:
         description: App Store Connect build number
         required: true
-        default: '2'
+        default: '3'
   push:
     branches: [main]
     paths:
@@ -21,7 +21,7 @@ concurrency:
 
 env:
   SOURCE_REPO: acciento89-bot/arbeitsklar
-  SOURCE_REF: 00490f5ffd686644e4699547d58498cf6ebea517
+  SOURCE_REF: c0da2ceeff2c8a0cd6cfd9bf69f5bfcc3a2f24f3
   TEAM_ID: TKG684N5GL
   BUNDLE_ID: de.kamilunavo.arbeitsklar
   EXTENSION_BUNDLE_ID: de.kamilunavo.arbeitsklar.liveactivity
@@ -39,7 +39,7 @@ jobs:
           REQUESTED_BUILD: ${{ inputs.build }}
         run: |
           set -euo pipefail
-          BUILD_NUMBER="${REQUESTED_BUILD:-2}"
+          BUILD_NUMBER="${REQUESTED_BUILD:-3}"
           [[ "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
 
