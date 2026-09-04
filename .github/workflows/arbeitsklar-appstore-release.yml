@@ -199,49 +199,53 @@ jobs:
           echo "ArbeitsKlar Pro state: $IAP_STATE"
 
           SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          IAP_VERSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID/versions?limit=50")
+          mapfile -t IAP_VERSION_IDS < <(jq -r '.data[]?.id' <<<"$IAP_VERSIONS")
           jq -c '.data[]? | {id,state:.attributes.state,platform:.attributes.platform,submittedDate:.attributes.submittedDate}' <<<"$SUBMISSIONS"
           FOUND_IAP=false
           while read -r SUBMISSION_ID; do
             [[ -z "$SUBMISSION_ID" ]] && continue
             ITEMS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/reviewSubmissions/$SUBMISSION_ID/items?limit=200")
             jq -c --arg submission "$SUBMISSION_ID" '.data[]? | {submission:$submission,id,attributes,relationships}' <<<"$ITEMS"
-            if jq -e --arg iid "$IAP_ID" '.. | objects | select(.type? == "inAppPurchases" and .id? == $iid)' <<<"$ITEMS" >/dev/null; then
-              FOUND_IAP=true
-            fi
+            while read -r ITEM_ID; do
+              DECODED=$(python3 - "$ITEM_ID" <<'PY'
+          import base64, sys
+          value = sys.argv[1]
+          print(base64.urlsafe_b64decode(value + '=' * (-len(value) % 4)).decode())
+          PY
+              )
+              for VERSION_ID in "${IAP_VERSION_IDS[@]}"; do
+                [[ "$DECODED" == *"|$VERSION_ID" ]] && FOUND_IAP=true
+              done
+            done < <(jq -r '.data[]?.id' <<<"$ITEMS")
           done < <(jq -r '.data[]?.id' <<<"$SUBMISSIONS")
           echo "IAP_INCLUDED_IN_REVIEW_SUBMISSION=$FOUND_IAP"
           echo "Pro state: $IAP_STATE; included in a review submission: $FOUND_IAP" >> "$GITHUB_STEP_SUMMARY"
+          test "$FOUND_IAP" = true
 
-      - name: Submit Pro IAP with the corrected app version
+      - name: Resubmit corrected app and Pro IAP
         run: |
           set -euo pipefail
           API=https://api.appstoreconnect.apple.com
-          IAP=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
-          IAP_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' <<<"$IAP")
-
-          if [[ "$IAP_STATE" != READY_TO_SUBMIT ]]; then
-            echo "Pro IAP already left READY_TO_SUBMIT: $IAP_STATE"
+          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
+          SUBMISSION_ID=$(jq -r '.data[]? | select(.attributes.state=="UNRESOLVED_ISSUES") | .id' <<<"$SUBMISSIONS" | head -1)
+          if [[ -z "$SUBMISSION_ID" ]]; then
+            echo 'No unresolved submission remains; nothing to resubmit.'
             exit 0
           fi
 
-          BODY=$(jq -n --arg iid "$IAP_ID" '{data:{type:"inAppPurchaseSubmissions",relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}}}}}')
-          RESPONSE_FILE="$RUNNER_TEMP/iap-submission.json"
-          HTTP=$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/inAppPurchaseSubmissions")
-          if [[ "$HTTP" != 201 ]]; then
-            echo "Submitting Pro IAP failed: HTTP $HTTP"
+          BODY=$(jq -n --arg id "$SUBMISSION_ID" '{data:{type:"reviewSubmissions",id:$id,attributes:{submitted:true}}}')
+          RESPONSE_FILE="$RUNNER_TEMP/review-resubmit.json"
+          HTTP=$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' -X PATCH -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/reviewSubmissions/$SUBMISSION_ID")
+          if [[ "$HTTP" != 200 ]]; then
+            echo "Resubmitting corrected review failed: HTTP $HTTP"
             jq . "$RESPONSE_FILE" 2>/dev/null || cat "$RESPONSE_FILE"
             exit 1
           fi
-
-          for _ in $(seq 1 20); do
-            UPDATED=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
-            UPDATED_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' <<<"$UPDATED")
-            [[ "$UPDATED_STATE" != READY_TO_SUBMIT ]] && break
-            sleep 3
-          done
-          test "$UPDATED_STATE" != READY_TO_SUBMIT
-          echo "ArbeitsKlar Pro submission state: $UPDATED_STATE"
-          echo "Pro IAP submitted with the corrected app version: $UPDATED_STATE" >> "$GITHUB_STEP_SUMMARY"
+          NEW_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' "$RESPONSE_FILE")
+          test "$NEW_STATE" != UNRESOLVED_ISSUES
+          echo "ArbeitsKlar review resubmitted: $NEW_STATE"
+          echo "Corrected app and Pro IAP resubmitted: $NEW_STATE" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove key
         if: always()
