@@ -212,7 +212,7 @@ jobs:
           echo "IAP_INCLUDED_IN_REVIEW_SUBMISSION=$FOUND_IAP"
           echo "Pro state: $IAP_STATE; included in a review submission: $FOUND_IAP" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Add Pro IAP to unresolved review submission
+      - name: Submit Pro IAP with the corrected app version
         run: |
           set -euo pipefail
           API=https://api.appstoreconnect.apple.com
@@ -224,26 +224,24 @@ jobs:
             exit 0
           fi
 
-          SUBMISSIONS=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/apps/$APP_ID/reviewSubmissions?limit=50")
-          SUBMISSION_ID=$(jq -r '.data[]? | select(.attributes.state=="UNRESOLVED_ISSUES" or .attributes.state=="READY_FOR_REVIEW") | .id' <<<"$SUBMISSIONS" | head -1)
-          test -n "$SUBMISSION_ID"
-
-          BEFORE=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/reviewSubmissions/$SUBMISSION_ID/items?limit=200")
-          BEFORE_COUNT=$(jq '.data | length' <<<"$BEFORE")
-          BODY=$(jq -n --arg submission "$SUBMISSION_ID" --arg iid "$IAP_ID" '{data:{type:"reviewSubmissionItems",relationships:{reviewSubmission:{data:{type:"reviewSubmissions",id:$submission}},inAppPurchase:{data:{type:"inAppPurchases",id:$iid}}}}}')
-          RESPONSE_FILE="$RUNNER_TEMP/iap-review-item.json"
-          HTTP=$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/reviewSubmissionItems")
+          BODY=$(jq -n --arg iid "$IAP_ID" '{data:{type:"inAppPurchaseSubmissions",relationships:{inAppPurchaseV2:{data:{type:"inAppPurchases",id:$iid}}}}}')
+          RESPONSE_FILE="$RUNNER_TEMP/iap-submission.json"
+          HTTP=$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' -X POST -H "Authorization: Bearer $ASC_TOKEN" -H 'Content-Type: application/json' -d "$BODY" "$API/v1/inAppPurchaseSubmissions")
           if [[ "$HTTP" != 201 ]]; then
-            echo "Adding Pro IAP to review submission failed: HTTP $HTTP"
+            echo "Submitting Pro IAP failed: HTTP $HTTP"
             jq . "$RESPONSE_FILE" 2>/dev/null || cat "$RESPONSE_FILE"
             exit 1
           fi
 
-          AFTER=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v1/reviewSubmissions/$SUBMISSION_ID/items?limit=200")
-          AFTER_COUNT=$(jq '.data | length' <<<"$AFTER")
-          test "$AFTER_COUNT" -eq "$((BEFORE_COUNT + 1))"
-          echo "ArbeitsKlar Pro added to review submission $SUBMISSION_ID."
-          echo "Pro IAP added to the unresolved app review submission." >> "$GITHUB_STEP_SUMMARY"
+          for _ in $(seq 1 20); do
+            UPDATED=$(curl --fail-with-body -sS -H "Authorization: Bearer $ASC_TOKEN" "$API/v2/inAppPurchases/$IAP_ID")
+            UPDATED_STATE=$(jq -r '.data.attributes.state // "UNKNOWN"' <<<"$UPDATED")
+            [[ "$UPDATED_STATE" != READY_TO_SUBMIT ]] && break
+            sleep 3
+          done
+          test "$UPDATED_STATE" != READY_TO_SUBMIT
+          echo "ArbeitsKlar Pro submission state: $UPDATED_STATE"
+          echo "Pro IAP submitted with the corrected app version: $UPDATED_STATE" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Remove key
         if: always()
