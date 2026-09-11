@@ -67,19 +67,57 @@ jobs:
           NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
           mkdir -p "$(dirname "$ANALYTICS_PATH")"
 
-          APPS=$(curl --fail-with-body -sSL -G \
-            -H "Authorization: Bearer $ASC_TOKEN" \
+          NOTES='[]'
+          APPLE_AVAILABLE=false
+          COMMERCIAL_AVAILABLE=false
+          MONETIZATION_AVAILABLE=false
+
+          safe_error_note() {
+            local path="$1"
+            local fallback="$2"
+            if jq -e . "$path" >/dev/null 2>&1; then
+              jq -r --arg fallback "$fallback" '(.errors[0]? | [(.status // ""), (.code // ""), (.title // ""), (.detail // "")] | map(select(length > 0)) | join(" · ")) // $fallback' "$path"
+            else
+              printf '%s' "$fallback"
+            fi
+          }
+
+          request_json() {
+            local output="$1"
+            local url="$2"
+            shift 2
+            curl --retry 3 --retry-all-errors --retry-delay 2 -sSL -G \
+              -o "$output" -w '%{http_code}' \
+              -H "Authorization: Bearer $ASC_TOKEN" \
+              "$@" "$url" || true
+          }
+
+          APPS_FILE="$RUNNER_TEMP/asc-apps.json"
+          APPS_HTTP=$(request_json "$APPS_FILE" "$API/v1/apps" \
             --data-urlencode 'limit=200' \
-            --data-urlencode 'fields[apps]=name,bundleId' \
-            "$API/v1/apps")
+            --data-urlencode 'fields[apps]=name,bundleId')
+
+          if [[ "$APPS_HTTP" =~ ^2 ]]; then
+            APPS=$(cat "$APPS_FILE")
+            APPLE_AVAILABLE=true
+            echo "App Store Connect app inventory: HTTP $APPS_HTTP"
+          elif [[ -s generated/navoops/store-status.json ]]; then
+            APPS=$(jq -c '{data:[.apps[]? | select(.provider == "apple") | {id:.externalID,attributes:{name:.appName,bundleId:.bundleOrPackageID}}]}' generated/navoops/store-status.json)
+            SAFE=$(safe_error_note "$APPS_FILE" "HTTP ${APPS_HTTP:-000}")
+            NOTES=$(jq -c --arg note "Direct Apple app inventory unavailable ($SAFE); using the latest sanitized store-status inventory as fallback." '. + [$note]' <<<"$NOTES")
+            echo "Direct app inventory unavailable: $SAFE; continuing with store-status fallback."
+          else
+            SAFE=$(safe_error_note "$APPS_FILE" "HTTP ${APPS_HTTP:-000}")
+            NOTES=$(jq -c --arg note "Apple app inventory unavailable ($SAFE); no fallback inventory exists." '. + [$note]' <<<"$NOTES")
+            APPS='{"data":[]}'
+            echo "Apple app inventory unavailable: $SAFE"
+          fi
 
           SALES_MAP='{}'
-          COMMERCIAL_AVAILABLE=false
-          NOTES='[]'
-
           if [[ -n "${ASC_VENDOR_NUMBER:-}" ]]; then
             SALES_GZ="$RUNNER_TEMP/apple-sales.tsv.gz"
-            if curl --fail-with-body -sSL -G \
+            SALES_HTTP=$(curl --retry 3 --retry-all-errors --retry-delay 2 -sSL -G \
+              -o "$SALES_GZ" -w '%{http_code}' \
               -H "Authorization: Bearer $ASC_TOKEN" \
               -H 'Accept: application/a-gzip' \
               --data-urlencode "filter[vendorNumber]=$ASC_VENDOR_NUMBER" \
@@ -87,81 +125,104 @@ jobs:
               --data-urlencode 'filter[reportSubType]=SUMMARY' \
               --data-urlencode 'filter[frequency]=DAILY' \
               --data-urlencode 'filter[version]=1_0' \
-              "$API/v1/salesReports" > "$SALES_GZ"; then
+              "$API/v1/salesReports" || true)
+
+            if [[ "$SALES_HTTP" =~ ^2 ]] && gzip -t "$SALES_GZ" >/dev/null 2>&1; then
               export SALES_GZ
               SALES_MAP=$(python3 <<'PY'
           import csv, gzip, json, os
           from collections import defaultdict
 
           result = defaultdict(lambda: {'units': 0, 'proceeds': defaultdict(float)})
-          path = os.environ['SALES_GZ']
-          try:
-              with gzip.open(path, 'rt', encoding='utf-8-sig', errors='replace', newline='') as handle:
-                  reader = csv.DictReader(handle, delimiter='\t')
-                  for row in reader:
-                      app_id = (row.get('Apple Identifier') or row.get('Apple ID') or '').strip()
-                      if not app_id:
-                          continue
-                      try:
-                          units = int(float((row.get('Units') or '0').replace(',', '.')))
-                      except ValueError:
-                          units = 0
-                      result[app_id]['units'] += units
-                      currency = (row.get('Developer Proceeds Currency') or row.get('Currency of Proceeds') or row.get('Customer Currency') or '').strip()
-                      raw = (row.get('Developer Proceeds') or '0').strip().replace(',', '.')
-                      try:
-                          value = float(raw)
-                      except ValueError:
-                          value = 0.0
-                      if currency:
-                          result[app_id]['proceeds'][currency] += value * units
-          except Exception:
-              print('{}')
-              raise SystemExit(0)
+          with gzip.open(os.environ['SALES_GZ'], 'rt', encoding='utf-8-sig', errors='replace', newline='') as handle:
+              reader = csv.DictReader(handle, delimiter='\t')
+              for row in reader:
+                  app_id = (row.get('Apple Identifier') or row.get('Apple ID') or '').strip()
+                  if not app_id:
+                      continue
+                  try:
+                      units = int(float((row.get('Units') or '0').replace(',', '.')))
+                  except ValueError:
+                      units = 0
+                  result[app_id]['units'] += units
+                  currency = (row.get('Developer Proceeds Currency') or row.get('Currency of Proceeds') or row.get('Customer Currency') or '').strip()
+                  raw = (row.get('Developer Proceeds') or '0').strip().replace(',', '.')
+                  try:
+                      per_unit = float(raw)
+                  except ValueError:
+                      per_unit = 0.0
+                  if currency:
+                      result[app_id]['proceeds'][currency] += per_unit * units
 
-          clean = {}
-          for app_id, item in result.items():
-              clean[app_id] = {
+          clean = {
+              app_id: {
                   'units': item['units'],
                   'proceeds': [
                       {'currency': currency, 'amount': round(amount, 6)}
                       for currency, amount in sorted(item['proceeds'].items())
                   ]
               }
+              for app_id, item in result.items()
+          }
           print(json.dumps(clean, separators=(',', ':')))
           PY
               )
               COMMERCIAL_AVAILABLE=true
+              APPLE_AVAILABLE=true
+              echo "Apple Sales and Trends: HTTP $SALES_HTTP"
             else
-              NOTES=$(jq -c '. + ["Apple Sales and Trends report could not be downloaded with the configured API role/vendor number."]' <<<"$NOTES")
+              SAFE=$(safe_error_note "$SALES_GZ" "HTTP ${SALES_HTTP:-000}")
+              NOTES=$(jq -c --arg note "Apple Sales and Trends unavailable ($SAFE). Check the API role and ASC_VENDOR_NUMBER." '. + [$note]' <<<"$NOTES")
+              echo "Apple Sales and Trends unavailable: $SAFE"
             fi
           else
-            NOTES=$(jq -c '. + ["ASC_VENDOR_NUMBER is not configured; proceeds and sales units remain unavailable."]' <<<"$NOTES")
+            NOTES=$(jq -c '. + ["ASC_VENDOR_NUMBER is not configured; Apple Sales and Trends units/proceeds remain unavailable."]' <<<"$NOTES")
           fi
 
           ITEMS='[]'
+          MONETIZATION_FAILURES=0
           while IFS=$'\t' read -r APP_ID APP_NAME BUNDLE_ID; do
             [[ -n "$APP_ID" ]] || continue
 
-            IAPS=$(curl -sS -G \
-              -H "Authorization: Bearer $ASC_TOKEN" \
+            IAPS_FILE="$RUNNER_TEMP/iaps-${APP_ID}.json"
+            IAPS_HTTP=$(request_json "$IAPS_FILE" "$API/v1/apps/$APP_ID/inAppPurchasesV2" \
               --data-urlencode 'limit=200' \
-              --data-urlencode 'fields[inAppPurchases]=name,productId,inAppPurchaseType,state' \
-              "$API/v1/apps/$APP_ID/inAppPurchasesV2" || printf '{"data":[]}')
+              --data-urlencode 'fields[inAppPurchases]=name,productId,inAppPurchaseType,state')
+            if [[ "$IAPS_HTTP" =~ ^2 ]]; then
+              IAPS=$(cat "$IAPS_FILE")
+              IAP_COUNT_JSON=$(jq '[.data[]?] | length' <<<"$IAPS")
+              IAP_ACTION=$(jq '[.data[]? | .attributes.state // "" | select(. == "DEVELOPER_ACTION_NEEDED" or . == "REJECTED" or . == "MISSING_METADATA")] | length' <<<"$IAPS")
+              MONETIZATION_AVAILABLE=true
+              APPLE_AVAILABLE=true
+            else
+              IAP_COUNT_JSON='null'
+              IAP_ACTION=0
+              MONETIZATION_FAILURES=$((MONETIZATION_FAILURES + 1))
+            fi
 
-            GROUPS=$(curl -sS -G \
-              -H "Authorization: Bearer $ASC_TOKEN" \
+            GROUPS_FILE="$RUNNER_TEMP/subscriptions-${APP_ID}.json"
+            GROUPS_HTTP=$(request_json "$GROUPS_FILE" "$API/v1/apps/$APP_ID/subscriptionGroups" \
               --data-urlencode 'limit=200' \
               --data-urlencode 'include=subscriptions' \
               --data-urlencode 'fields[subscriptionGroups]=referenceName,subscriptions' \
-              --data-urlencode 'fields[subscriptions]=name,productId,state,subscriptionPeriod,groupLevel' \
-              "$API/v1/apps/$APP_ID/subscriptionGroups" || printf '{"data":[],"included":[]}')
+              --data-urlencode 'fields[subscriptions]=name,productId,state,subscriptionPeriod,groupLevel')
+            if [[ "$GROUPS_HTTP" =~ ^2 ]]; then
+              GROUPS=$(cat "$GROUPS_FILE")
+              SUB_COUNT_JSON=$(jq '[.included[]? | select(.type == "subscriptions")] | length' <<<"$GROUPS")
+              SUB_ACTION=$(jq '[.included[]? | select(.type == "subscriptions") | .attributes.state // "" | select(. == "DEVELOPER_ACTION_NEEDED" or . == "REJECTED" or . == "MISSING_METADATA")] | length' <<<"$GROUPS")
+              MONETIZATION_AVAILABLE=true
+              APPLE_AVAILABLE=true
+            else
+              SUB_COUNT_JSON='null'
+              SUB_ACTION=0
+              MONETIZATION_FAILURES=$((MONETIZATION_FAILURES + 1))
+            fi
 
-            IAP_COUNT=$(jq '[.data[]?] | length' <<<"$IAPS")
-            SUB_COUNT=$(jq '[.included[]? | select(.type == "subscriptions")] | length' <<<"$GROUPS")
-            IAP_ACTION=$(jq '[.data[]? | .attributes.state // "" | select(. == "DEVELOPER_ACTION_NEEDED" or . == "REJECTED" or . == "MISSING_METADATA")] | length' <<<"$IAPS")
-            SUB_ACTION=$(jq '[.included[]? | select(.type == "subscriptions") | .attributes.state // "" | select(. == "DEVELOPER_ACTION_NEEDED" or . == "REJECTED" or . == "MISSING_METADATA")] | length' <<<"$GROUPS")
-            NEEDS_ACTION=$((IAP_ACTION + SUB_ACTION))
+            if [[ "$IAP_COUNT_JSON" == 'null' && "$SUB_COUNT_JSON" == 'null' ]]; then
+              ACTION_JSON='null'
+            else
+              ACTION_JSON=$((IAP_ACTION + SUB_ACTION))
+            fi
 
             SALES=$(jq -c --arg id "$APP_ID" '.[$id] // {}' <<<"$SALES_MAP")
             UNITS=$(jq -r '.units // empty' <<<"$SALES")
@@ -176,18 +237,24 @@ jobs:
               --arg periodEnd "$NOW" \
               --arg units "$UNITS" \
               --argjson proceeds "$PROCEEDS" \
-              --argjson subscriptions "$SUB_COUNT" \
-              --argjson oneTime "$IAP_COUNT" \
-              --argjson action "$NEEDS_ACTION" \
-              '{provider:$provider,appName:$appName,externalID:$externalID,bundleOrPackageID:$bundle,periodStart:$periodStart,periodEnd:$periodEnd,units:(if $units=="" then null else ($units|tonumber) end),downloads:null,proceeds:$proceeds,activeSubscriptions:null,subscriptionProducts:$subscriptions,oneTimeProducts:$oneTime,productsNeedingAction:$action,crashRate:null,userPerceivedCrashRate:null,anrRate:null,userPerceivedAnrRate:null,detail:"App Store Connect monetization inventory"}')
+              --argjson subscriptions "$SUB_COUNT_JSON" \
+              --argjson oneTime "$IAP_COUNT_JSON" \
+              --argjson action "$ACTION_JSON" \
+              '{provider:$provider,appName:$appName,externalID:$externalID,bundleOrPackageID:$bundle,periodStart:$periodStart,periodEnd:$periodEnd,units:(if $units=="" then null else ($units|tonumber) end),downloads:null,proceeds:$proceeds,activeSubscriptions:null,subscriptionProducts:$subscriptions,oneTimeProducts:$oneTime,productsNeedingAction:$action,crashRate:null,userPerceivedCrashRate:null,anrRate:null,userPerceivedAnrRate:null,detail:"App Store Connect inventory, monetization and optional Sales & Trends"}')
             ITEMS=$(jq -c --argjson item "$ITEM" '. + [$item]' <<<"$ITEMS")
           done < <(jq -r '.data[]? | [.id,.attributes.name,.attributes.bundleId] | @tsv' <<<"$APPS")
+
+          if [[ "$MONETIZATION_AVAILABLE" != 'true' ]]; then
+            NOTES=$(jq -c '. + ["Apple in-app purchase/subscription inventory is unavailable with the current App Store Connect API role."]' <<<"$NOTES")
+          elif (( MONETIZATION_FAILURES > 0 )); then
+            NOTES=$(jq -c --arg count "$MONETIZATION_FAILURES" '. + [($count + " Apple monetization endpoint requests were unavailable; affected fields remain null.")]' <<<"$NOTES")
+          fi
 
           jq -n \
             --argjson schemaVersion 1 \
             --arg generatedAt "$NOW" \
             --arg sourceRepository "$GITHUB_REPOSITORY" \
-            --argjson appleAvailable true \
+            --argjson appleAvailable "$APPLE_AVAILABLE" \
             --argjson googleAvailable false \
             --argjson commercialAvailable "$COMMERCIAL_AVAILABLE" \
             --argjson reliabilityAvailable false \
@@ -198,6 +265,7 @@ jobs:
 
           jq empty "$ANALYTICS_PATH"
           echo "Apple analytics snapshots: $(jq '.apps | length' "$ANALYTICS_PATH")"
+          echo "Apple source available: $APPLE_AVAILABLE; monetization: $MONETIZATION_AVAILABLE; commercial: $COMMERCIAL_AVAILABLE"
 
       - name: Commit refreshed analytics feed
         shell: bash
