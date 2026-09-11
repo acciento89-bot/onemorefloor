@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-11T16:20:31Z",
+  "generatedAt": "2026-09-11T17:04:01Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
@@ -11,7 +11,7 @@
       "externalID": "6811085573",
       "bundleOrPackageID": "com.kamilunavo.NavoOps",
       "version": "1.0",
-      "build": "1",
+      "build": "2",
       "rawState": "PREPARE_FOR_SUBMISSION",
       "state": "development",
       "updatedAt": "2026-09-11T07:48:04-07:00",
@@ -24,10 +24,10 @@
       "bundleOrPackageID": "com.kamilunavo.navokids",
       "version": "0.4.0",
       "build": "13",
-      "rawState": "IN_REVIEW",
-      "state": "review",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
       "updatedAt": "2026-09-10T14:36:14-07:00",
-      "detail": "IN_REVIEW"
+      "detail": "READY_FOR_SALE"
     },
     {
       "provider": "apple",
