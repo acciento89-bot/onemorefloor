@@ -187,7 +187,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY='' \
-            archive
+            archive 2>&1 | tee "$RUNNER_TEMP/archive.log"
           APP="$ARCHIVE/Products/Applications/NavoOps.app"
           test -d "$APP"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -Fx "$BUNDLE_ID"
@@ -305,6 +305,7 @@ jobs:
         with:
           name: navoops-testflight-diagnostics-${{ env.BUILD_NUMBER }}
           path: |
+            ${{ runner.temp }}/archive.log
             ${{ runner.temp }}/export.log
             ${{ runner.temp }}/upload.log
           if-no-files-found: ignore
