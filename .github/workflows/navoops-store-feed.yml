@@ -174,3 +174,5 @@ jobs:
         if: always()
         shell: bash
         run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+
+# Manual refresh marker: NavoOps 1.1 build 2 verification.
