@@ -41,6 +41,7 @@ jobs:
           BUILD_NUMBER="${REQUESTED_BUILD:-1}"
           [[ "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          echo "Resolved build number: $BUILD_NUMBER"
 
       - name: Check App Store Connect credentials
         shell: bash
@@ -188,12 +189,53 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY='' \
             archive 2>&1 | tee "$RUNNER_TEMP/archive.log"
-          APP="$ARCHIVE/Products/Applications/NavoOps.app"
-          test -d "$APP"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -Fx "$BUNDLE_ID"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -Fx "$APP_VERSION"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -Fx "$BUILD_NUMBER"
+
+          echo '--- xcarchive contents ---'
+          if [[ -d "$ARCHIVE" ]]; then
+            find "$ARCHIVE" -maxdepth 5 -print | sort | tee "$RUNNER_TEMP/archive-contents.txt"
+          else
+            echo "Archive directory missing: $ARCHIVE" | tee "$RUNNER_TEMP/archive-contents.txt"
+            exit 1
+          fi
+
+          APP=$(find "$ARCHIVE/Products/Applications" -maxdepth 1 -type d -name '*.app' -print -quit 2>/dev/null || true)
+          if [[ -z "$APP" || ! -d "$APP" ]]; then
+            echo "::error::No archived .app found below $ARCHIVE/Products/Applications"
+            exit 1
+          fi
+          INFO="$APP/Info.plist"
+          if [[ ! -f "$INFO" ]]; then
+            echo "::error::Archived Info.plist missing: $INFO"
+            exit 1
+          fi
+
+          ACTUAL_BUNDLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$INFO")
+          ACTUAL_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO")
+          ACTUAL_BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$INFO")
+          {
+            printf 'app=%s\n' "$APP"
+            printf 'bundle=%s\n' "$ACTUAL_BUNDLE"
+            printf 'version=%s\n' "$ACTUAL_VERSION"
+            printf 'build=%s\n' "$ACTUAL_BUILD"
+            printf 'expected_bundle=%s\n' "$BUNDLE_ID"
+            printf 'expected_version=%s\n' "$APP_VERSION"
+            printf 'expected_build=%s\n' "$BUILD_NUMBER"
+          } | tee "$RUNNER_TEMP/archive-info.txt"
+
+          [[ "$ACTUAL_BUNDLE" == "$BUNDLE_ID" ]] || {
+            echo "::error::Bundle ID mismatch: expected '$BUNDLE_ID', got '$ACTUAL_BUNDLE'"
+            exit 1
+          }
+          [[ "$ACTUAL_VERSION" == "$APP_VERSION" ]] || {
+            echo "::error::Version mismatch: expected '$APP_VERSION', got '$ACTUAL_VERSION'"
+            exit 1
+          }
+          [[ "$ACTUAL_BUILD" == "$BUILD_NUMBER" ]] || {
+            echo "::error::Build mismatch: expected '$BUILD_NUMBER', got '$ACTUAL_BUILD'"
+            exit 1
+          }
           echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+          echo 'Unsigned archive metadata validated.'
 
       - name: Create App Store export options
         shell: bash
@@ -306,6 +348,8 @@ jobs:
           name: navoops-testflight-diagnostics-${{ env.BUILD_NUMBER }}
           path: |
             ${{ runner.temp }}/archive.log
+            ${{ runner.temp }}/archive-contents.txt
+            ${{ runner.temp }}/archive-info.txt
             ${{ runner.temp }}/export.log
             ${{ runner.temp }}/upload.log
           if-no-files-found: ignore
