@@ -63,7 +63,7 @@ jobs:
           NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
           mkdir -p "$(dirname "$FEED_PATH")"
 
-          APPS=$(curl --fail-with-body -fsSL -G \
+          APPS=$(curl --fail-with-body -sSL -G \
             -H "Authorization: Bearer $ASC_TOKEN" \
             --data-urlencode 'limit=200' \
             --data-urlencode 'fields[apps]=name,bundleId' \
