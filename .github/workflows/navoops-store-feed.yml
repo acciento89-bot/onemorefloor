@@ -1,0 +1,176 @@
+name: NavoOps Store Feed
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+  push:
+    branches:
+      - main
+      - feature/navoops-store-feed
+    paths:
+      - '.github/workflows/navoops-store-feed.yml'
+
+permissions:
+  contents: write
+
+env:
+  FEED_PATH: generated/navoops/store-status.json
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout bridge repository
+        uses: actions/checkout@v5
+
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          export ASC_KEY_PATH="$KEY_PATH"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v, padding: false); end
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          h = b(JSON.generate({alg: 'ES256', kid: ENV.fetch('ASC_KEY_ID'), typ: 'JWT'}))
+          p = b(JSON.generate({iss: ENV.fetch('ASC_ISSUER_ID'), iat: now, exp: now + 900, aud: 'appstoreconnect-v1'}))
+          input = "#{h}.#{p}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new, input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64, '0')].pack('H*') }.join
+          puts "#{input}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Collect Apple App Store state
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.appstoreconnect.apple.com'
+          NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          mkdir -p "$(dirname "$FEED_PATH")"
+
+          APPS=$(curl --fail-with-body -fsSL -G \
+            -H "Authorization: Bearer $ASC_TOKEN" \
+            --data-urlencode 'limit=200' \
+            --data-urlencode 'fields[apps]=name,bundleId' \
+            "$API/v1/apps")
+
+          APPLE_ITEMS='[]'
+          while IFS=$'\t' read -r APP_ID APP_NAME BUNDLE_ID; do
+            [[ -n "$APP_ID" ]] || continue
+
+            VERSIONS=$(curl -sS -G \
+              -H "Authorization: Bearer $ASC_TOKEN" \
+              --data-urlencode 'filter[platform]=IOS' \
+              --data-urlencode 'limit=50' \
+              --data-urlencode 'fields[appStoreVersions]=versionString,appStoreState,createdDate' \
+              "$API/v1/apps/$APP_ID/appStoreVersions" || printf '{"data":[]}')
+
+            VERSION_ITEM=$(jq -c '[.data[]?] | sort_by(.attributes.createdDate // "") | reverse | .[0] // null' <<<"$VERSIONS")
+            VERSION=$(jq -r '.attributes.versionString // empty' <<<"$VERSION_ITEM")
+            RAW_STATE=$(jq -r '.attributes.appStoreState // empty' <<<"$VERSION_ITEM")
+            UPDATED=$(jq -r '.attributes.createdDate // empty' <<<"$VERSION_ITEM")
+
+            BUILDS=$(curl -sS -G \
+              -H "Authorization: Bearer $ASC_TOKEN" \
+              --data-urlencode "filter[app]=$APP_ID" \
+              --data-urlencode 'sort=-uploadedDate' \
+              --data-urlencode 'limit=1' \
+              --data-urlencode 'fields[builds]=version,uploadedDate,processingState' \
+              "$API/v1/builds" || printf '{"data":[]}')
+            BUILD=$(jq -r '.data[0].attributes.version // empty' <<<"$BUILDS")
+            BUILD_UPDATED=$(jq -r '.data[0].attributes.uploadedDate // empty' <<<"$BUILDS")
+            PROCESSING=$(jq -r '.data[0].attributes.processingState // empty' <<<"$BUILDS")
+
+            if [[ -z "$UPDATED" ]]; then UPDATED="$BUILD_UPDATED"; fi
+            if [[ -z "$UPDATED" ]]; then UPDATED="$NOW"; fi
+
+            case "$RAW_STATE" in
+              READY_FOR_SALE|READY_FOR_DISTRIBUTION|PREORDER_READY_FOR_SALE)
+                STATE='live'
+                ;;
+              WAITING_FOR_REVIEW|IN_REVIEW|PENDING_APPLE_RELEASE)
+                STATE='review'
+                ;;
+              PROCESSING_FOR_APP_STORE|WAITING_FOR_EXPORT_COMPLIANCE)
+                STATE='processing'
+                ;;
+              REJECTED|METADATA_REJECTED|INVALID_BINARY|DEVELOPER_REJECTED)
+                STATE='rejected'
+                ;;
+              PREPARE_FOR_SUBMISSION|READY_FOR_REVIEW|PENDING_DEVELOPER_RELEASE|PENDING_CONTRACT|REMOVED_FROM_SALE|REPLACED_WITH_NEW_VERSION)
+                STATE='development'
+                ;;
+              '')
+                if [[ -n "$BUILD" ]]; then
+                  if [[ "$PROCESSING" == 'PROCESSING' ]]; then STATE='processing'; else STATE='internalTest'; fi
+                  RAW_STATE=${PROCESSING:-TESTFLIGHT_BUILD}
+                else
+                  STATE='development'
+                  RAW_STATE='NO_APP_STORE_VERSION'
+                fi
+                ;;
+              *)
+                STATE='attention'
+                ;;
+            esac
+
+            ITEM=$(jq -n \
+              --arg provider 'apple' \
+              --arg appName "$APP_NAME" \
+              --arg externalID "$APP_ID" \
+              --arg bundle "$BUNDLE_ID" \
+              --arg version "$VERSION" \
+              --arg build "$BUILD" \
+              --arg rawState "$RAW_STATE" \
+              --arg state "$STATE" \
+              --arg updatedAt "$UPDATED" \
+              '{provider:$provider,appName:$appName,externalID:$externalID,bundleOrPackageID:$bundle,version:(if $version=="" then null else $version end),build:(if $build=="" then null else $build end),rawState:$rawState,state:$state,updatedAt:$updatedAt,detail:$rawState}')
+            APPLE_ITEMS=$(jq -c --argjson item "$ITEM" '. + [$item]' <<<"$APPLE_ITEMS")
+          done < <(jq -r '.data[]? | [.id,.attributes.name,.attributes.bundleId] | @tsv' <<<"$APPS")
+
+          jq -n \
+            --argjson schemaVersion 1 \
+            --arg generatedAt "$NOW" \
+            --arg sourceRepository "$GITHUB_REPOSITORY" \
+            --argjson appleAvailable true \
+            --argjson googleAvailable false \
+            --argjson apps "$APPLE_ITEMS" \
+            '{schemaVersion:$schemaVersion,generatedAt:$generatedAt,sourceRepository:$sourceRepository,appleAvailable:$appleAvailable,googleAvailable:$googleAvailable,apps:$apps}' \
+            > "$FEED_PATH"
+
+          jq empty "$FEED_PATH"
+          echo "Apple apps in NavoOps feed: $(jq '.apps | length' "$FEED_PATH")"
+
+      - name: Commit refreshed feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'kamilunavo-ops-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add "$FEED_PATH"
+          if git diff --cached --quiet; then
+            echo 'Store feed unchanged.'
+            exit 0
+          fi
+          git commit -m 'chore: refresh NavoOps store feed'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Remove App Store Connect key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
