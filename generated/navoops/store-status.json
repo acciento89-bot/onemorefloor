@@ -1,10 +1,22 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-11T17:47:47Z",
+  "generatedAt": "2026-09-11T18:54:28Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Kintaroq",
+      "externalID": "6808796440",
+      "bundleOrPackageID": "com.kamilunavo.kintaroq",
+      "version": "1.0.0",
+      "build": "4",
+      "rawState": "IN_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-09-04T14:48:54-07:00",
+      "detail": "IN_REVIEW"
+    },
     {
       "provider": "apple",
       "appName": "NavoOps",
@@ -124,18 +136,6 @@
       "state": "live",
       "updatedAt": "2026-09-08T10:02:23-07:00",
       "detail": "READY_FOR_SALE"
-    },
-    {
-      "provider": "apple",
-      "appName": "Kintaroq",
-      "externalID": "6808796440",
-      "bundleOrPackageID": "com.kamilunavo.kintaroq",
-      "version": "1.0.0",
-      "build": "4",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-09-04T14:48:54-07:00",
-      "detail": "WAITING_FOR_REVIEW"
     },
     {
       "provider": "apple",
