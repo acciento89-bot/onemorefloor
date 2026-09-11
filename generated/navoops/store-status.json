@@ -1,10 +1,34 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-11T19:43:14Z",
+  "generatedAt": "2026-09-11T22:35:40Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "NavoOps",
+      "externalID": "6811085573",
+      "bundleOrPackageID": "com.kamilunavo.NavoOps",
+      "version": "1.3.0",
+      "build": "4",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-09-11T07:48:04-07:00",
+      "detail": "WAITING_FOR_REVIEW"
+    },
+    {
+      "provider": "apple",
+      "appName": "Kintaroq",
+      "externalID": "6808796440",
+      "bundleOrPackageID": "com.kamilunavo.kintaroq",
+      "version": "1.0.0",
+      "build": "4",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-09-04T14:48:54-07:00",
+      "detail": "READY_FOR_SALE"
+    },
     {
       "provider": "apple",
       "appName": "RohrCalc",
@@ -112,30 +136,6 @@
       "state": "rejected",
       "updatedAt": "2026-08-24T09:03:21-07:00",
       "detail": "REJECTED"
-    },
-    {
-      "provider": "apple",
-      "appName": "Kintaroq",
-      "externalID": "6808796440",
-      "bundleOrPackageID": "com.kamilunavo.kintaroq",
-      "version": "1.0.0",
-      "build": "4",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-09-04T14:48:54-07:00",
-      "detail": "READY_FOR_SALE"
-    },
-    {
-      "provider": "apple",
-      "appName": "NavoOps",
-      "externalID": "6811085573",
-      "bundleOrPackageID": "com.kamilunavo.NavoOps",
-      "version": "1.0",
-      "build": "2",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-09-11T07:48:04-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION"
     },
     {
       "provider": "apple",
