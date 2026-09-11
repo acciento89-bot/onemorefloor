@@ -1,0 +1,228 @@
+name: NavoOps Apple Analytics
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '47 * * * *'
+
+permissions:
+  contents: write
+
+env:
+  ANALYTICS_PATH: generated/navoops/apple-analytics.json
+
+concurrency:
+  group: navoops-apple-analytics-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout bridge repository
+        uses: actions/checkout@v5
+
+      - name: Prepare App Store Connect token
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          export ASC_KEY_PATH="$KEY_PATH"
+          JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v, padding: false); end
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          h = b(JSON.generate({alg: 'ES256', kid: ENV.fetch('ASC_KEY_ID'), typ: 'JWT'}))
+          p = b(JSON.generate({iss: ENV.fetch('ASC_ISSUER_ID'), iat: now, exp: now + 900, aud: 'appstoreconnect-v1'}))
+          input = "#{h}.#{p}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new, input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64, '0')].pack('H*') }.join
+          puts "#{input}.#{b(raw)}"
+          RUBY
+          )
+          echo "ASC_TOKEN=$JWT" >> "$GITHUB_ENV"
+
+      - name: Collect Apple analytics
+        env:
+          ASC_VENDOR_NUMBER: ${{ secrets.ASC_VENDOR_NUMBER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='https://api.appstoreconnect.apple.com'
+          NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          mkdir -p "$(dirname "$ANALYTICS_PATH")"
+
+          APPS=$(curl --fail-with-body -sSL -G \
+            -H "Authorization: Bearer $ASC_TOKEN" \
+            --data-urlencode 'limit=200' \
+            --data-urlencode 'fields[apps]=name,bundleId' \
+            "$API/v1/apps")
+
+          SALES_MAP='{}'
+          COMMERCIAL_AVAILABLE=false
+          NOTES='[]'
+
+          if [[ -n "${ASC_VENDOR_NUMBER:-}" ]]; then
+            SALES_GZ="$RUNNER_TEMP/apple-sales.tsv.gz"
+            if curl --fail-with-body -sSL -G \
+              -H "Authorization: Bearer $ASC_TOKEN" \
+              -H 'Accept: application/a-gzip' \
+              --data-urlencode "filter[vendorNumber]=$ASC_VENDOR_NUMBER" \
+              --data-urlencode 'filter[reportType]=SALES' \
+              --data-urlencode 'filter[reportSubType]=SUMMARY' \
+              --data-urlencode 'filter[frequency]=DAILY' \
+              --data-urlencode 'filter[version]=1_0' \
+              "$API/v1/salesReports" > "$SALES_GZ"; then
+              export SALES_GZ
+              SALES_MAP=$(python3 <<'PY'
+          import csv, gzip, json, os
+          from collections import defaultdict
+
+          result = defaultdict(lambda: {'units': 0, 'proceeds': defaultdict(float)})
+          path = os.environ['SALES_GZ']
+          try:
+              with gzip.open(path, 'rt', encoding='utf-8-sig', errors='replace', newline='') as handle:
+                  reader = csv.DictReader(handle, delimiter='\t')
+                  for row in reader:
+                      app_id = (row.get('Apple Identifier') or row.get('Apple ID') or '').strip()
+                      if not app_id:
+                          continue
+                      try:
+                          units = int(float((row.get('Units') or '0').replace(',', '.')))
+                      except ValueError:
+                          units = 0
+                      result[app_id]['units'] += units
+                      currency = (row.get('Developer Proceeds Currency') or row.get('Currency of Proceeds') or row.get('Customer Currency') or '').strip()
+                      raw = (row.get('Developer Proceeds') or '0').strip().replace(',', '.')
+                      try:
+                          value = float(raw)
+                      except ValueError:
+                          value = 0.0
+                      if currency:
+                          result[app_id]['proceeds'][currency] += value * units
+          except Exception:
+              print('{}')
+              raise SystemExit(0)
+
+          clean = {}
+          for app_id, item in result.items():
+              clean[app_id] = {
+                  'units': item['units'],
+                  'proceeds': [
+                      {'currency': currency, 'amount': round(amount, 6)}
+                      for currency, amount in sorted(item['proceeds'].items())
+                  ]
+              }
+          print(json.dumps(clean, separators=(',', ':')))
+          PY
+              )
+              COMMERCIAL_AVAILABLE=true
+            else
+              NOTES=$(jq -c '. + ["Apple Sales and Trends report could not be downloaded with the configured API role/vendor number."]' <<<"$NOTES")
+            fi
+          else
+            NOTES=$(jq -c '. + ["ASC_VENDOR_NUMBER is not configured; proceeds and sales units remain unavailable."]' <<<"$NOTES")
+          fi
+
+          ITEMS='[]'
+          while IFS=$'\t' read -r APP_ID APP_NAME BUNDLE_ID; do
+            [[ -n "$APP_ID" ]] || continue
+
+            IAPS=$(curl -sS -G \
+              -H "Authorization: Bearer $ASC_TOKEN" \
+              --data-urlencode 'limit=200' \
+              --data-urlencode 'fields[inAppPurchases]=name,productId,inAppPurchaseType,state' \
+              "$API/v1/apps/$APP_ID/inAppPurchasesV2" || printf '{"data":[]}')
+
+            GROUPS=$(curl -sS -G \
+              -H "Authorization: Bearer $ASC_TOKEN" \
+              --data-urlencode 'limit=200' \
+              --data-urlencode 'include=subscriptions' \
+              --data-urlencode 'fields[subscriptionGroups]=referenceName,subscriptions' \
+              --data-urlencode 'fields[subscriptions]=name,productId,state,subscriptionPeriod,groupLevel' \
+              "$API/v1/apps/$APP_ID/subscriptionGroups" || printf '{"data":[],"included":[]}')
+
+            IAP_COUNT=$(jq '[.data[]?] | length' <<<"$IAPS")
+            SUB_COUNT=$(jq '[.included[]? | select(.type == "subscriptions")] | length' <<<"$GROUPS")
+            IAP_ACTION=$(jq '[.data[]? | .attributes.state // "" | select(. == "DEVELOPER_ACTION_NEEDED" or . == "REJECTED" or . == "MISSING_METADATA")] | length' <<<"$IAPS")
+            SUB_ACTION=$(jq '[.included[]? | select(.type == "subscriptions") | .attributes.state // "" | select(. == "DEVELOPER_ACTION_NEEDED" or . == "REJECTED" or . == "MISSING_METADATA")] | length' <<<"$GROUPS")
+            NEEDS_ACTION=$((IAP_ACTION + SUB_ACTION))
+
+            SALES=$(jq -c --arg id "$APP_ID" '.[$id] // {}' <<<"$SALES_MAP")
+            UNITS=$(jq -r '.units // empty' <<<"$SALES")
+            PROCEEDS=$(jq -c '.proceeds // []' <<<"$SALES")
+
+            ITEM=$(jq -n \
+              --arg provider 'apple' \
+              --arg appName "$APP_NAME" \
+              --arg externalID "$APP_ID" \
+              --arg bundle "$BUNDLE_ID" \
+              --arg periodStart "$NOW" \
+              --arg periodEnd "$NOW" \
+              --arg units "$UNITS" \
+              --argjson proceeds "$PROCEEDS" \
+              --argjson subscriptions "$SUB_COUNT" \
+              --argjson oneTime "$IAP_COUNT" \
+              --argjson action "$NEEDS_ACTION" \
+              '{provider:$provider,appName:$appName,externalID:$externalID,bundleOrPackageID:$bundle,periodStart:$periodStart,periodEnd:$periodEnd,units:(if $units=="" then null else ($units|tonumber) end),downloads:null,proceeds:$proceeds,activeSubscriptions:null,subscriptionProducts:$subscriptions,oneTimeProducts:$oneTime,productsNeedingAction:$action,crashRate:null,userPerceivedCrashRate:null,anrRate:null,userPerceivedAnrRate:null,detail:"App Store Connect monetization inventory"}')
+            ITEMS=$(jq -c --argjson item "$ITEM" '. + [$item]' <<<"$ITEMS")
+          done < <(jq -r '.data[]? | [.id,.attributes.name,.attributes.bundleId] | @tsv' <<<"$APPS")
+
+          jq -n \
+            --argjson schemaVersion 1 \
+            --arg generatedAt "$NOW" \
+            --arg sourceRepository "$GITHUB_REPOSITORY" \
+            --argjson appleAvailable true \
+            --argjson googleAvailable false \
+            --argjson commercialAvailable "$COMMERCIAL_AVAILABLE" \
+            --argjson reliabilityAvailable false \
+            --argjson apps "$ITEMS" \
+            --argjson notes "$NOTES" \
+            '{schemaVersion:$schemaVersion,generatedAt:$generatedAt,sourceRepository:$sourceRepository,appleAvailable:$appleAvailable,googleAvailable:$googleAvailable,commercialAvailable:$commercialAvailable,reliabilityAvailable:$reliabilityAvailable,apps:$apps,notes:$notes}' \
+            > "$ANALYTICS_PATH"
+
+          jq empty "$ANALYTICS_PATH"
+          echo "Apple analytics snapshots: $(jq '.apps | length' "$ANALYTICS_PATH")"
+
+      - name: Commit refreshed analytics feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          SNAPSHOT="$RUNNER_TEMP/apple-analytics.json"
+          cp "$ANALYTICS_PATH" "$SNAPSHOT"
+          git config user.name 'kamilunavo-ops-bot'
+          git config user.email 'actions@users.noreply.github.com'
+
+          for attempt in 1 2 3; do
+            git fetch origin "$GITHUB_REF_NAME"
+            git reset --hard "origin/$GITHUB_REF_NAME"
+            mkdir -p "$(dirname "$ANALYTICS_PATH")"
+            cp "$SNAPSHOT" "$ANALYTICS_PATH"
+            git add "$ANALYTICS_PATH"
+            if git diff --cached --quiet; then
+              echo 'Apple analytics feed unchanged.'
+              exit 0
+            fi
+            git commit -m 'chore: refresh NavoOps Apple analytics'
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            sleep $((attempt * 2))
+          done
+          exit 1
+
+      - name: Remove App Store Connect key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
