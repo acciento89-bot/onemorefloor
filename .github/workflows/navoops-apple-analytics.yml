@@ -4,6 +4,10 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '47 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/navoops-apple-analytics.yml'
 
 permissions:
   contents: write
