@@ -21,7 +21,7 @@ concurrency:
 
 env:
   SOURCE_REPO: acciento89-bot/navoOps
-  SOURCE_REF: a178cc3ff8ca31129b7207b64c779357ca125823
+  SOURCE_REF: 64e5ab1fe6ddbe0f4572e88fcd435f1de8ea7148
   TEAM_ID: TKG684N5GL
   BUNDLE_ID: com.kamilunavo.NavoOps
   APP_VERSION: '1.0.0'
