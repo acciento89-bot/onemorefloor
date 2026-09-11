@@ -63,209 +63,286 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          API='https://api.appstoreconnect.apple.com'
-          NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
           mkdir -p "$(dirname "$ANALYTICS_PATH")"
+          test -n "${ASC_TOKEN:-}"
 
-          NOTES='[]'
-          APPLE_AVAILABLE=false
-          COMMERCIAL_AVAILABLE=false
-          MONETIZATION_AVAILABLE=false
+          ANALYTICS_PATH="$ANALYTICS_PATH" ASC_TOKEN="$ASC_TOKEN" ASC_VENDOR_NUMBER="${ASC_VENDOR_NUMBER:-}" python3 <<'PY'
+          import csv
+          import gzip
+          import io
+          import json
+          import os
+          import sys
+          import time
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          from datetime import datetime, timezone
 
-          safe_error_note() {
-            local path="$1"
-            local fallback="$2"
-            if jq -e . "$path" >/dev/null 2>&1; then
-              jq -r --arg fallback "$fallback" '(.errors[0]? | [(.status // ""), (.code // ""), (.title // ""), (.detail // "")] | map(select(length > 0)) | join(" · ")) // $fallback' "$path"
-            else
-              printf '%s' "$fallback"
-            fi
-          }
+          API = 'https://api.appstoreconnect.apple.com'
+          TOKEN = os.environ['ASC_TOKEN']
+          VENDOR = os.environ.get('ASC_VENDOR_NUMBER', '').strip()
+          FEED_PATH = os.environ['ANALYTICS_PATH']
+          NOW = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-          request_json() {
-            local output="$1"
-            local url="$2"
-            shift 2
-            curl --retry 3 --retry-all-errors --retry-delay 2 -sSL -G \
-              -o "$output" -w '%{http_code}' \
-              -H "Authorization: Bearer $ASC_TOKEN" \
-              "$@" "$url" || true
-          }
+          notes = []
+          apple_available = False
+          commercial_available = False
+          monetization_available = False
 
-          APPS_FILE="$RUNNER_TEMP/asc-apps.json"
-          APPS_HTTP=$(request_json "$APPS_FILE" "$API/v1/apps" \
-            --data-urlencode 'limit=200' \
-            --data-urlencode 'fields[apps]=name,bundleId')
+          def note(message):
+              if message not in notes:
+                  notes.append(message)
 
-          if [[ "$APPS_HTTP" =~ ^2 ]]; then
-            APPS=$(cat "$APPS_FILE")
-            APPLE_AVAILABLE=true
-            echo "App Store Connect app inventory: HTTP $APPS_HTTP"
-          elif [[ -s generated/navoops/store-status.json ]]; then
-            APPS=$(jq -c '{data:[.apps[]? | select(.provider == "apple") | {id:.externalID,attributes:{name:.appName,bundleId:.bundleOrPackageID}}]}' generated/navoops/store-status.json)
-            SAFE=$(safe_error_note "$APPS_FILE" "HTTP ${APPS_HTTP:-000}")
-            NOTES=$(jq -c --arg note "Direct Apple app inventory unavailable ($SAFE); using the latest sanitized store-status inventory as fallback." '. + [$note]' <<<"$NOTES")
-            echo "Direct app inventory unavailable: $SAFE; continuing with store-status fallback."
-          else
-            SAFE=$(safe_error_note "$APPS_FILE" "HTTP ${APPS_HTTP:-000}")
-            NOTES=$(jq -c --arg note "Apple app inventory unavailable ($SAFE); no fallback inventory exists." '. + [$note]' <<<"$NOTES")
-            APPS='{"data":[]}'
-            echo "Apple app inventory unavailable: $SAFE"
-          fi
+          def error_detail(data, fallback):
+              try:
+                  payload = json.loads(data.decode('utf-8', errors='replace')) if isinstance(data, (bytes, bytearray)) else data
+                  first = (payload.get('errors') or [{}])[0]
+                  parts = [str(first.get(key, '')).strip() for key in ('status', 'code', 'title', 'detail')]
+                  parts = [part for part in parts if part]
+                  return ' · '.join(parts) if parts else fallback
+              except Exception:
+                  return fallback
 
-          SALES_MAP='{}'
-          if [[ -n "${ASC_VENDOR_NUMBER:-}" ]]; then
-            SALES_GZ="$RUNNER_TEMP/apple-sales.tsv.gz"
-            SALES_HTTP=$(curl --retry 3 --retry-all-errors --retry-delay 2 -sSL -G \
-              -o "$SALES_GZ" -w '%{http_code}' \
-              -H "Authorization: Bearer $ASC_TOKEN" \
-              -H 'Accept: application/a-gzip' \
-              --data-urlencode "filter[vendorNumber]=$ASC_VENDOR_NUMBER" \
-              --data-urlencode 'filter[reportType]=SALES' \
-              --data-urlencode 'filter[reportSubType]=SUMMARY' \
-              --data-urlencode 'filter[frequency]=DAILY' \
-              --data-urlencode 'filter[version]=1_0' \
-              "$API/v1/salesReports" || true)
-
-            if [[ "$SALES_HTTP" =~ ^2 ]] && gzip -t "$SALES_GZ" >/dev/null 2>&1; then
-              export SALES_GZ
-              SALES_MAP=$(python3 <<'PY'
-          import csv, gzip, json, os
-          from collections import defaultdict
-
-          result = defaultdict(lambda: {'units': 0, 'proceeds': defaultdict(float)})
-          with gzip.open(os.environ['SALES_GZ'], 'rt', encoding='utf-8-sig', errors='replace', newline='') as handle:
-              reader = csv.DictReader(handle, delimiter='\t')
-              for row in reader:
-                  app_id = (row.get('Apple Identifier') or row.get('Apple ID') or '').strip()
-                  if not app_id:
-                      continue
-                  try:
-                      units = int(float((row.get('Units') or '0').replace(',', '.')))
-                  except ValueError:
-                      units = 0
-                  result[app_id]['units'] += units
-                  currency = (row.get('Developer Proceeds Currency') or row.get('Currency of Proceeds') or row.get('Customer Currency') or '').strip()
-                  raw = (row.get('Developer Proceeds') or '0').strip().replace(',', '.')
-                  try:
-                      per_unit = float(raw)
-                  except ValueError:
-                      per_unit = 0.0
-                  if currency:
-                      result[app_id]['proceeds'][currency] += per_unit * units
-
-          clean = {
-              app_id: {
-                  'units': item['units'],
-                  'proceeds': [
-                      {'currency': currency, 'amount': round(amount, 6)}
-                      for currency, amount in sorted(item['proceeds'].items())
-                  ]
+          def request(path, params=None, accept='application/json', attempts=4):
+              query = urllib.parse.urlencode(params or {}, doseq=True)
+              url = API + path + (('?' + query) if query else '')
+              headers = {
+                  'Authorization': f'Bearer {TOKEN}',
+                  'Accept': accept,
+                  'User-Agent': 'Kamilunavo-NavoOps/1.3'
               }
-              for app_id, item in result.items()
+              last_status = 0
+              last_body = b''
+              for attempt in range(attempts):
+                  try:
+                      req = urllib.request.Request(url, headers=headers, method='GET')
+                      with urllib.request.urlopen(req, timeout=45) as response:
+                          return response.status, response.read(), dict(response.headers)
+                  except urllib.error.HTTPError as exc:
+                      last_status = exc.code
+                      last_body = exc.read()
+                      if exc.code not in (429, 500, 502, 503, 504) or attempt == attempts - 1:
+                          return last_status, last_body, dict(exc.headers)
+                  except Exception as exc:
+                      last_status = 0
+                      last_body = str(exc).encode('utf-8', errors='replace')
+                      if attempt == attempts - 1:
+                          return last_status, last_body, {}
+                  time.sleep(2 ** attempt)
+              return last_status, last_body, {}
+
+          def request_json(path, params=None):
+              status, body, headers = request(path, params=params)
+              payload = None
+              if 200 <= status < 300:
+                  try:
+                      payload = json.loads(body.decode('utf-8'))
+                  except Exception:
+                      note(f'{path}: Apple returned HTTP {status} but the response was not valid JSON.')
+              return status, payload, body, headers
+
+          def paginated_json(path, params=None):
+              items = []
+              next_url = None
+              base_params = dict(params or {})
+              while True:
+                  if next_url:
+                      parsed = urllib.parse.urlparse(next_url)
+                      status, payload, body, _ = request_json(parsed.path, dict(urllib.parse.parse_qsl(parsed.query)))
+                  else:
+                      status, payload, body, _ = request_json(path, base_params)
+                  if not (200 <= status < 300) or payload is None:
+                      return status, None, body
+                  items.extend(payload.get('data') or [])
+                  next_url = ((payload.get('links') or {}).get('next'))
+                  if not next_url:
+                      break
+              return 200, {'data': items}, b''
+
+          # App inventory
+          apps_status, apps_payload, apps_body = paginated_json('/v1/apps', {
+              'limit': '200',
+              'fields[apps]': 'name,bundleId'
+          })
+
+          if apps_payload is None:
+              fallback_path = 'generated/navoops/store-status.json'
+              if os.path.exists(fallback_path):
+                  try:
+                      with open(fallback_path, 'r', encoding='utf-8') as handle:
+                          fallback = json.load(handle)
+                      apps_payload = {
+                          'data': [
+                              {
+                                  'id': item.get('externalID'),
+                                  'attributes': {
+                                      'name': item.get('appName'),
+                                      'bundleId': item.get('bundleOrPackageID')
+                                  }
+                              }
+                              for item in fallback.get('apps', [])
+                              if item.get('provider') == 'apple' and item.get('externalID')
+                          ]
+                      }
+                      note(f'Direct Apple app inventory unavailable ({error_detail(apps_body, f"HTTP {apps_status or 0}")}); using sanitized store-status inventory.')
+                  except Exception as exc:
+                      apps_payload = {'data': []}
+                      note(f'Apple app inventory unavailable and fallback could not be read: {exc}')
+              else:
+                  apps_payload = {'data': []}
+                  note(f'Apple app inventory unavailable ({error_detail(apps_body, f"HTTP {apps_status or 0}")}).')
+          else:
+              apple_available = True
+              print(f'App Store Connect app inventory: HTTP {apps_status}; apps={len(apps_payload.get("data") or [])}')
+
+          # Sales & Trends (daily report; Apple does not require reportDate for DAILY).
+          sales_map = {}
+          if VENDOR:
+              sales_status, sales_body, _ = request('/v1/salesReports', {
+                  'filter[vendorNumber]': VENDOR,
+                  'filter[reportType]': 'SALES',
+                  'filter[reportSubType]': 'SUMMARY',
+                  'filter[frequency]': 'DAILY',
+                  'filter[version]': '1_0'
+              }, accept='application/a-gzip')
+
+              if 200 <= sales_status < 300:
+                  try:
+                      raw = gzip.decompress(sales_body)
+                      reader = csv.DictReader(io.StringIO(raw.decode('utf-8-sig', errors='replace')), delimiter='\t')
+                      for row in reader:
+                          app_id = (row.get('Apple Identifier') or row.get('Apple ID') or '').strip()
+                          if not app_id:
+                              continue
+                          try:
+                              units = int(float((row.get('Units') or '0').replace(',', '.')))
+                          except (TypeError, ValueError):
+                              units = 0
+                          currency = (row.get('Developer Proceeds Currency') or row.get('Currency of Proceeds') or row.get('Customer Currency') or '').strip()
+                          try:
+                              per_unit = float((row.get('Developer Proceeds') or '0').strip().replace(',', '.'))
+                          except (TypeError, ValueError):
+                              per_unit = 0.0
+                          entry = sales_map.setdefault(app_id, {'units': 0, 'proceeds': {}})
+                          entry['units'] += units
+                          if currency:
+                              entry['proceeds'][currency] = entry['proceeds'].get(currency, 0.0) + (per_unit * units)
+                      commercial_available = True
+                      apple_available = True
+                      print(f'Apple Sales and Trends: HTTP {sales_status}; apps-with-sales={len(sales_map)}')
+                  except Exception as exc:
+                      note(f'Apple Sales and Trends returned HTTP {sales_status}, but parsing failed: {type(exc).__name__}: {exc}')
+              else:
+                  note(f'Apple Sales and Trends unavailable ({error_detail(sales_body, f"HTTP {sales_status or 0}")}). Check ASC role/vendor number.')
+          else:
+              note('ASC_VENDOR_NUMBER is not configured; Apple Sales and Trends units/proceeds remain unavailable.')
+
+          apps = []
+          monetization_failures = 0
+
+          for app in apps_payload.get('data') or []:
+              app_id = str(app.get('id') or '').strip()
+              attrs = app.get('attributes') or {}
+              app_name = str(attrs.get('name') or '').strip() or app_id
+              bundle_id = str(attrs.get('bundleId') or '').strip()
+              if not app_id:
+                  continue
+
+              iap_count = None
+              sub_count = None
+              action_count = None
+              app_action = 0
+              app_money_accessible = False
+
+              iap_status, iap_payload, iap_body = paginated_json(f'/v1/apps/{urllib.parse.quote(app_id)}/inAppPurchasesV2', {
+                  'limit': '200',
+                  'fields[inAppPurchases]': 'name,productId,inAppPurchaseType,state'
+              })
+              if iap_payload is not None:
+                  iaps = iap_payload.get('data') or []
+                  iap_count = len(iaps)
+                  app_action += sum(1 for item in iaps if ((item.get('attributes') or {}).get('state') or '') in {'DEVELOPER_ACTION_NEEDED', 'REJECTED', 'MISSING_METADATA'})
+                  app_money_accessible = True
+              else:
+                  monetization_failures += 1
+                  note(f'{app_name}: IAP inventory unavailable ({error_detail(iap_body, f"HTTP {iap_status or 0}")}).')
+
+              sub_status, sub_payload, sub_body, _ = request_json(f'/v1/apps/{urllib.parse.quote(app_id)}/subscriptionGroups', {
+                  'limit': '200',
+                  'include': 'subscriptions',
+                  'fields[subscriptionGroups]': 'referenceName,subscriptions',
+                  'fields[subscriptions]': 'name,productId,state,subscriptionPeriod,groupLevel'
+              })
+              if sub_payload is not None:
+                  subscriptions = [item for item in (sub_payload.get('included') or []) if item.get('type') == 'subscriptions']
+                  sub_count = len(subscriptions)
+                  app_action += sum(1 for item in subscriptions if ((item.get('attributes') or {}).get('state') or '') in {'DEVELOPER_ACTION_NEEDED', 'REJECTED', 'MISSING_METADATA'})
+                  app_money_accessible = True
+              else:
+                  monetization_failures += 1
+                  note(f'{app_name}: subscription inventory unavailable ({error_detail(sub_body, f"HTTP {sub_status or 0}")}).')
+
+              if app_money_accessible:
+                  monetization_available = True
+                  apple_available = True
+                  action_count = app_action
+
+              sale = sales_map.get(app_id, {})
+              proceeds = [
+                  {'currency': currency, 'amount': round(amount, 6)}
+                  for currency, amount in sorted((sale.get('proceeds') or {}).items())
+              ]
+
+              apps.append({
+                  'provider': 'apple',
+                  'appName': app_name,
+                  'externalID': app_id,
+                  'bundleOrPackageID': bundle_id,
+                  'periodStart': NOW,
+                  'periodEnd': NOW,
+                  'units': sale.get('units') if app_id in sales_map else None,
+                  'downloads': None,
+                  'proceeds': proceeds,
+                  'activeSubscriptions': None,
+                  'subscriptionProducts': sub_count,
+                  'oneTimeProducts': iap_count,
+                  'productsNeedingAction': action_count,
+                  'crashRate': None,
+                  'userPerceivedCrashRate': None,
+                  'anrRate': None,
+                  'userPerceivedAnrRate': None,
+                  'detail': 'App Store Connect inventory, monetization and Sales & Trends'
+              })
+
+          if not monetization_available:
+              note('Apple in-app purchase/subscription inventory is unavailable with the current App Store Connect API role.')
+          elif monetization_failures:
+              note(f'{monetization_failures} Apple monetization endpoint requests were unavailable; affected fields remain null.')
+
+          feed = {
+              'schemaVersion': 1,
+              'generatedAt': NOW,
+              'sourceRepository': os.environ.get('GITHUB_REPOSITORY', 'acciento89-bot/onemorefloor'),
+              'appleAvailable': apple_available,
+              'googleAvailable': False,
+              'commercialAvailable': commercial_available,
+              'reliabilityAvailable': False,
+              'apps': apps,
+              'notes': notes
           }
-          print(json.dumps(clean, separators=(',', ':')))
+
+          os.makedirs(os.path.dirname(FEED_PATH), exist_ok=True)
+          with open(FEED_PATH, 'w', encoding='utf-8') as handle:
+              json.dump(feed, handle, ensure_ascii=False, indent=2)
+              handle.write('\n')
+
+          print(f'Apple analytics snapshots: {len(apps)}')
+          print(f'Apple source available: {apple_available}; monetization: {monetization_available}; commercial: {commercial_available}')
+          print(f'Notes: {len(notes)}')
           PY
-              )
-              COMMERCIAL_AVAILABLE=true
-              APPLE_AVAILABLE=true
-              echo "Apple Sales and Trends: HTTP $SALES_HTTP"
-            else
-              SAFE=$(safe_error_note "$SALES_GZ" "HTTP ${SALES_HTTP:-000}")
-              NOTES=$(jq -c --arg note "Apple Sales and Trends unavailable ($SAFE). Check the API role and ASC_VENDOR_NUMBER." '. + [$note]' <<<"$NOTES")
-              echo "Apple Sales and Trends unavailable: $SAFE"
-            fi
-          else
-            NOTES=$(jq -c '. + ["ASC_VENDOR_NUMBER is not configured; Apple Sales and Trends units/proceeds remain unavailable."]' <<<"$NOTES")
-          fi
-
-          ITEMS='[]'
-          MONETIZATION_FAILURES=0
-          while IFS=$'\t' read -r APP_ID APP_NAME BUNDLE_ID; do
-            [[ -n "$APP_ID" ]] || continue
-
-            IAPS_FILE="$RUNNER_TEMP/iaps-${APP_ID}.json"
-            IAPS_HTTP=$(request_json "$IAPS_FILE" "$API/v1/apps/$APP_ID/inAppPurchasesV2" \
-              --data-urlencode 'limit=200' \
-              --data-urlencode 'fields[inAppPurchases]=name,productId,inAppPurchaseType,state')
-            if [[ "$IAPS_HTTP" =~ ^2 ]]; then
-              IAPS=$(cat "$IAPS_FILE")
-              IAP_COUNT_JSON=$(jq '[.data[]?] | length' <<<"$IAPS")
-              IAP_ACTION=$(jq '[.data[]? | .attributes.state // "" | select(. == "DEVELOPER_ACTION_NEEDED" or . == "REJECTED" or . == "MISSING_METADATA")] | length' <<<"$IAPS")
-              MONETIZATION_AVAILABLE=true
-              APPLE_AVAILABLE=true
-            else
-              IAP_COUNT_JSON='null'
-              IAP_ACTION=0
-              MONETIZATION_FAILURES=$((MONETIZATION_FAILURES + 1))
-            fi
-
-            GROUPS_FILE="$RUNNER_TEMP/subscriptions-${APP_ID}.json"
-            GROUPS_HTTP=$(request_json "$GROUPS_FILE" "$API/v1/apps/$APP_ID/subscriptionGroups" \
-              --data-urlencode 'limit=200' \
-              --data-urlencode 'include=subscriptions' \
-              --data-urlencode 'fields[subscriptionGroups]=referenceName,subscriptions' \
-              --data-urlencode 'fields[subscriptions]=name,productId,state,subscriptionPeriod,groupLevel')
-            if [[ "$GROUPS_HTTP" =~ ^2 ]]; then
-              GROUPS=$(cat "$GROUPS_FILE")
-              SUB_COUNT_JSON=$(jq '[.included[]? | select(.type == "subscriptions")] | length' <<<"$GROUPS")
-              SUB_ACTION=$(jq '[.included[]? | select(.type == "subscriptions") | .attributes.state // "" | select(. == "DEVELOPER_ACTION_NEEDED" or . == "REJECTED" or . == "MISSING_METADATA")] | length' <<<"$GROUPS")
-              MONETIZATION_AVAILABLE=true
-              APPLE_AVAILABLE=true
-            else
-              SUB_COUNT_JSON='null'
-              SUB_ACTION=0
-              MONETIZATION_FAILURES=$((MONETIZATION_FAILURES + 1))
-            fi
-
-            if [[ "$IAP_COUNT_JSON" == 'null' && "$SUB_COUNT_JSON" == 'null' ]]; then
-              ACTION_JSON='null'
-            else
-              ACTION_JSON=$((IAP_ACTION + SUB_ACTION))
-            fi
-
-            SALES=$(jq -c --arg id "$APP_ID" '.[$id] // {}' <<<"$SALES_MAP")
-            UNITS=$(jq -r '.units // empty' <<<"$SALES")
-            PROCEEDS=$(jq -c '.proceeds // []' <<<"$SALES")
-
-            ITEM=$(jq -n \
-              --arg provider 'apple' \
-              --arg appName "$APP_NAME" \
-              --arg externalID "$APP_ID" \
-              --arg bundle "$BUNDLE_ID" \
-              --arg periodStart "$NOW" \
-              --arg periodEnd "$NOW" \
-              --arg units "$UNITS" \
-              --argjson proceeds "$PROCEEDS" \
-              --argjson subscriptions "$SUB_COUNT_JSON" \
-              --argjson oneTime "$IAP_COUNT_JSON" \
-              --argjson action "$ACTION_JSON" \
-              '{provider:$provider,appName:$appName,externalID:$externalID,bundleOrPackageID:$bundle,periodStart:$periodStart,periodEnd:$periodEnd,units:(if $units=="" then null else ($units|tonumber) end),downloads:null,proceeds:$proceeds,activeSubscriptions:null,subscriptionProducts:$subscriptions,oneTimeProducts:$oneTime,productsNeedingAction:$action,crashRate:null,userPerceivedCrashRate:null,anrRate:null,userPerceivedAnrRate:null,detail:"App Store Connect inventory, monetization and optional Sales & Trends"}')
-            ITEMS=$(jq -c --argjson item "$ITEM" '. + [$item]' <<<"$ITEMS")
-          done < <(jq -r '.data[]? | [.id,.attributes.name,.attributes.bundleId] | @tsv' <<<"$APPS")
-
-          if [[ "$MONETIZATION_AVAILABLE" != 'true' ]]; then
-            NOTES=$(jq -c '. + ["Apple in-app purchase/subscription inventory is unavailable with the current App Store Connect API role."]' <<<"$NOTES")
-          elif (( MONETIZATION_FAILURES > 0 )); then
-            NOTES=$(jq -c --arg count "$MONETIZATION_FAILURES" '. + [($count + " Apple monetization endpoint requests were unavailable; affected fields remain null.")]' <<<"$NOTES")
-          fi
-
-          jq -n \
-            --argjson schemaVersion 1 \
-            --arg generatedAt "$NOW" \
-            --arg sourceRepository "$GITHUB_REPOSITORY" \
-            --argjson appleAvailable "$APPLE_AVAILABLE" \
-            --argjson googleAvailable false \
-            --argjson commercialAvailable "$COMMERCIAL_AVAILABLE" \
-            --argjson reliabilityAvailable false \
-            --argjson apps "$ITEMS" \
-            --argjson notes "$NOTES" \
-            '{schemaVersion:$schemaVersion,generatedAt:$generatedAt,sourceRepository:$sourceRepository,appleAvailable:$appleAvailable,googleAvailable:$googleAvailable,commercialAvailable:$commercialAvailable,reliabilityAvailable:$reliabilityAvailable,apps:$apps,notes:$notes}' \
-            > "$ANALYTICS_PATH"
 
           jq empty "$ANALYTICS_PATH"
-          echo "Apple analytics snapshots: $(jq '.apps | length' "$ANALYTICS_PATH")"
-          echo "Apple source available: $APPLE_AVAILABLE; monetization: $MONETIZATION_AVAILABLE; commercial: $COMMERCIAL_AVAILABLE"
 
       - name: Commit refreshed analytics feed
         shell: bash
