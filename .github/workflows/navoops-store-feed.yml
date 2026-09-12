@@ -96,7 +96,37 @@ jobs:
             BUILD_UPDATED=$(jq -r '.data[0].attributes.uploadedDate // empty' <<<"$BUILDS")
             PROCESSING=$(jq -r '.data[0].attributes.processingState // empty' <<<"$BUILDS")
 
+            REVIEWS=$(curl -sS -G \
+              -H "Authorization: Bearer $ASC_TOKEN" \
+              --data-urlencode 'filter[platform]=IOS' \
+              --data-urlencode 'limit=50' \
+              --data-urlencode 'include=items,appStoreVersionForReview' \
+              --data-urlencode 'fields[reviewSubmissions]=platform,submittedDate,state,items,appStoreVersionForReview' \
+              --data-urlencode 'fields[reviewSubmissionItems]=state' \
+              --data-urlencode 'fields[appStoreVersions]=versionString,appStoreState' \
+              "$API/v1/apps/$APP_ID/reviewSubmissions" || printf '{"data":[],"included":[]}')
+
+            REVIEW_ITEM=$(jq -c '
+              [.data[]? | . + {priority:
+                (if .attributes.state == "UNRESOLVED_ISSUES" then 70
+                 elif .attributes.state == "IN_REVIEW" then 60
+                 elif .attributes.state == "WAITING_FOR_REVIEW" then 50
+                 elif .attributes.state == "READY_FOR_REVIEW" then 40
+                 elif .attributes.state == "CANCELING" then 30
+                 elif .attributes.state == "COMPLETING" then 20
+                 else 10 end)}]
+              | sort_by(.priority, .attributes.submittedDate // "")
+              | reverse
+              | .[0] // null
+            ' <<<"$REVIEWS")
+            REVIEW_ID=$(jq -r '.id // empty' <<<"$REVIEW_ITEM")
+            REVIEW_STATE=$(jq -r '.attributes.state // empty' <<<"$REVIEW_ITEM")
+            REVIEW_SUBMITTED=$(jq -r '.attributes.submittedDate // empty' <<<"$REVIEW_ITEM")
+            REVIEW_ITEM_IDS=$(jq -c '.relationships.items.data // [] | map(.id)' <<<"$REVIEW_ITEM")
+            REVIEW_ITEM_STATES=$(jq -c --argjson ids "$REVIEW_ITEM_IDS" '[.included[]? | select(.type == "reviewSubmissionItems") | select(.id as $id | ($ids | index($id)) != null) | .attributes.state] | unique' <<<"$REVIEWS")
+
             if [[ -z "$UPDATED" ]]; then UPDATED="$BUILD_UPDATED"; fi
+            if [[ -z "$UPDATED" ]]; then UPDATED="$REVIEW_SUBMITTED"; fi
             if [[ -z "$UPDATED" ]]; then UPDATED="$NOW"; fi
 
             case "$RAW_STATE" in
@@ -129,6 +159,30 @@ jobs:
                 ;;
             esac
 
+            if [[ "$REVIEW_STATE" == 'UNRESOLVED_ISSUES' ]]; then
+              STATE='rejected'
+            elif [[ "$REVIEW_STATE" == 'IN_REVIEW' || "$REVIEW_STATE" == 'WAITING_FOR_REVIEW' ]]; then
+              STATE='review'
+            fi
+
+            DETAIL="$RAW_STATE"
+            if [[ -n "$REVIEW_STATE" ]]; then
+              ITEM_TEXT=$(jq -r 'join(", ")' <<<"$REVIEW_ITEM_STATES")
+              if [[ -n "$ITEM_TEXT" ]]; then
+                DETAIL="$REVIEW_STATE · $ITEM_TEXT"
+              else
+                DETAIL="$REVIEW_STATE"
+              fi
+            fi
+
+            REVIEW_JSON=$(jq -n \
+              --arg submissionID "$REVIEW_ID" \
+              --arg submissionState "$REVIEW_STATE" \
+              --arg submittedAt "$REVIEW_SUBMITTED" \
+              --argjson itemStates "$REVIEW_ITEM_STATES" \
+              --arg consoleURL "https://appstoreconnect.apple.com/apps/$APP_ID" \
+              '{submissionID:(if $submissionID=="" then null else $submissionID end),submissionState:(if $submissionState=="" then null else $submissionState end),itemStates:$itemStates,submittedAt:(if $submittedAt=="" then null else $submittedAt end),track:null,lifecycleState:null,reason:null,reasonAvailability:"consoleOnly",consoleURL:$consoleURL}')
+
             ITEM=$(jq -n \
               --arg provider 'apple' \
               --arg appName "$APP_NAME" \
@@ -139,12 +193,15 @@ jobs:
               --arg rawState "$RAW_STATE" \
               --arg state "$STATE" \
               --arg updatedAt "$UPDATED" \
-              '{provider:$provider,appName:$appName,externalID:$externalID,bundleOrPackageID:$bundle,version:(if $version=="" then null else $version end),build:(if $build=="" then null else $build end),rawState:$rawState,state:$state,updatedAt:$updatedAt,detail:$rawState}')
+              --arg detail "$DETAIL" \
+              --arg reviewState "$REVIEW_STATE" \
+              --argjson review "$REVIEW_JSON" \
+              '{provider:$provider,appName:$appName,externalID:$externalID,bundleOrPackageID:$bundle,version:(if $version=="" then null else $version end),build:(if $build=="" then null else $build end),rawState:$rawState,state:$state,updatedAt:$updatedAt,detail:$detail,review:(if $reviewState=="" then null else $review end)}')
             APPLE_ITEMS=$(jq -c --argjson item "$ITEM" '. + [$item]' <<<"$APPLE_ITEMS")
           done < <(jq -r '.data[]? | [.id,.attributes.name,.attributes.bundleId] | @tsv' <<<"$APPS")
 
           jq -n \
-            --argjson schemaVersion 1 \
+            --argjson schemaVersion 2 \
             --arg generatedAt "$NOW" \
             --arg sourceRepository "$GITHUB_REPOSITORY" \
             --argjson appleAvailable true \
@@ -155,6 +212,7 @@ jobs:
 
           jq empty "$FEED_PATH"
           echo "Apple apps in NavoOps feed: $(jq '.apps | length' "$FEED_PATH")"
+          echo "Apple apps with review data: $(jq '[.apps[] | select(.review != null)] | length' "$FEED_PATH")"
 
       - name: Commit refreshed feed
         shell: bash
@@ -174,5 +232,3 @@ jobs:
         if: always()
         shell: bash
         run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
-
-# Manual refresh marker: NavoOps 1.1 build 2 verification.
