@@ -140,6 +140,9 @@ capture_ready_state() {
   done
   echo "Timed out waiting for non-splash, non-monochrome game UI without system overlays." >&2
   current_focus >&2
+  adb shell dumpsys activity exit-info "$PACKAGE_NAME" \
+    | grep -E 'reason=|status=|description=|timestamp=' \
+    | head -20 >&2 || true
   return 1
 }
 
