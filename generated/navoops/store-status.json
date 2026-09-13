@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-13T06:10:59Z",
+  "generatedAt": "2026-09-13T11:53:38Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
@@ -317,14 +317,14 @@
       "rawState": "READY_FOR_SALE",
       "state": "live",
       "updatedAt": "2026-09-01T10:09:02-07:00",
-      "detail": "COMPLETE · APPROVED",
+      "detail": "READY_FOR_REVIEW · READY_FOR_REVIEW",
       "review": {
-        "submissionID": "9aa745a7-c9f5-4e64-ab46-a136229ca96a",
-        "submissionState": "COMPLETE",
+        "submissionID": "ee3c6c82-818e-47e8-9eca-0ca73acda05b",
+        "submissionState": "READY_FOR_REVIEW",
         "itemStates": [
-          "APPROVED"
+          "READY_FOR_REVIEW"
         ],
-        "submittedAt": "2026-09-07T08:40:46.66Z",
+        "submittedAt": null,
         "track": null,
         "lifecycleState": null,
         "reason": null,
