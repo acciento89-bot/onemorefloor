@@ -74,6 +74,11 @@ jobs:
           sed -i 's#architectures/arm64-v8a=true#architectures/arm64-v8a=false#' export_presets.cfg
           sed -i 's#architectures/armeabi-v7a=true#architectures/armeabi-v7a=false#' export_presets.cfg
           sed -i 's#architectures/x86_64=false#architectures/x86_64=true#' export_presets.cfg
+          # The Android emulator's GLES3 software driver crashes this canvas-heavy scene
+          # inside Godot's compatibility renderer. Keep production settings untouched,
+          # but export this CI-only APK through Vulkan's software implementation.
+          sed -i 's#renderer/rendering_method="gl_compatibility"#renderer/rendering_method="mobile"#' project.godot
+          sed -i 's#renderer/rendering_method.mobile="gl_compatibility"#renderer/rendering_method.mobile="mobile"#' project.godot
           mkdir -p build/android
           ./godot --headless --path . --export-debug 'Android Playtest' build/android/one-more-floor.apk
           test -s build/android/one-more-floor.apk
@@ -84,7 +89,7 @@ jobs:
           arch: x86_64
           profile: pixel_7
           disable-animations: true
-          emulator-options: -no-window -gpu software -noaudio -no-boot-anim -cores 4 -memory 4096
+          emulator-options: -no-window -gpu lavapipe -noaudio -no-boot-anim -cores 4 -memory 4096
           script: PACKAGE_NAME='de.kamilunavo.onemorefloor' APK_PATH='build/android/one-more-floor.apk' OUTPUT_DIR='store/google-play/screenshots/de-DE' SECOND_ACTION='tap' TAP_X='540' TAP_Y='1300' bash "$GITHUB_WORKSPACE/.github/scripts/capture-android-store-screenshots.sh"
       - uses: actions/upload-artifact@v4
         with:
