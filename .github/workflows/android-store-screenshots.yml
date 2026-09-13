@@ -26,8 +26,8 @@ permissions:
   contents: write
 
 env:
-  GODOT_VERSION: '4.7.1'
-  GODOT_TAG: '4.7.1-stable'
+  GODOT_VERSION: '4.7.2'
+  GODOT_TAG: '4.7.2-stable'
 
 jobs:
   capture:
