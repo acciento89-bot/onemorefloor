@@ -25,29 +25,101 @@ launch_app() {
 }
 
 visual_candidate_is_ready() {
-  local path="$1"
-  local previous="$2"
-  local dimensions colors stddev mean near_white
-  dimensions="$(identify -format '%wx%h' "$path")"
-  [[ "$dimensions" == "1080x2400" ]] || { echo "unexpected dimensions: $dimensions" >&2; return 1; }
-  colors="$(identify -format '%k' "$path")"
-  read -r stddev mean <<<"$(convert "$path" -colorspace Gray -format '%[fx:standard_deviation] %[fx:mean]' info:)"
-  near_white="$(convert "$path" -colorspace Gray -threshold 88% -format '%[fx:mean]' info:)"
-  python3 - "$stddev" "$mean" "$near_white" "$colors" <<'PY'
+  python3 - "$1" "$2" <<'PY'
+import hashlib
+import math
+import struct
 import sys
-stddev, mean, near_white = map(float, sys.argv[1:4])
-colors = int(sys.argv[4])
-if stddev < 0.07 or colors < 64:
-    raise SystemExit(f"near-monochrome frame: stddev={stddev:.4f}, colors={colors}")
-if mean < 0.10:
-    raise SystemExit(f"splash-like frame: mean={mean:.4f}")
-if near_white > 0.10:
-    raise SystemExit(f"system/fullscreen overlay-like frame: near_white={near_white:.4f}")
+import zlib
+from pathlib import Path
+
+path = Path(sys.argv[1])
+previous = Path(sys.argv[2]) if sys.argv[2] else None
+data = path.read_bytes()
+if data[:8] != b'\x89PNG\r\n\x1a\n':
+    raise SystemExit("not a PNG")
+width, height, depth, color_type = struct.unpack(">IIBB", data[16:26])
+if (width, height, depth, color_type) != (1080, 2400, 8, 6):
+    raise SystemExit(f"unexpected PNG format: {width}x{height}, depth={depth}, color={color_type}")
+
+pos = 8
+compressed = bytearray()
+while pos < len(data):
+    length = struct.unpack(">I", data[pos:pos+4])[0]
+    kind = data[pos+4:pos+8]
+    if kind == b"IDAT":
+        compressed.extend(data[pos+8:pos+8+length])
+    pos += 12 + length
+
+raw = zlib.decompress(bytes(compressed))
+stride = width * 4
+rows = []
+offset = 0
+prior = bytearray(stride)
+for _ in range(height):
+    mode = raw[offset]
+    offset += 1
+    scan = bytearray(raw[offset:offset+stride])
+    offset += stride
+    recon = bytearray(stride)
+    for i, value in enumerate(scan):
+        left = recon[i-4] if i >= 4 else 0
+        up = prior[i]
+        upper_left = prior[i-4] if i >= 4 else 0
+        if mode == 0:
+            recon[i] = value
+        elif mode == 1:
+            recon[i] = (value + left) & 255
+        elif mode == 2:
+            recon[i] = (value + up) & 255
+        elif mode == 3:
+            recon[i] = (value + ((left + up) // 2)) & 255
+        elif mode == 4:
+            p = left + up - upper_left
+            pa, pb, pc = abs(p-left), abs(p-up), abs(p-upper_left)
+            predictor = left if pa <= pb and pa <= pc else up if pb <= pc else upper_left
+            recon[i] = (value + predictor) & 255
+        else:
+            raise SystemExit(f"unsupported PNG filter {mode}")
+    rows.append(recon)
+    prior = recon
+
+luma = []
+colors = set()
+near_white = 0
+non_dark = 0
+edges = 0
+samples = 0
+prior_luma = None
+for y in range(0, height, 8):
+    row = rows[y]
+    for x in range(0, width, 8):
+        i = x * 4
+        r, g, b = row[i], row[i+1], row[i+2]
+        value = (299*r + 587*g + 114*b) / 1000
+        luma.append(value)
+        colors.add((r >> 4, g >> 4, b >> 4))
+        near_white += int(r > 225 and g > 225 and b > 225 and max(r,g,b)-min(r,g,b) < 18)
+        non_dark += int(value > 35)
+        if prior_luma is not None and abs(value-prior_luma) > 28:
+            edges += 1
+        prior_luma = value
+        samples += 1
+
+mean = sum(luma) / samples
+stddev = math.sqrt(sum((v-mean)**2 for v in luma) / samples)
+white_fraction = near_white / samples
+non_dark_fraction = non_dark / samples
+edge_fraction = edges / samples
+if stddev < 18 or len(colors) < 32:
+    raise SystemExit(f"near-monochrome frame: stddev={stddev:.2f}, colors={len(colors)}")
+if non_dark_fraction < 0.10 or edge_fraction < 0.006:
+    raise SystemExit(f"splash-like frame: non_dark={non_dark_fraction:.3f}, edges={edge_fraction:.3f}")
+if white_fraction > 0.10:
+    raise SystemExit(f"system/fullscreen overlay-like frame: near_white={white_fraction:.3f}")
+if previous and previous.exists() and hashlib.sha256(data).digest() == hashlib.sha256(previous.read_bytes()).digest():
+    raise SystemExit("frame is unchanged from previous game state")
 PY
-  if [[ -n "$previous" ]] && cmp -s "$path" "$previous"; then
-    echo "Frame is unchanged from previous game state." >&2
-    return 1
-  fi
 }
 
 capture_ready_state() {
