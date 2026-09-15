@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-15T18:12:37Z",
+  "generatedAt": "2026-09-15T21:22:33Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
@@ -10,7 +10,7 @@
       "appName": "WonderCaps",
       "externalID": "6812037765",
       "bundleOrPackageID": "com.kamilunavo.wondercaps",
-      "version": "1.0",
+      "version": "0.5.0",
       "build": "8",
       "rawState": "PREPARE_FOR_SUBMISSION",
       "state": "development",
