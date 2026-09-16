@@ -12,7 +12,7 @@ concurrency:
 
 env:
   SOURCE_REPO: acciento89-bot/Wunderkapseln
-  SOURCE_REF: 87342cf561bcbada9a2ac811298f1809ae0c2223
+  SOURCE_REF: f9dbbef244d8f4295f5bffd0851e51f374e86769
   TEAM_ID: TKG684N5GL
   BUNDLE_ID: com.kamilunavo.wondercaps
   ASC_APP_ID: '6812037765'
