@@ -6,7 +6,7 @@ on:
       build:
         description: App Store Connect build number
         required: true
-        default: '2'
+        default: '6'
   push:
     branches: [main]
     paths:
@@ -21,11 +21,11 @@ concurrency:
 
 env:
   SOURCE_REPO: acciento89-bot/navoOps
-  SOURCE_REF: 074dce0ba359bd62254f9493f241246c04869699
+  SOURCE_REF: 14b154afb1bb57a7c7cc7d33b6398787cb37790b
   TEAM_ID: TKG684N5GL
   BUNDLE_ID: com.kamilunavo.NavoOps
-  APP_VERSION: '1.1.0'
-  DEFAULT_BUILD_NUMBER: '2'
+  APP_VERSION: '1.3.1'
+  DEFAULT_BUILD_NUMBER: '6'
 
 jobs:
   upload:
@@ -72,8 +72,8 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SOURCE_REF"
           grep -q 'PRODUCT_BUNDLE_IDENTIFIER: com.kamilunavo.NavoOps' project.yml
           grep -q 'DEVELOPMENT_TEAM: TKG684N5GL' project.yml
-          grep -q 'MARKETING_VERSION: 1.1.0' project.yml
-          grep -q 'CURRENT_PROJECT_VERSION: 2' project.yml
+          grep -q 'MARKETING_VERSION: 1.3.1' project.yml
+          grep -q 'CURRENT_PROJECT_VERSION: 6' project.yml
           test -f NavoOps/Info.plist
           test -f NavoOps/Resources/PrivacyInfo.xcprivacy
           test -f NavoOps/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json
