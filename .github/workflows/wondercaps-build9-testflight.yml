@@ -61,8 +61,10 @@ jobs:
           npm run check:build -- --source-only
           node - <<'NODE'
           const app = require('./app.json').expo;
-          if (app.name !== 'WonderCaps') throw new Error('Wrong app name');
+          if (app.name !== 'Wunderkapseln') throw new Error('Wrong shared Expo app name');
           if (app.ios.bundleIdentifier !== process.env.BUNDLE_ID) throw new Error('Wrong bundle identifier');
+          if (app.ios.infoPlist?.CFBundleDisplayName !== 'WonderCaps') throw new Error('Wrong iOS display name');
+          if (app.ios.infoPlist?.CFBundleName !== 'WonderCaps') throw new Error('Wrong iOS bundle name');
           if (app.version !== process.env.APP_VERSION) throw new Error('Wrong marketing version');
           if (String(app.ios.buildNumber) !== process.env.BUILD_NUMBER) throw new Error('Wrong build number');
           NODE
