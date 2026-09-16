@@ -1,0 +1,252 @@
+name: WonderCaps Build 9 TestFlight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wondercaps-build9-testflight
+  cancel-in-progress: false
+
+env:
+  SOURCE_REPO: acciento89-bot/Wunderkapseln
+  SOURCE_REF: ecc28c519ab0f7e0ae9c279b59e1cdefc982b348
+  TEAM_ID: TKG684N5GL
+  BUNDLE_ID: com.kamilunavo.wondercaps
+  ASC_APP_ID: '6812037765'
+  APP_VERSION: '0.5.0'
+  BUILD_NUMBER: '9'
+
+jobs:
+  upload:
+    name: Build, sign and upload WonderCaps 0.5.0 (9)
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - name: Check App Store Connect credentials
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_PRIVATE_KEY_B64"
+
+      - name: Checkout exact WonderCaps source
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.SOURCE_REPO }}
+          ref: ${{ env.SOURCE_REF }}
+          path: source
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: source/package-lock.json
+
+      - name: Install and verify source
+        working-directory: source
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_REF"
+          npm ci
+          npm test
+          npm run check:build -- --source-only
+          node - <<'NODE'
+          const app = require('./app.json').expo;
+          if (app.name !== 'WonderCaps') throw new Error('Wrong app name');
+          if (app.ios.bundleIdentifier !== process.env.BUNDLE_ID) throw new Error('Wrong bundle identifier');
+          if (app.version !== process.env.APP_VERSION) throw new Error('Wrong marketing version');
+          if (String(app.ios.buildNumber) !== process.env.BUILD_NUMBER) throw new Error('Wrong build number');
+          NODE
+
+      - name: Generate native iOS project
+        working-directory: source
+        env:
+          CI: '1'
+        run: |
+          set -euo pipefail
+          npm run assets
+          npx --no-install expo prebuild --platform ios --clean --no-install
+          cd ios
+          pod install --repo-update
+
+      - name: Resolve workspace and scheme
+        working-directory: source
+        run: |
+          set -euo pipefail
+          WORKSPACE=$(find ios -maxdepth 1 -type d -name '*.xcworkspace' -print -quit)
+          test -n "$WORKSPACE"
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          xcodebuild -workspace "$WORKSPACE" -list -json > "$RUNNER_TEMP/xcode-list.json"
+          jq -e --arg scheme "$SCHEME" '.workspace.schemes | index($scheme) != null' "$RUNNER_TEMP/xcode-list.json" >/dev/null
+          echo "XCODE_WORKSPACE=$WORKSPACE" >> "$GITHUB_ENV"
+          echo "XCODE_SCHEME=$SCHEME" >> "$GITHUB_ENV"
+
+      - name: Build simulator release gate
+        working-directory: source
+        run: |
+          set -euo pipefail
+          xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+
+      - name: Prepare App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY_B64: ${{ secrets.ASC_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          KEY_PATH="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          grep -q 'BEGIN PRIVATE KEY' "$KEY_PATH"
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          cp "$KEY_PATH" "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Verify Apple app and consumables
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          make_jwt() {
+            ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v, padding: false); end
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          h = b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p = b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'}))
+          input = "#{h}.#{p}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{input}.#{b(raw)}"
+          RUBY
+          }
+          JWT=$(make_jwt)
+          APPS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $JWT" --data-urlencode "filter[bundleId]=$BUNDLE_ID" --data-urlencode 'limit=10' 'https://api.appstoreconnect.apple.com/v1/apps')
+          test "$(jq -r '.data[0].id // empty' <<<"$APPS")" = "$ASC_APP_ID"
+          IAPS=$(curl --fail-with-body -sS -H "Authorization: Bearer $JWT" "https://api.appstoreconnect.apple.com/v1/apps/$ASC_APP_ID/inAppPurchasesV2?limit=200")
+          for product in wk_lives_5 wk_time_60 wk_time_240; do
+            jq -e --arg p "$product" '.data[] | select(.attributes.productId == $p and .attributes.inAppPurchaseType == "CONSUMABLE")' <<<"$IAPS" >/dev/null
+          done
+
+      - name: Create unsigned archive
+        working-directory: source
+        run: |
+          set -euo pipefail
+          ARCHIVE="$RUNNER_TEMP/WonderCaps.xcarchive"
+          rm -rf "$ARCHIVE"
+          xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration Release -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" DEVELOPMENT_TEAM="$TEAM_ID" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" MARKETING_VERSION="$APP_VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" INFOPLIST_KEY_ITSAppUsesNonExemptEncryption=NO CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' archive
+          APP=$(find "$ARCHIVE/Products/Applications" -maxdepth 1 -type d -name '*.app' -print -quit)
+          test -d "$APP"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -Fx "$BUNDLE_ID"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -Fx "$APP_VERSION"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -Fx "$BUILD_NUMBER"
+          echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+
+      - name: Create export options
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>method</key><string>app-store-connect</string>
+          <key>destination</key><string>export</string>
+          <key>signingStyle</key><string>automatic</string>
+          <key>teamID</key><string>$TEAM_ID</string>
+          <key>uploadSymbols</key><true/>
+          <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+
+      - name: Cloud-sign IPA
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          EXPORT_PATH="$RUNNER_TEMP/TestFlightExport"
+          rm -rf "$EXPORT_PATH"
+          xcodebuild -exportArchive -archivePath "$ARCHIVE" -exportPath "$EXPORT_PATH" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" 2>&1 | tee "$RUNNER_TEMP/export.log"
+          IPA=$(find "$EXPORT_PATH" -maxdepth 2 -type f -name '*.ipa' -print -quit)
+          test -s "$IPA"
+          echo "SIGNED_IPA=$IPA" >> "$GITHUB_ENV"
+
+      - name: Verify distribution IPA
+        run: |
+          set -euo pipefail
+          PAYLOAD="$RUNNER_TEMP/SignedPayload"
+          rm -rf "$PAYLOAD"
+          mkdir -p "$PAYLOAD"
+          unzip -q "$SIGNED_IPA" -d "$PAYLOAD"
+          APP=$(find "$PAYLOAD/Payload" -maxdepth 1 -type d -name '*.app' -print -quit)
+          test -d "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          grep -q '^Authority=Apple Distribution' < <(codesign -dvv "$APP" 2>&1)
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -Fx "$BUNDLE_ID"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -Fx "$BUILD_NUMBER"
+
+      - name: Upload to TestFlight
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          xcrun altool --upload-app --type ios -f "$SIGNED_IPA" --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" 2>&1 | tee "$RUNNER_TEMP/upload.log"
+
+      - name: Confirm TestFlight receipt
+        env:
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 60); do
+            JWT=$(ruby <<'RUBY'
+          require 'openssl'; require 'base64'; require 'json'
+          def b(v); Base64.urlsafe_encode64(v, padding: false); end
+          key = OpenSSL::PKey.read(File.read(ENV.fetch('ASC_KEY_PATH')))
+          now = Time.now.to_i
+          h = b(JSON.generate({alg:'ES256',kid:ENV.fetch('ASC_KEY_ID'),typ:'JWT'}))
+          p = b(JSON.generate({iss:ENV.fetch('ASC_ISSUER_ID'),iat:now,exp:now+900,aud:'appstoreconnect-v1'}))
+          input = "#{h}.#{p}"
+          seq = OpenSSL::ASN1.decode(key.sign(OpenSSL::Digest::SHA256.new,input))
+          raw = seq.value.map { |i| [i.value.to_i.to_s(16).rjust(64,'0')].pack('H*') }.join
+          puts "#{input}.#{b(raw)}"
+          RUBY
+          )
+            BUILDS=$(curl --fail-with-body -sS -G -H "Authorization: Bearer $JWT" --data-urlencode "filter[app]=$ASC_APP_ID" --data-urlencode "filter[version]=$BUILD_NUMBER" --data-urlencode 'sort=-uploadedDate' --data-urlencode 'limit=10' --data-urlencode 'fields[builds]=version,uploadedDate,processingState' 'https://api.appstoreconnect.apple.com/v1/builds')
+            if test "$(jq '.data | length' <<<"$BUILDS")" -gt 0; then
+              jq -r '.data[0].attributes | "WonderCaps build 9 reached TestFlight: \(.processingState)"' <<<"$BUILDS"
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wondercaps-build9-testflight-diagnostics
+          path: |
+            ${{ runner.temp }}/export.log
+            ${{ runner.temp }}/upload.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Remove App Store Connect key
+        if: always()
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+          if [[ -n "${ASC_KEY_ID:-}" ]]; then rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"; fi
