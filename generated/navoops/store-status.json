@@ -1,10 +1,87 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-16T22:56:35Z",
+  "generatedAt": "2026-09-17T01:26:00Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "99,9%",
+      "externalID": "6804225589",
+      "bundleOrPackageID": "de.kamilunavo.ninenine",
+      "version": "1.0",
+      "build": "19",
+      "rawState": "REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-08-22T06:43:53-07:00",
+      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
+      "review": {
+        "submissionID": "a78428f9-a7f8-4c6d-a8e4-2f21b607d7d2",
+        "submissionState": "UNRESOLVED_ISSUES",
+        "itemStates": [
+          "READY_FOR_REVIEW",
+          "REJECTED"
+        ],
+        "submittedAt": "2026-09-14T16:46:08.709Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6804225589"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Family Life OS",
+      "externalID": "6803079524",
+      "bundleOrPackageID": "de.kamilunavo.familyprototype",
+      "version": "0.1.0",
+      "build": "9",
+      "rawState": "REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-08-19T04:59:27-07:00",
+      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
+      "review": {
+        "submissionID": "3b4e487e-d776-471e-abff-0fae824a72cd",
+        "submissionState": "UNRESOLVED_ISSUES",
+        "itemStates": [
+          "READY_FOR_REVIEW",
+          "REJECTED"
+        ],
+        "submittedAt": "2026-09-14T11:28:35.489Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803079524"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "NavoPass",
+      "externalID": "6808345429",
+      "bundleOrPackageID": "de.kamilunavo.navopass",
+      "version": "1.0",
+      "build": "5",
+      "rawState": "REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-09-03T12:35:50-07:00",
+      "detail": "UNRESOLVED_ISSUES · REJECTED",
+      "review": {
+        "submissionID": "db65544b-91ce-41ac-a695-3c2292cdb1a7",
+        "submissionState": "UNRESOLVED_ISSUES",
+        "itemStates": [
+          "REJECTED"
+        ],
+        "submittedAt": "2026-09-14T11:31:15.903Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6808345429"
+      }
+    },
     {
       "provider": "apple",
       "appName": "NavoOps",
@@ -66,81 +143,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6807486805"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "99,9%",
-      "externalID": "6804225589",
-      "bundleOrPackageID": "de.kamilunavo.ninenine",
-      "version": "1.0",
-      "build": "19",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-08-22T06:43:53-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "a78428f9-a7f8-4c6d-a8e4-2f21b607d7d2",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-09-14T16:46:08.709Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6804225589"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "NavoPass",
-      "externalID": "6808345429",
-      "bundleOrPackageID": "de.kamilunavo.navopass",
-      "version": "1.0",
-      "build": "5",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-09-03T12:35:50-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "db65544b-91ce-41ac-a695-3c2292cdb1a7",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-09-14T11:31:15.903Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6808345429"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Family Life OS",
-      "externalID": "6803079524",
-      "bundleOrPackageID": "de.kamilunavo.familyprototype",
-      "version": "0.1.0",
-      "build": "9",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-08-19T04:59:27-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "3b4e487e-d776-471e-abff-0fae824a72cd",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-09-14T11:28:35.489Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803079524"
       }
     },
     {
