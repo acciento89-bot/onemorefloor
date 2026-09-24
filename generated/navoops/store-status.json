@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-24T15:07:12Z",
+  "generatedAt": "2026-09-24T19:10:53Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
@@ -12,13 +12,13 @@
       "bundleOrPackageID": "com.kamilunavo.NavoOps",
       "version": "1.3.1",
       "build": "6",
-      "rawState": "WAITING_FOR_REVIEW",
+      "rawState": "IN_REVIEW",
       "state": "review",
       "updatedAt": "2026-09-11T07:48:04-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "detail": "IN_REVIEW · READY_FOR_REVIEW",
       "review": {
         "submissionID": "5ede7f1b-944a-4d4b-bf36-bfaee6690081",
-        "submissionState": "WAITING_FOR_REVIEW",
+        "submissionState": "IN_REVIEW",
         "itemStates": [
           "READY_FOR_REVIEW"
         ],
