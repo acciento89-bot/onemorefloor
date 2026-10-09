@@ -1,10 +1,36 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-09T02:10:42Z",
+  "generatedAt": "2026-10-09T09:05:40Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Rising Steps",
+      "externalID": "6819872415",
+      "bundleOrPackageID": "com.kamilunavo.risingsteps",
+      "version": "1.0",
+      "build": "2",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-06T14:41:17-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
+      "appName": "Perfect Drop",
+      "externalID": "6819872064",
+      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
+      "version": "1.0",
+      "build": "7",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-06T14:39:19-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
     {
       "provider": "apple",
       "appName": "Repair Empire",
@@ -28,32 +54,6 @@
       "rawState": "PREPARE_FOR_SUBMISSION",
       "state": "development",
       "updatedAt": "2026-10-06T14:40:25-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "Rising Steps",
-      "externalID": "6819872415",
-      "bundleOrPackageID": "com.kamilunavo.risingsteps",
-      "version": "1.0",
-      "build": "1",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-06T14:41:17-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "Perfect Drop",
-      "externalID": "6819872064",
-      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
-      "version": "1.0",
-      "build": "6",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-06T14:39:19-07:00",
       "detail": "PREPARE_FOR_SUBMISSION",
       "review": null
     },
