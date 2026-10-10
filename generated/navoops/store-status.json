@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-10T13:43:11Z",
+  "generatedAt": "2026-10-10T18:36:39Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
@@ -11,23 +11,10 @@
       "externalID": "6819872064",
       "bundleOrPackageID": "com.kamilunavo.perfectdrop",
       "version": "1.0",
-      "build": "9",
+      "build": "10",
       "rawState": "PREPARE_FOR_SUBMISSION",
       "state": "development",
       "updatedAt": "2026-10-06T14:39:19-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "Repair Empire",
-      "externalID": "6819872687",
-      "bundleOrPackageID": "com.kamilunavo.repairempire",
-      "version": "1.0",
-      "build": "3",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-06T14:42:17-07:00",
       "detail": "PREPARE_FOR_SUBMISSION",
       "review": null
     },
@@ -37,7 +24,7 @@
       "externalID": "6819872214",
       "bundleOrPackageID": "com.kamilunavo.onemorefloor",
       "version": "1.0",
-      "build": "4",
+      "build": "5",
       "rawState": "PREPARE_FOR_SUBMISSION",
       "state": "development",
       "updatedAt": "2026-10-06T14:40:25-07:00",
@@ -50,10 +37,48 @@
       "externalID": "6819872415",
       "bundleOrPackageID": "com.kamilunavo.risingsteps",
       "version": "1.0",
-      "build": "4",
+      "build": "5",
       "rawState": "PREPARE_FOR_SUBMISSION",
       "state": "development",
       "updatedAt": "2026-10-06T14:41:17-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
+      "appName": "Reklaio",
+      "externalID": "6799375798",
+      "bundleOrPackageID": "de.kamilunavo.reklaio",
+      "version": "0.4.1",
+      "build": "7",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-08-08T01:39:54-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "cec03f62-b529-4473-9502-662ea0f83968",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-08T17:52:59.991Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6799375798"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Repair Empire",
+      "externalID": "6819872687",
+      "bundleOrPackageID": "com.kamilunavo.repairempire",
+      "version": "1.0",
+      "build": "3",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-06T14:42:17-07:00",
       "detail": "PREPARE_FOR_SUBMISSION",
       "review": null
     },
@@ -520,31 +545,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6806348716"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Reklaio",
-      "externalID": "6799375798",
-      "bundleOrPackageID": "de.kamilunavo.reklaio",
-      "version": "0.4.1",
-      "build": "7",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-08T01:39:54-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "cec03f62-b529-4473-9502-662ea0f83968",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-08T17:52:59.991Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6799375798"
       }
     },
     {
