@@ -1,10 +1,35 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-13T21:15:18Z",
+  "generatedAt": "2026-10-14T00:20:07Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "One More Floor",
+      "externalID": "6819872214",
+      "bundleOrPackageID": "com.kamilunavo.onemorefloor",
+      "version": "1.0",
+      "build": "6",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-06T14:40:25-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "a5e537c0-a31a-47e3-8e0c-727590b3f99f",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-13T22:22:05.297Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872214"
+      }
+    },
     {
       "provider": "apple",
       "appName": "Perfect Drop",
@@ -12,17 +37,17 @@
       "bundleOrPackageID": "com.kamilunavo.perfectdrop",
       "version": "1.0",
       "build": "12",
-      "rawState": "READY_FOR_REVIEW",
-      "state": "development",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
       "updatedAt": "2026-10-06T14:39:19-07:00",
-      "detail": "READY_FOR_REVIEW · READY_FOR_REVIEW",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
       "review": {
         "submissionID": "f3a143e9-5768-4b45-b9fc-df1713687add",
-        "submissionState": "READY_FOR_REVIEW",
+        "submissionState": "WAITING_FOR_REVIEW",
         "itemStates": [
           "READY_FOR_REVIEW"
         ],
-        "submittedAt": null,
+        "submittedAt": "2026-10-13T21:19:56.138Z",
         "track": null,
         "lifecycleState": null,
         "reason": null,
@@ -65,19 +90,6 @@
       "rawState": "PREPARE_FOR_SUBMISSION",
       "state": "development",
       "updatedAt": "2026-10-06T14:42:17-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "One More Floor",
-      "externalID": "6819872214",
-      "bundleOrPackageID": "com.kamilunavo.onemorefloor",
-      "version": "1.0",
-      "build": "5",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-06T14:40:25-07:00",
       "detail": "PREPARE_FOR_SUBMISSION",
       "review": null
     },
