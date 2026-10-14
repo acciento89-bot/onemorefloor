@@ -1,33 +1,33 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-14T20:41:58Z",
+  "generatedAt": "2026-10-14T23:55:07Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
     {
       "provider": "apple",
-      "appName": "Rising Steps",
-      "externalID": "6819872415",
-      "bundleOrPackageID": "com.kamilunavo.risingsteps",
+      "appName": "Perfect Drop",
+      "externalID": "6819872064",
+      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
       "version": "1.0",
-      "build": "6",
-      "rawState": "READY_FOR_REVIEW",
-      "state": "development",
-      "updatedAt": "2026-10-06T14:41:17-07:00",
-      "detail": "READY_FOR_REVIEW · READY_FOR_REVIEW",
+      "build": "13",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-06T14:39:19-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
       "review": {
-        "submissionID": "401b5ec7-127e-4879-92c3-143f4e29b9a3",
-        "submissionState": "READY_FOR_REVIEW",
+        "submissionID": "14167654-8d95-43a6-a034-4868e52378eb",
+        "submissionState": "WAITING_FOR_REVIEW",
         "itemStates": [
           "READY_FOR_REVIEW"
         ],
-        "submittedAt": null,
+        "submittedAt": "2026-10-14T22:52:28.453Z",
         "track": null,
         "lifecycleState": null,
         "reason": null,
         "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872415"
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
       }
     },
     {
@@ -58,27 +58,27 @@
     },
     {
       "provider": "apple",
-      "appName": "Perfect Drop",
-      "externalID": "6819872064",
-      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
+      "appName": "Rising Steps",
+      "externalID": "6819872415",
+      "bundleOrPackageID": "com.kamilunavo.risingsteps",
       "version": "1.0",
-      "build": "12",
-      "rawState": "DEVELOPER_REJECTED",
-      "state": "rejected",
-      "updatedAt": "2026-10-06T14:39:19-07:00",
-      "detail": "COMPLETE · REMOVED",
+      "build": "6",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-06T14:41:17-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
       "review": {
-        "submissionID": "f3a143e9-5768-4b45-b9fc-df1713687add",
-        "submissionState": "COMPLETE",
+        "submissionID": "401b5ec7-127e-4879-92c3-143f4e29b9a3",
+        "submissionState": "WAITING_FOR_REVIEW",
         "itemStates": [
-          "REMOVED"
+          "READY_FOR_REVIEW"
         ],
-        "submittedAt": "2026-10-13T21:19:56.138Z",
+        "submittedAt": "2026-10-14T20:50:19.635Z",
         "track": null,
         "lifecycleState": null,
         "reason": null,
         "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872415"
       }
     },
     {
