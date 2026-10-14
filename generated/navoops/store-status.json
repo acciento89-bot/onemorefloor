@@ -1,10 +1,35 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-14T00:20:07Z",
+  "generatedAt": "2026-10-14T06:09:08Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Perfect Drop",
+      "externalID": "6819872064",
+      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
+      "version": "1.0",
+      "build": "12",
+      "rawState": "DEVELOPER_REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-10-06T14:39:19-07:00",
+      "detail": "COMPLETE · REMOVED",
+      "review": {
+        "submissionID": "f3a143e9-5768-4b45-b9fc-df1713687add",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "REMOVED"
+        ],
+        "submittedAt": "2026-10-13T21:19:56.138Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
+      }
+    },
     {
       "provider": "apple",
       "appName": "One More Floor",
@@ -28,31 +53,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6819872214"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Perfect Drop",
-      "externalID": "6819872064",
-      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
-      "version": "1.0",
-      "build": "12",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-06T14:39:19-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "f3a143e9-5768-4b45-b9fc-df1713687add",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-13T21:19:56.138Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
       }
     },
     {
