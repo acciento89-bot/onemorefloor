@@ -1,10 +1,61 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-14T17:11:29Z",
+  "generatedAt": "2026-10-14T20:41:58Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Rising Steps",
+      "externalID": "6819872415",
+      "bundleOrPackageID": "com.kamilunavo.risingsteps",
+      "version": "1.0",
+      "build": "6",
+      "rawState": "READY_FOR_REVIEW",
+      "state": "development",
+      "updatedAt": "2026-10-06T14:41:17-07:00",
+      "detail": "READY_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "401b5ec7-127e-4879-92c3-143f4e29b9a3",
+        "submissionState": "READY_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": null,
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872415"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "One More Floor",
+      "externalID": "6819872214",
+      "bundleOrPackageID": "com.kamilunavo.onemorefloor",
+      "version": "1.0",
+      "build": "6",
+      "rawState": "REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-10-06T14:40:25-07:00",
+      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
+      "review": {
+        "submissionID": "a5e537c0-a31a-47e3-8e0c-727590b3f99f",
+        "submissionState": "UNRESOLVED_ISSUES",
+        "itemStates": [
+          "READY_FOR_REVIEW",
+          "REJECTED"
+        ],
+        "submittedAt": "2026-10-13T22:22:05.297Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872214"
+      }
+    },
     {
       "provider": "apple",
       "appName": "Perfect Drop",
@@ -28,31 +79,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "One More Floor",
-      "externalID": "6819872214",
-      "bundleOrPackageID": "com.kamilunavo.onemorefloor",
-      "version": "1.0",
-      "build": "6",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-06T14:40:25-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "a5e537c0-a31a-47e3-8e0c-727590b3f99f",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-13T22:22:05.297Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872214"
       }
     },
     {
@@ -90,19 +116,6 @@
       "rawState": "PREPARE_FOR_SUBMISSION",
       "state": "development",
       "updatedAt": "2026-10-06T14:42:17-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "Rising Steps",
-      "externalID": "6819872415",
-      "bundleOrPackageID": "com.kamilunavo.risingsteps",
-      "version": "1.0",
-      "build": "5",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-06T14:41:17-07:00",
       "detail": "PREPARE_FOR_SUBMISSION",
       "review": null
     },
