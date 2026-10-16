@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-16T12:25:59Z",
+  "generatedAt": "2026-10-16T17:24:43Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
@@ -11,18 +11,18 @@
       "externalID": "6804749223",
       "bundleOrPackageID": "de.kamilunavo.servicecheck",
       "version": "1.0",
-      "build": "5",
-      "rawState": "REJECTED",
-      "state": "rejected",
+      "build": "6",
+      "rawState": "READY_FOR_REVIEW",
+      "state": "development",
       "updatedAt": "2026-08-24T09:08:15-07:00",
-      "detail": "UNRESOLVED_ISSUES · REJECTED",
+      "detail": "READY_FOR_REVIEW · READY_FOR_REVIEW",
       "review": {
-        "submissionID": "9b8822d1-1ecb-4403-8f54-b308643a298a",
-        "submissionState": "UNRESOLVED_ISSUES",
+        "submissionID": "5ae9147d-4dfd-47c6-8c0a-3894c4a1a94d",
+        "submissionState": "READY_FOR_REVIEW",
         "itemStates": [
-          "REJECTED"
+          "READY_FOR_REVIEW"
         ],
-        "submittedAt": "2026-09-04T18:42:56.777Z",
+        "submittedAt": null,
         "track": null,
         "lifecycleState": null,
         "reason": null,
