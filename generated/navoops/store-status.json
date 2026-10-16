@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-16T07:10:38Z",
+  "generatedAt": "2026-10-16T12:25:59Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
@@ -11,7 +11,7 @@
       "externalID": "6804749223",
       "bundleOrPackageID": "de.kamilunavo.servicecheck",
       "version": "1.0",
-      "build": "4",
+      "build": "5",
       "rawState": "REJECTED",
       "state": "rejected",
       "updatedAt": "2026-08-24T09:08:15-07:00",
