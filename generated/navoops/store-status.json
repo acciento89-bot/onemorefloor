@@ -1,10 +1,35 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-16T01:21:27Z",
+  "generatedAt": "2026-10-16T07:10:38Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "SHK Werkstatt",
+      "externalID": "6804749223",
+      "bundleOrPackageID": "de.kamilunavo.servicecheck",
+      "version": "1.0",
+      "build": "4",
+      "rawState": "REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-08-24T09:08:15-07:00",
+      "detail": "UNRESOLVED_ISSUES · REJECTED",
+      "review": {
+        "submissionID": "9b8822d1-1ecb-4403-8f54-b308643a298a",
+        "submissionState": "UNRESOLVED_ISSUES",
+        "itemStates": [
+          "REJECTED"
+        ],
+        "submittedAt": "2026-09-04T18:42:56.777Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6804749223"
+      }
+    },
     {
       "provider": "apple",
       "appName": "One More Floor",
@@ -306,31 +331,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6804748249"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "AnlagenCheck",
-      "externalID": "6804749223",
-      "bundleOrPackageID": "de.kamilunavo.servicecheck",
-      "version": "1.0",
-      "build": "4",
-      "rawState": "REJECTED",
-      "state": "rejected",
-      "updatedAt": "2026-08-24T09:08:15-07:00",
-      "detail": "UNRESOLVED_ISSUES · REJECTED",
-      "review": {
-        "submissionID": "9b8822d1-1ecb-4403-8f54-b308643a298a",
-        "submissionState": "UNRESOLVED_ISSUES",
-        "itemStates": [
-          "REJECTED"
-        ],
-        "submittedAt": "2026-09-04T18:42:56.777Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6804749223"
       }
     },
     {
