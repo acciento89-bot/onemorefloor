@@ -1,10 +1,23 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-19T21:03:33Z",
+  "generatedAt": "2026-10-20T00:20:39Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Gildenfunke: Helden & Gilde",
+      "externalID": "6824671509",
+      "bundleOrPackageID": "com.kamilunavo.gildenfunke",
+      "version": "0.1.0",
+      "build": "1",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-19T14:27:39-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
     {
       "provider": "apple",
       "appName": "Runenpfad: Karten & Dungeons",
