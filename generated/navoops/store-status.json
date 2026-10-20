@@ -1,10 +1,60 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T11:37:57Z",
+  "generatedAt": "2026-10-20T17:08:24Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "KeepMeter: Käufe & Rückgabe",
+      "externalID": "6803227186",
+      "bundleOrPackageID": "de.kamilunavo.keepmeter",
+      "version": "1.1.0",
+      "build": "4",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-20T09:56:52-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "4b8acde5-90a1-4cb7-99da-228e740ff78d",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-09-08T17:19:47.493Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803227186"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "NavoTap",
+      "externalID": "6803636049",
+      "bundleOrPackageID": "com.kamilunavo.onemoretap",
+      "version": "1.0",
+      "build": "6",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-08-20T12:26:25-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "b57f5ed4-34af-4cf2-9f58-5699b302d2ce",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-21T19:36:45.934Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
+      }
+    },
     {
       "provider": "apple",
       "appName": "Gildenfunke: Helden & Gilde",
@@ -400,31 +450,6 @@
     },
     {
       "provider": "apple",
-      "appName": "KeepMeter",
-      "externalID": "6803227186",
-      "bundleOrPackageID": "de.kamilunavo.keepmeter",
-      "version": "1.0.3",
-      "build": "4",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-09-08T10:02:23-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "4b8acde5-90a1-4cb7-99da-228e740ff78d",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-09-08T17:19:47.493Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803227186"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "ArbeitsKlar",
       "externalID": "6806348774",
       "bundleOrPackageID": "de.kamilunavo.arbeitsklar",
@@ -534,31 +559,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6803765449"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "NavoTap",
-      "externalID": "6803636049",
-      "bundleOrPackageID": "com.kamilunavo.onemoretap",
-      "version": "1.0",
-      "build": "6",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-20T12:26:25-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "b57f5ed4-34af-4cf2-9f58-5699b302d2ce",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-21T19:36:45.934Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
       }
     },
     {
