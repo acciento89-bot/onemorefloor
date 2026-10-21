@@ -1,10 +1,410 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-21T10:09:16Z",
+  "generatedAt": "2026-10-21T15:15:16Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "ArbeitsKlar: Zeiterfassung",
+      "externalID": "6806348774",
+      "bundleOrPackageID": "de.kamilunavo.arbeitsklar",
+      "version": "1.1.0",
+      "build": "4",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-20T20:20:26-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "789af490-7a7e-49ba-901e-36123406b38c",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-21T14:45:34.863Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6806348774"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "BrennerCalc: Brenner & SHK",
+      "externalID": "6801656652",
+      "bundleOrPackageID": "de.kamilunavo.brennercalc",
+      "version": "1.1.0",
+      "build": "4",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-21T01:09:40-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "f5cae342-279f-4702-8979-6cb2cde9a2d8",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-21T14:38:15.366Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801656652"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "HydroCalc: Heizung & Hydraulik",
+      "externalID": "6801788464",
+      "bundleOrPackageID": "de.kamilunavo.hydrocalc",
+      "version": "1.1.0",
+      "build": "3",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-21T00:00:49-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "d92c94e6-f48d-424b-a02e-638efa7fde92",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-21T14:34:12.296Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801788464"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "MAGCalc: Ausdehnungsgefäße",
+      "externalID": "6801678865",
+      "bundleOrPackageID": "de.kamilunavo.magcalc",
+      "version": "1.1.0",
+      "build": "4",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-20T23:14:44-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "c198449b-b45e-4c64-a4cb-4b144b0c2e7a",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-21T14:31:05.335Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801678865"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Perfect Drop: Turm stapeln",
+      "externalID": "6819872064",
+      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
+      "version": "1.1.0",
+      "build": "13",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T05:42:10-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "14167654-8d95-43a6-a034-4868e52378eb",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-14T22:52:28.453Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Rising Steps: Inselabenteuer",
+      "externalID": "6819872415",
+      "bundleOrPackageID": "com.kamilunavo.risingsteps",
+      "version": "1.1.0",
+      "build": "7",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T05:39:24-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "401b5ec7-127e-4879-92c3-143f4e29b9a3",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-14T20:50:19.635Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872415"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "MängelFix: Begehung & Fristen",
+      "externalID": "6801253878",
+      "bundleOrPackageID": "com.kamilunavo.maengelfix",
+      "version": "0.5.0",
+      "build": "8",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T05:36:53-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "2359b141-207b-4ca4-99fa-cabd3a0161b4",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-16T14:12:29.721Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801253878"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Idle Handwerker: SHK-Tycoon",
+      "externalID": "6806743167",
+      "bundleOrPackageID": "de.kamilunavo.idlehandwerker",
+      "version": "1.4.0",
+      "build": "18",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T05:24:55-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "26893877-dcb8-4199-bc47-51982acf3489",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-09-01T04:28:35.849Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6806743167"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Reklaio: Reklamation & Fristen",
+      "externalID": "6799375798",
+      "bundleOrPackageID": "de.kamilunavo.reklaio",
+      "version": "0.5.0",
+      "build": "7",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T05:07:49-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "cec03f62-b529-4473-9502-662ea0f83968",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-08T17:52:59.991Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6799375798"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "ZweiCheck: Gemeinsam prüfen",
+      "externalID": "6800781224",
+      "bundleOrPackageID": "de.kamilunavo.zweicheck",
+      "version": "1.1.0",
+      "build": "13",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T05:14:51-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "d92bd072-835c-4adf-859b-6a2a78387f8a",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-17T17:11:37.107Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6800781224"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "NavoKids – Lerninseln",
+      "externalID": "6809038305",
+      "bundleOrPackageID": "com.kamilunavo.navokids",
+      "version": "0.5.0",
+      "build": "13",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T04:54:06-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "d9878062-b363-4c0a-b64d-412d43d141bd",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-09-10T23:31:28.74Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6809038305"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "WärmeTakt: Wärmepumpen-Tests",
+      "externalID": "6806348716",
+      "bundleOrPackageID": "de.kamilunavo.waermetakt",
+      "version": "1.1.0",
+      "build": "2",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T04:45:51-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "8a1193d9-d931-4fa7-97c9-b1852efcc366",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-29T21:26:39.005Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6806348716"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "NavoTap: Timing & Highscore",
+      "externalID": "6803636049",
+      "bundleOrPackageID": "com.kamilunavo.onemoretap",
+      "version": "1.1.0",
+      "build": "6",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T04:38:26-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "b57f5ed4-34af-4cf2-9f58-5699b302d2ce",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-21T19:36:45.934Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Kamilunavo Trace: Nachweise",
+      "externalID": "6803765449",
+      "bundleOrPackageID": "de.kamilunavo.trace",
+      "version": "1.1.0",
+      "build": "11",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T04:33:54-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "c7add2c4-51c8-4b78-a825-6f0d9487c3ef",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-22T13:04:07.067Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803765449"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Schon erledigt? Haushalt",
+      "externalID": "6806816948",
+      "bundleOrPackageID": "com.kamilunavo.schon-erledigt",
+      "version": "1.1.0",
+      "build": "3",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T03:21:08-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "1f28281b-ed78-4368-a118-e08e36e94b2e",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-30T19:00:56.6Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6806816948"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Rapport AI: Arbeitsberichte",
+      "externalID": "6807486805",
+      "bundleOrPackageID": "de.kamilunavo.rapportai",
+      "version": "1.2.0",
+      "build": "10",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T03:14:41-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "ee3c6c82-818e-47e8-9eca-0ca73acda05b",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-09-14T17:31:46.519Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6807486805"
+      }
+    },
     {
       "provider": "apple",
       "appName": "Kintaroq: Geräte-Fehlerhilfe",
@@ -32,106 +432,6 @@
     },
     {
       "provider": "apple",
-      "appName": "ArbeitsKlar: Zeiterfassung",
-      "externalID": "6806348774",
-      "bundleOrPackageID": "de.kamilunavo.arbeitsklar",
-      "version": "1.1.0",
-      "build": "4",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-20T20:20:26-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "f586137d-12ae-4a03-bef6-2f2877e9a423",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-09-04T14:41:50.389Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6806348774"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "BrennerCalc: Brenner & SHK",
-      "externalID": "6801656652",
-      "bundleOrPackageID": "de.kamilunavo.brennercalc",
-      "version": "1.1.0",
-      "build": "2",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-21T01:09:40-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "b2bece0d-7bce-448a-ab4b-52de0d21f218",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-14T22:23:55.508Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801656652"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "HydroCalc: Heizung & Hydraulik",
-      "externalID": "6801788464",
-      "bundleOrPackageID": "de.kamilunavo.hydrocalc",
-      "version": "1.1.0",
-      "build": "1",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-21T00:00:49-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "64e49a30-0923-4c73-921f-4e56e323365c",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-15T08:42:56.244Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801788464"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "MAGCalc: Ausdehnungsgefäße",
-      "externalID": "6801678865",
-      "bundleOrPackageID": "de.kamilunavo.magcalc",
-      "version": "1.1.0",
-      "build": "2",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-20T23:14:44-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "72b2160a-dc4d-4708-9f97-120e73ae4a39",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-14T23:53:15.848Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801678865"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "KeepMeter: Käufe & Rückgabe",
       "externalID": "6803227186",
       "bundleOrPackageID": "de.kamilunavo.keepmeter",
@@ -153,31 +453,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6803227186"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "NavoTap",
-      "externalID": "6803636049",
-      "bundleOrPackageID": "com.kamilunavo.onemoretap",
-      "version": "1.0",
-      "build": "6",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-20T12:26:25-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "b57f5ed4-34af-4cf2-9f58-5699b302d2ce",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-21T19:36:45.934Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
       }
     },
     {
@@ -272,56 +547,6 @@
     },
     {
       "provider": "apple",
-      "appName": "Rising Steps",
-      "externalID": "6819872415",
-      "bundleOrPackageID": "com.kamilunavo.risingsteps",
-      "version": "1.0",
-      "build": "7",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-10-06T14:41:17-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "401b5ec7-127e-4879-92c3-143f4e29b9a3",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-14T20:50:19.635Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872415"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Perfect Drop",
-      "externalID": "6819872064",
-      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
-      "version": "1.0",
-      "build": "13",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-10-06T14:39:19-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "14167654-8d95-43a6-a034-4868e52378eb",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-14T22:52:28.453Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "Repair Empire",
       "externalID": "6819872687",
       "bundleOrPackageID": "com.kamilunavo.repairempire",
@@ -332,31 +557,6 @@
       "updatedAt": "2026-10-06T14:42:17-07:00",
       "detail": "PREPARE_FOR_SUBMISSION",
       "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "Reklaio",
-      "externalID": "6799375798",
-      "bundleOrPackageID": "de.kamilunavo.reklaio",
-      "version": "0.4.1",
-      "build": "7",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-08T01:39:54-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "cec03f62-b529-4473-9502-662ea0f83968",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-08T17:52:59.991Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6799375798"
-      }
     },
     {
       "provider": "apple",
@@ -475,131 +675,6 @@
     },
     {
       "provider": "apple",
-      "appName": "Rapport AI",
-      "externalID": "6807486805",
-      "bundleOrPackageID": "de.kamilunavo.rapportai",
-      "version": "1.1",
-      "build": "10",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-09-14T10:06:10-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "ee3c6c82-818e-47e8-9eca-0ca73acda05b",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-09-14T17:31:46.519Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6807486805"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "NavoKids – Lerninseln",
-      "externalID": "6809038305",
-      "bundleOrPackageID": "com.kamilunavo.navokids",
-      "version": "0.4.0",
-      "build": "13",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-09-10T14:36:14-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "d9878062-b363-4c0a-b64d-412d43d141bd",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-09-10T23:31:28.74Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6809038305"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Idle Handwerker",
-      "externalID": "6806743167",
-      "bundleOrPackageID": "de.kamilunavo.idlehandwerker",
-      "version": "1.3.0",
-      "build": "18",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-30T00:37:42-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "26893877-dcb8-4199-bc47-51982acf3489",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-09-01T04:28:35.849Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6806743167"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Schon erledigt?",
-      "externalID": "6806816948",
-      "bundleOrPackageID": "com.kamilunavo.schon-erledigt",
-      "version": "1.0",
-      "build": "3",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-30T09:30:54-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "1f28281b-ed78-4368-a118-e08e36e94b2e",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-30T19:00:56.6Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6806816948"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "WärmeTakt",
-      "externalID": "6806348716",
-      "bundleOrPackageID": "de.kamilunavo.waermetakt",
-      "version": "1.0",
-      "build": "2",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-28T10:18:14-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "8a1193d9-d931-4fa7-97c9-b1852efcc366",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-29T21:26:39.005Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6806348716"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "NächsteRunde",
       "externalID": "6806349214",
       "bundleOrPackageID": "de.kamilunavo.naechsterunde",
@@ -610,31 +685,6 @@
       "updatedAt": "2026-08-28T10:19:21-07:00",
       "detail": "PREPARE_FOR_SUBMISSION",
       "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "Kamilunavo Trace",
-      "externalID": "6803765449",
-      "bundleOrPackageID": "de.kamilunavo.trace",
-      "version": "1.0",
-      "build": "11",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-20T21:11:15-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "c7add2c4-51c8-4b78-a825-6f0d9487c3ef",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-22T13:04:07.067Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803765449"
-      }
     },
     {
       "provider": "apple",
@@ -661,56 +711,6 @@
       "updatedAt": "2026-08-22T14:41:04-07:00",
       "detail": "PREPARE_FOR_SUBMISSION",
       "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "ZweiCheck",
-      "externalID": "6800781224",
-      "bundleOrPackageID": "de.kamilunavo.zweicheck",
-      "version": "1.0.0",
-      "build": "13",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-12T08:09:25-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "d92bd072-835c-4adf-859b-6a2a78387f8a",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-17T17:11:37.107Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6800781224"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Maengelfix",
-      "externalID": "6801253878",
-      "bundleOrPackageID": "com.kamilunavo.maengelfix",
-      "version": "0.4.0",
-      "build": "8",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-13T11:38:53-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "2359b141-207b-4ca4-99fa-cabd3a0161b4",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-16T14:12:29.721Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801253878"
-      }
     }
   ]
 }
