@@ -1,10 +1,35 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T23:53:18Z",
+  "generatedAt": "2026-10-21T04:49:16Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "ArbeitsKlar: Zeiterfassung",
+      "externalID": "6806348774",
+      "bundleOrPackageID": "de.kamilunavo.arbeitsklar",
+      "version": "1.1.0",
+      "build": "3",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-20T20:20:26-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "f586137d-12ae-4a03-bef6-2f2877e9a423",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-09-04T14:41:50.389Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6806348774"
+      }
+    },
     {
       "provider": "apple",
       "appName": "KeepMeter: Käufe & Rückgabe",
@@ -446,31 +471,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6806743167"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "ArbeitsKlar",
-      "externalID": "6806348774",
-      "bundleOrPackageID": "de.kamilunavo.arbeitsklar",
-      "version": "1.0",
-      "build": "3",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-28T10:17:28-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "f586137d-12ae-4a03-bef6-2f2877e9a423",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-09-04T14:41:50.389Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6806348774"
       }
     },
     {
