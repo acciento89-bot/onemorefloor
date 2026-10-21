@@ -1,17 +1,42 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-21T04:49:16Z",
+  "generatedAt": "2026-10-21T10:09:16Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
     {
       "provider": "apple",
+      "appName": "Kintaroq: Geräte-Fehlerhilfe",
+      "externalID": "6808796440",
+      "bundleOrPackageID": "com.kamilunavo.kintaroq",
+      "version": "1.2.0",
+      "build": "4",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T02:02:44-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "c4918eab-6bda-40b5-b6b3-1c80aad5e5ca",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-09-05T15:38:16.304Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6808796440"
+      }
+    },
+    {
+      "provider": "apple",
       "appName": "ArbeitsKlar: Zeiterfassung",
       "externalID": "6806348774",
       "bundleOrPackageID": "de.kamilunavo.arbeitsklar",
       "version": "1.1.0",
-      "build": "3",
+      "build": "4",
       "rawState": "PREPARE_FOR_SUBMISSION",
       "state": "development",
       "updatedAt": "2026-10-20T20:20:26-07:00",
@@ -28,6 +53,81 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6806348774"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "BrennerCalc: Brenner & SHK",
+      "externalID": "6801656652",
+      "bundleOrPackageID": "de.kamilunavo.brennercalc",
+      "version": "1.1.0",
+      "build": "2",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T01:09:40-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "b2bece0d-7bce-448a-ab4b-52de0d21f218",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-14T22:23:55.508Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801656652"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "HydroCalc: Heizung & Hydraulik",
+      "externalID": "6801788464",
+      "bundleOrPackageID": "de.kamilunavo.hydrocalc",
+      "version": "1.1.0",
+      "build": "1",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T00:00:49-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "64e49a30-0923-4c73-921f-4e56e323365c",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-15T08:42:56.244Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801788464"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "MAGCalc: Ausdehnungsgefäße",
+      "externalID": "6801678865",
+      "bundleOrPackageID": "de.kamilunavo.magcalc",
+      "version": "1.1.0",
+      "build": "2",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-20T23:14:44-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "72b2160a-dc4d-4708-9f97-120e73ae4a39",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-14T23:53:15.848Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801678865"
       }
     },
     {
@@ -218,31 +318,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Kintaroq",
-      "externalID": "6808796440",
-      "bundleOrPackageID": "com.kamilunavo.kintaroq",
-      "version": "1.0.0",
-      "build": "4",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-09-04T14:48:54-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "c4918eab-6bda-40b5-b6b3-1c80aad5e5ca",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-09-05T15:38:16.304Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6808796440"
       }
     },
     {
@@ -589,56 +664,6 @@
     },
     {
       "provider": "apple",
-      "appName": "MAGCalc",
-      "externalID": "6801678865",
-      "bundleOrPackageID": "de.kamilunavo.magcalc",
-      "version": "1.0.0",
-      "build": "2",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-14T16:02:41-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "72b2160a-dc4d-4708-9f97-120e73ae4a39",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-14T23:53:15.848Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801678865"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "BrennerCalc",
-      "externalID": "6801656652",
-      "bundleOrPackageID": "de.kamilunavo.brennercalc",
-      "version": "1.0.0",
-      "build": "2",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-14T14:07:13-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "b2bece0d-7bce-448a-ab4b-52de0d21f218",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-14T22:23:55.508Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801656652"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "ZweiCheck",
       "externalID": "6800781224",
       "bundleOrPackageID": "de.kamilunavo.zweicheck",
@@ -660,31 +685,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6800781224"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "HydroCalc SHK",
-      "externalID": "6801788464",
-      "bundleOrPackageID": "de.kamilunavo.hydrocalc",
-      "version": "1.0.0",
-      "build": "1",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-08-15T01:19:31-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "64e49a30-0923-4c73-921f-4e56e323365c",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-15T08:42:56.244Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801788464"
       }
     },
     {
