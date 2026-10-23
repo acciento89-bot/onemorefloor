@@ -1,10 +1,110 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-23T10:04:23Z",
+  "generatedAt": "2026-10-23T15:04:29Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Kintaroq: Geräte-Fehlerhilfe",
+      "externalID": "6808796440",
+      "bundleOrPackageID": "com.kamilunavo.kintaroq",
+      "version": "1.2.0",
+      "build": "5",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-21T02:02:44-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "a905335e-0640-481c-a7b6-28a704f0fafd",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-23T14:59:16.492Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6808796440"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "WärmeTakt: Wärmepumpen-Tests",
+      "externalID": "6806348716",
+      "bundleOrPackageID": "de.kamilunavo.waermetakt",
+      "version": "1.1.0",
+      "build": "5",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-21T04:45:51-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "6ab05811-328d-4967-998c-7d40b1a184ac",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-23T13:32:43.997Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6806348716"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "NavoTap: Timing & Highscore",
+      "externalID": "6803636049",
+      "bundleOrPackageID": "com.kamilunavo.onemoretap",
+      "version": "1.1.0",
+      "build": "7",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-21T04:38:26-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "a69b05ec-026d-4738-b8af-cc6dfe10ec12",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-23T11:44:29.982Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Rapport AI: Arbeitsberichte",
+      "externalID": "6807486805",
+      "bundleOrPackageID": "de.kamilunavo.rapportai",
+      "version": "1.2.0",
+      "build": "11",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-21T03:14:41-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "28a00f57-a0d6-4866-83e5-c0badbfb55ed",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-23T10:45:02.864Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6807486805"
+      }
+    },
     {
       "provider": "apple",
       "appName": "Schon erledigt? Haushalt",
@@ -353,106 +453,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6809038305"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "WärmeTakt: Wärmepumpen-Tests",
-      "externalID": "6806348716",
-      "bundleOrPackageID": "de.kamilunavo.waermetakt",
-      "version": "1.1.0",
-      "build": "2",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-21T04:45:51-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "8a1193d9-d931-4fa7-97c9-b1852efcc366",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-29T21:26:39.005Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6806348716"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "NavoTap: Timing & Highscore",
-      "externalID": "6803636049",
-      "bundleOrPackageID": "com.kamilunavo.onemoretap",
-      "version": "1.1.0",
-      "build": "6",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-21T04:38:26-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "b57f5ed4-34af-4cf2-9f58-5699b302d2ce",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-21T19:36:45.934Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Rapport AI: Arbeitsberichte",
-      "externalID": "6807486805",
-      "bundleOrPackageID": "de.kamilunavo.rapportai",
-      "version": "1.2.0",
-      "build": "10",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-21T03:14:41-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "ee3c6c82-818e-47e8-9eca-0ca73acda05b",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-09-14T17:31:46.519Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6807486805"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Kintaroq: Geräte-Fehlerhilfe",
-      "externalID": "6808796440",
-      "bundleOrPackageID": "com.kamilunavo.kintaroq",
-      "version": "1.2.0",
-      "build": "4",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-21T02:02:44-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "c4918eab-6bda-40b5-b6b3-1c80aad5e5ca",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-09-05T15:38:16.304Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6808796440"
       }
     },
     {
