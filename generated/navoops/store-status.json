@@ -1,10 +1,60 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-24T11:02:06Z",
+  "generatedAt": "2026-10-24T14:33:47Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Perfect Drop: Turm stapeln",
+      "externalID": "6819872064",
+      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
+      "version": "1.1.0",
+      "build": "13",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T05:42:10-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "14167654-8d95-43a6-a034-4868e52378eb",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-14T22:52:28.453Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "ZweiCheck: Gemeinsam prüfen",
+      "externalID": "6800781224",
+      "bundleOrPackageID": "de.kamilunavo.zweicheck",
+      "version": "1.1.0",
+      "build": "14",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-21T05:14:51-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "6814e497-9c18-44ab-ab80-6c6573805e66",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-24T11:47:43.439Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6800781224"
+      }
+    },
     {
       "provider": "apple",
       "appName": "MängelFix: Begehung & Fristen",
@@ -28,31 +78,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6801253878"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "ZweiCheck: Gemeinsam prüfen",
-      "externalID": "6800781224",
-      "bundleOrPackageID": "de.kamilunavo.zweicheck",
-      "version": "1.1.0",
-      "build": "13",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-21T05:14:51-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "d92bd072-835c-4adf-859b-6a2a78387f8a",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-17T17:11:37.107Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6800781224"
       }
     },
     {
@@ -128,31 +153,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6808796440"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Perfect Drop: Turm stapeln",
-      "externalID": "6819872064",
-      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
-      "version": "1.1.0",
-      "build": "13",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-21T05:42:10-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "14167654-8d95-43a6-a034-4868e52378eb",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-14T22:52:28.453Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
       }
     },
     {
