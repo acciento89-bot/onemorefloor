@@ -1,10 +1,85 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-23T22:13:37Z",
+  "generatedAt": "2026-10-24T00:44:19Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "NavoKids – Lerninseln",
+      "externalID": "6809038305",
+      "bundleOrPackageID": "com.kamilunavo.navokids",
+      "version": "0.5.0",
+      "build": "14",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-21T04:54:06-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "1da3aba6-195f-4eb9-a55f-af53902543e9",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-23T20:44:54.57Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6809038305"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Reklaio: Reklamation & Fristen",
+      "externalID": "6799375798",
+      "bundleOrPackageID": "de.kamilunavo.reklaio",
+      "version": "0.5.0",
+      "build": "8",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-21T05:07:49-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "84ad254f-f573-41e2-82ec-ba9916a07053",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-23T19:37:27.892Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6799375798"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Kintaroq: Geräte-Fehlerhilfe",
+      "externalID": "6808796440",
+      "bundleOrPackageID": "com.kamilunavo.kintaroq",
+      "version": "1.2.0",
+      "build": "5",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-21T02:02:44-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "a905335e-0640-481c-a7b6-28a704f0fafd",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-23T14:59:16.492Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6808796440"
+      }
+    },
     {
       "provider": "apple",
       "appName": "Perfect Drop: Turm stapeln",
@@ -28,56 +103,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "NavoKids – Lerninseln",
-      "externalID": "6809038305",
-      "bundleOrPackageID": "com.kamilunavo.navokids",
-      "version": "0.5.0",
-      "build": "14",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-21T04:54:06-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "1da3aba6-195f-4eb9-a55f-af53902543e9",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-23T20:44:54.57Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6809038305"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Reklaio: Reklamation & Fristen",
-      "externalID": "6799375798",
-      "bundleOrPackageID": "de.kamilunavo.reklaio",
-      "version": "0.5.0",
-      "build": "8",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-21T05:07:49-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "84ad254f-f573-41e2-82ec-ba9916a07053",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-23T19:37:27.892Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6799375798"
       }
     },
     {
@@ -178,31 +203,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6803227186"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Kintaroq: Geräte-Fehlerhilfe",
-      "externalID": "6808796440",
-      "bundleOrPackageID": "com.kamilunavo.kintaroq",
-      "version": "1.2.0",
-      "build": "5",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-21T02:02:44-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "a905335e-0640-481c-a7b6-28a704f0fafd",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-23T14:59:16.492Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6808796440"
       }
     },
     {
