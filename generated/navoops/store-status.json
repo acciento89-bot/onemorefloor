@@ -1,28 +1,54 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-24T14:33:47Z",
+  "generatedAt": "2026-10-24T18:10:00Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
     {
       "provider": "apple",
+      "appName": "Pocket Rail: Meine Eisenbahn",
+      "externalID": "6824594887",
+      "bundleOrPackageID": "com.kamilunavo.pocketrail",
+      "version": "0.2.0",
+      "build": "2",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-19T10:13:03-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
+      "appName": "Gildenfunke: Helden & Gilde",
+      "externalID": "6824671509",
+      "bundleOrPackageID": "com.kamilunavo.gildenfunke",
+      "version": "0.1.0",
+      "build": "1",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-19T14:27:39-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
       "appName": "Perfect Drop: Turm stapeln",
       "externalID": "6819872064",
       "bundleOrPackageID": "com.kamilunavo.perfectdrop",
       "version": "1.1.0",
-      "build": "13",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
+      "build": "14",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
       "updatedAt": "2026-10-21T05:42:10-07:00",
-      "detail": "COMPLETE · APPROVED",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
       "review": {
-        "submissionID": "14167654-8d95-43a6-a034-4868e52378eb",
-        "submissionState": "COMPLETE",
+        "submissionID": "76a6ee80-40a0-4ada-8aa0-c53f4e2a24a4",
+        "submissionState": "WAITING_FOR_REVIEW",
         "itemStates": [
-          "APPROVED"
+          "READY_FOR_REVIEW"
         ],
-        "submittedAt": "2026-10-14T22:52:28.453Z",
+        "submittedAt": "2026-10-24T17:29:44.691Z",
         "track": null,
         "lifecycleState": null,
         "reason": null,
@@ -37,15 +63,15 @@
       "bundleOrPackageID": "de.kamilunavo.zweicheck",
       "version": "1.1.0",
       "build": "14",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
       "updatedAt": "2026-10-21T05:14:51-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "detail": "COMPLETE · APPROVED",
       "review": {
         "submissionID": "6814e497-9c18-44ab-ab80-6c6573805e66",
-        "submissionState": "WAITING_FOR_REVIEW",
+        "submissionState": "COMPLETE",
         "itemStates": [
-          "READY_FOR_REVIEW"
+          "APPROVED"
         ],
         "submittedAt": "2026-10-24T11:47:43.439Z",
         "track": null,
@@ -53,6 +79,56 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6800781224"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Rising Steps: Inselabenteuer",
+      "externalID": "6819872415",
+      "bundleOrPackageID": "com.kamilunavo.risingsteps",
+      "version": "1.1.0",
+      "build": "8",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-21T05:39:24-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "0186b1d9-6d17-4fcc-9d25-eff1a8a56209",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-24T16:39:38.152Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872415"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Idle Handwerker: SHK-Tycoon",
+      "externalID": "6806743167",
+      "bundleOrPackageID": "de.kamilunavo.idlehandwerker",
+      "version": "1.4.0",
+      "build": "19",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-21T05:24:55-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "2482aa89-7c1c-4456-aef6-867247b70526",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-24T15:52:39.644Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6806743167"
       }
     },
     {
@@ -407,69 +483,6 @@
     },
     {
       "provider": "apple",
-      "appName": "Rising Steps: Inselabenteuer",
-      "externalID": "6819872415",
-      "bundleOrPackageID": "com.kamilunavo.risingsteps",
-      "version": "1.1.0",
-      "build": "7",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-21T05:39:24-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "401b5ec7-127e-4879-92c3-143f4e29b9a3",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-14T20:50:19.635Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872415"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Idle Handwerker: SHK-Tycoon",
-      "externalID": "6806743167",
-      "bundleOrPackageID": "de.kamilunavo.idlehandwerker",
-      "version": "1.4.0",
-      "build": "18",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-21T05:24:55-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "26893877-dcb8-4199-bc47-51982acf3489",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-09-01T04:28:35.849Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6806743167"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Gildenfunke: Helden & Gilde",
-      "externalID": "6824671509",
-      "bundleOrPackageID": "com.kamilunavo.gildenfunke",
-      "version": "0.1.0",
-      "build": "1",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-19T14:27:39-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
       "appName": "Runenpfad: Karten & Dungeons",
       "externalID": "6824596154",
       "bundleOrPackageID": "com.kamilunavo.runenpfad",
@@ -478,19 +491,6 @@
       "rawState": "PREPARE_FOR_SUBMISSION",
       "state": "development",
       "updatedAt": "2026-10-19T10:16:28-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "Pocket Rail: Meine Eisenbahn",
-      "externalID": "6824594887",
-      "bundleOrPackageID": "com.kamilunavo.pocketrail",
-      "version": "0.2.0",
-      "build": "2",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-19T10:13:03-07:00",
       "detail": "PREPARE_FOR_SUBMISSION",
       "review": null
     },
