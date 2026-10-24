@@ -1,10 +1,73 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-24T20:50:39Z",
+  "generatedAt": "2026-10-24T23:15:20Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Perfect Drop: Turm stapeln",
+      "externalID": "6819872064",
+      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
+      "version": "1.1.0",
+      "build": "14",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-21T05:42:10-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "76a6ee80-40a0-4ada-8aa0-c53f4e2a24a4",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-24T17:29:44.691Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Runenpfad: Karten & Dungeons",
+      "externalID": "6824596154",
+      "bundleOrPackageID": "com.kamilunavo.runenpfad",
+      "version": "0.3.0",
+      "build": "3",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-19T10:16:28-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
+      "appName": "NavoTap: Timing & Highscore",
+      "externalID": "6803636049",
+      "bundleOrPackageID": "com.kamilunavo.onemoretap",
+      "version": "1.1.0",
+      "build": "7",
+      "rawState": "REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-10-21T04:38:26-07:00",
+      "detail": "UNRESOLVED_ISSUES · REJECTED",
+      "review": {
+        "submissionID": "a69b05ec-026d-4738-b8af-cc6dfe10ec12",
+        "submissionState": "UNRESOLVED_ISSUES",
+        "itemStates": [
+          "REJECTED"
+        ],
+        "submittedAt": "2026-10-23T11:44:29.982Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
+      }
+    },
     {
       "provider": "apple",
       "appName": "Dungeonwerk: Bauen & Raiden",
@@ -17,31 +80,6 @@
       "updatedAt": "2026-10-24T11:21:30-07:00",
       "detail": "PREPARE_FOR_SUBMISSION",
       "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "Perfect Drop: Turm stapeln",
-      "externalID": "6819872064",
-      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
-      "version": "1.1.0",
-      "build": "14",
-      "rawState": "IN_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-21T05:42:10-07:00",
-      "detail": "IN_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "76a6ee80-40a0-4ada-8aa0-c53f4e2a24a4",
-        "submissionState": "IN_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-24T17:29:44.691Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
-      }
     },
     {
       "provider": "apple",
@@ -67,19 +105,6 @@
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6819872415"
       }
-    },
-    {
-      "provider": "apple",
-      "appName": "Runenpfad: Karten & Dungeons",
-      "externalID": "6824596154",
-      "bundleOrPackageID": "com.kamilunavo.runenpfad",
-      "version": "0.3.0",
-      "build": null,
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-19T10:16:28-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
     },
     {
       "provider": "apple",
@@ -380,31 +405,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6806348716"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "NavoTap: Timing & Highscore",
-      "externalID": "6803636049",
-      "bundleOrPackageID": "com.kamilunavo.onemoretap",
-      "version": "1.1.0",
-      "build": "7",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-21T04:38:26-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "a69b05ec-026d-4738-b8af-cc6dfe10ec12",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-23T11:44:29.982Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
       }
     },
     {
