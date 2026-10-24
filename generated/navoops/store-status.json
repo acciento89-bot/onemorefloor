@@ -1,10 +1,60 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-24T05:55:04Z",
+  "generatedAt": "2026-10-24T11:02:06Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "MängelFix: Begehung & Fristen",
+      "externalID": "6801253878",
+      "bundleOrPackageID": "com.kamilunavo.maengelfix",
+      "version": "0.5.0",
+      "build": "9",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-21T05:36:53-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "e29a27d4-ff34-4bb6-b3f7-064b0d6aa8ac",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-24T09:58:10.778Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801253878"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "ZweiCheck: Gemeinsam prüfen",
+      "externalID": "6800781224",
+      "bundleOrPackageID": "de.kamilunavo.zweicheck",
+      "version": "1.1.0",
+      "build": "13",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-21T05:14:51-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "d92bd072-835c-4adf-859b-6a2a78387f8a",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-08-17T17:11:37.107Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6800781224"
+      }
+    },
     {
       "provider": "apple",
       "appName": "NavoKids – Lerninseln",
@@ -382,31 +432,6 @@
     },
     {
       "provider": "apple",
-      "appName": "MängelFix: Begehung & Fristen",
-      "externalID": "6801253878",
-      "bundleOrPackageID": "com.kamilunavo.maengelfix",
-      "version": "0.5.0",
-      "build": "8",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-21T05:36:53-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "2359b141-207b-4ca4-99fa-cabd3a0161b4",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-16T14:12:29.721Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801253878"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "Idle Handwerker: SHK-Tycoon",
       "externalID": "6806743167",
       "bundleOrPackageID": "de.kamilunavo.idlehandwerker",
@@ -428,31 +453,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6806743167"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "ZweiCheck: Gemeinsam prüfen",
-      "externalID": "6800781224",
-      "bundleOrPackageID": "de.kamilunavo.zweicheck",
-      "version": "1.1.0",
-      "build": "13",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-21T05:14:51-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "d92bd072-835c-4adf-859b-6a2a78387f8a",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-08-17T17:11:37.107Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6800781224"
       }
     },
     {
