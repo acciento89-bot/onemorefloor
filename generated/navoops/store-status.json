@@ -1,10 +1,86 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-24T18:10:00Z",
+  "generatedAt": "2026-10-24T20:50:39Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Dungeonwerk: Bauen & Raiden",
+      "externalID": "6826646231",
+      "bundleOrPackageID": "com.kamilunavo.dungeonarchitect",
+      "version": "0.1.0",
+      "build": "1",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-24T11:21:30-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
+      "appName": "Perfect Drop: Turm stapeln",
+      "externalID": "6819872064",
+      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
+      "version": "1.1.0",
+      "build": "14",
+      "rawState": "IN_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-21T05:42:10-07:00",
+      "detail": "IN_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "76a6ee80-40a0-4ada-8aa0-c53f4e2a24a4",
+        "submissionState": "IN_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-24T17:29:44.691Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Rising Steps: Inselabenteuer",
+      "externalID": "6819872415",
+      "bundleOrPackageID": "com.kamilunavo.risingsteps",
+      "version": "1.1.0",
+      "build": "8",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-21T05:39:24-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "0186b1d9-6d17-4fcc-9d25-eff1a8a56209",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-24T16:39:38.152Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872415"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Runenpfad: Karten & Dungeons",
+      "externalID": "6824596154",
+      "bundleOrPackageID": "com.kamilunavo.runenpfad",
+      "version": "0.3.0",
+      "build": null,
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-19T10:16:28-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
     {
       "provider": "apple",
       "appName": "Pocket Rail: Meine Eisenbahn",
@@ -33,31 +109,6 @@
     },
     {
       "provider": "apple",
-      "appName": "Perfect Drop: Turm stapeln",
-      "externalID": "6819872064",
-      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
-      "version": "1.1.0",
-      "build": "14",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-21T05:42:10-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "76a6ee80-40a0-4ada-8aa0-c53f4e2a24a4",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-24T17:29:44.691Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "ZweiCheck: Gemeinsam prüfen",
       "externalID": "6800781224",
       "bundleOrPackageID": "de.kamilunavo.zweicheck",
@@ -79,31 +130,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6800781224"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Rising Steps: Inselabenteuer",
-      "externalID": "6819872415",
-      "bundleOrPackageID": "com.kamilunavo.risingsteps",
-      "version": "1.1.0",
-      "build": "8",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-21T05:39:24-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "0186b1d9-6d17-4fcc-9d25-eff1a8a56209",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-24T16:39:38.152Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872415"
       }
     },
     {
@@ -480,19 +506,6 @@
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6801678865"
       }
-    },
-    {
-      "provider": "apple",
-      "appName": "Runenpfad: Karten & Dungeons",
-      "externalID": "6824596154",
-      "bundleOrPackageID": "com.kamilunavo.runenpfad",
-      "version": "0.3.0",
-      "build": null,
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-19T10:16:28-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
     },
     {
       "provider": "apple",
