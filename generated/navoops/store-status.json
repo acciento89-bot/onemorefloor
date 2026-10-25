@@ -1,10 +1,23 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-25T19:37:43Z",
+  "generatedAt": "2026-10-25T22:33:44Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Monster Auto-Tactics",
+      "externalID": "6826929964",
+      "bundleOrPackageID": "com.kamilunavo.monsterautotactics",
+      "version": "0.1.0",
+      "build": null,
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-25T14:05:13-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
     {
       "provider": "apple",
       "appName": "NavoTap: Timing & Highscore",
