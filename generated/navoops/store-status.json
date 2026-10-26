@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-26T13:12:13Z",
+  "generatedAt": "2026-10-26T19:20:25Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
@@ -12,15 +12,16 @@
       "bundleOrPackageID": "com.kamilunavo.monsterautotactics",
       "version": "0.1.0",
       "build": "1",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
+      "rawState": "REJECTED",
+      "state": "rejected",
       "updatedAt": "2026-10-25T14:05:13-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
       "review": {
         "submissionID": "06c61b45-d515-41b6-9dca-e2051767b506",
-        "submissionState": "WAITING_FOR_REVIEW",
+        "submissionState": "UNRESOLVED_ISSUES",
         "itemStates": [
-          "READY_FOR_REVIEW"
+          "READY_FOR_REVIEW",
+          "REJECTED"
         ],
         "submittedAt": "2026-10-26T04:21:28.745Z",
         "track": null,
@@ -28,6 +29,31 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6826929964"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "BrennerCalc: Brenner & SHK",
+      "externalID": "6801656652",
+      "bundleOrPackageID": "de.kamilunavo.brennercalc",
+      "version": "1.1.0",
+      "build": "4",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-21T01:09:40-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "f5cae342-279f-4702-8979-6cb2cde9a2d8",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-21T14:38:15.366Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801656652"
       }
     },
     {
@@ -480,31 +506,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6806348774"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "BrennerCalc: Brenner & SHK",
-      "externalID": "6801656652",
-      "bundleOrPackageID": "de.kamilunavo.brennercalc",
-      "version": "1.1.0",
-      "build": "4",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-10-21T01:09:40-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "f5cae342-279f-4702-8979-6cb2cde9a2d8",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-21T14:38:15.366Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801656652"
       }
     },
     {
