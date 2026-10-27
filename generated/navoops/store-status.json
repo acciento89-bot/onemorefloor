@@ -1,10 +1,23 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-27T16:39:56Z",
+  "generatedAt": "2026-10-27T21:20:14Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "DuoCompare – Vote Battles",
+      "externalID": "6827674565",
+      "bundleOrPackageID": "com.kamilunavo.duocompare",
+      "version": "1.0",
+      "build": null,
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-27T10:56:32-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
     {
       "provider": "apple",
       "appName": "Monster Auto-Tactics",
