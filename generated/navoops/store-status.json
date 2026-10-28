@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-28T01:22:57Z",
+  "generatedAt": "2026-10-28T08:33:28Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
@@ -12,17 +12,17 @@
       "bundleOrPackageID": "com.kamilunavo.duocompare",
       "version": "1.0",
       "build": "1",
-      "rawState": "READY_FOR_REVIEW",
-      "state": "development",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
       "updatedAt": "2026-10-27T10:56:32-07:00",
-      "detail": "READY_FOR_REVIEW · READY_FOR_REVIEW",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
       "review": {
         "submissionID": "24a3c736-50af-4416-b825-b49342575eb9",
-        "submissionState": "READY_FOR_REVIEW",
+        "submissionState": "WAITING_FOR_REVIEW",
         "itemStates": [
           "READY_FOR_REVIEW"
         ],
-        "submittedAt": null,
+        "submittedAt": "2026-10-28T05:04:02.529Z",
         "track": null,
         "lifecycleState": null,
         "reason": null,
