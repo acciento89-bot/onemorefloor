@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-27T21:20:14Z",
+  "generatedAt": "2026-10-28T01:22:57Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
@@ -11,12 +11,24 @@
       "externalID": "6827674565",
       "bundleOrPackageID": "com.kamilunavo.duocompare",
       "version": "1.0",
-      "build": null,
-      "rawState": "PREPARE_FOR_SUBMISSION",
+      "build": "1",
+      "rawState": "READY_FOR_REVIEW",
       "state": "development",
       "updatedAt": "2026-10-27T10:56:32-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
+      "detail": "READY_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "24a3c736-50af-4416-b825-b49342575eb9",
+        "submissionState": "READY_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": null,
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6827674565"
+      }
     },
     {
       "provider": "apple",
