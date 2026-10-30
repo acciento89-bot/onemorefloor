@@ -1,10 +1,35 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-29T20:18:49Z",
+  "generatedAt": "2026-10-30T01:00:04Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "NavoPass",
+      "externalID": "6808345429",
+      "bundleOrPackageID": "de.kamilunavo.navopass",
+      "version": "1.0",
+      "build": "5",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-09-03T12:35:50-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "db65544b-91ce-41ac-a695-3c2292cdb1a7",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-09-14T11:31:15.903Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6808345429"
+      }
+    },
     {
       "provider": "apple",
       "appName": "DuoCompare – Vote Battles",
@@ -698,31 +723,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6803079524"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "NavoPass",
-      "externalID": "6808345429",
-      "bundleOrPackageID": "de.kamilunavo.navopass",
-      "version": "1.0",
-      "build": "5",
-      "rawState": "REJECTED",
-      "state": "rejected",
-      "updatedAt": "2026-09-03T12:35:50-07:00",
-      "detail": "UNRESOLVED_ISSUES · REJECTED",
-      "review": {
-        "submissionID": "db65544b-91ce-41ac-a695-3c2292cdb1a7",
-        "submissionState": "UNRESOLVED_ISSUES",
-        "itemStates": [
-          "REJECTED"
-        ],
-        "submittedAt": "2026-09-14T11:31:15.903Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6808345429"
       }
     },
     {
