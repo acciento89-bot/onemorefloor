@@ -1,33 +1,158 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-30T14:09:31Z",
+  "generatedAt": "2026-10-30T19:23:05Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
     {
       "provider": "apple",
+      "appName": "KeepMeter: Käufe & Rückgabe",
+      "externalID": "6803227186",
+      "bundleOrPackageID": "de.kamilunavo.keepmeter",
+      "version": "1.2.0",
+      "build": "7",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T12:15:49-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "59372d03-5839-462e-94bd-83bbcd096aa8",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-30T19:22:32.373Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803227186"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "NavoTap: Timing & Highscore",
+      "externalID": "6803636049",
+      "bundleOrPackageID": "com.kamilunavo.onemoretap",
+      "version": "1.2.0",
+      "build": "8",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T11:44:33-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "f12d05d1-704b-4957-9880-c228660e5c1f",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-30T18:49:57.523Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
+      }
+    },
+    {
+      "provider": "apple",
       "appName": "NavoPass",
       "externalID": "6808345429",
       "bundleOrPackageID": "de.kamilunavo.navopass",
-      "version": "1.0",
-      "build": "5",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-09-03T12:35:50-07:00",
-      "detail": "COMPLETE · APPROVED",
+      "version": "1.1.0",
+      "build": "6",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T11:12:16-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
       "review": {
-        "submissionID": "db65544b-91ce-41ac-a695-3c2292cdb1a7",
-        "submissionState": "COMPLETE",
+        "submissionID": "beb41bd8-f05f-4c27-a552-134f20af4bb5",
+        "submissionState": "WAITING_FOR_REVIEW",
         "itemStates": [
-          "APPROVED"
+          "READY_FOR_REVIEW"
         ],
-        "submittedAt": "2026-09-14T11:31:15.903Z",
+        "submittedAt": "2026-10-30T18:25:42.563Z",
         "track": null,
         "lifecycleState": null,
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6808345429"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "MAGCalc: Ausdehnungsgefäße",
+      "externalID": "6801678865",
+      "bundleOrPackageID": "de.kamilunavo.magcalc",
+      "version": "1.2.0",
+      "build": "5",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T10:28:33-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "c5715838-1b63-4b81-bded-bdd67050dbba",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-30T18:00:42.055Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801678865"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "BrennerCalc: Brenner & SHK",
+      "externalID": "6801656652",
+      "bundleOrPackageID": "de.kamilunavo.brennercalc",
+      "version": "1.2.0",
+      "build": "6",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T09:40:56-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "1920f65f-a019-4b8b-bed7-424633da0b9a",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-30T16:59:47.011Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801656652"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "HydroCalc: Heizung & Hydraulik",
+      "externalID": "6801788464",
+      "bundleOrPackageID": "de.kamilunavo.hydrocalc",
+      "version": "1.2.0",
+      "build": "5",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T09:00:13-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "b711da7a-6cc5-4e3e-b83d-4ea647da0f5f",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-30T16:53:13.479Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801788464"
       }
     },
     {
@@ -84,31 +209,6 @@
     },
     {
       "provider": "apple",
-      "appName": "BrennerCalc: Brenner & SHK",
-      "externalID": "6801656652",
-      "bundleOrPackageID": "de.kamilunavo.brennercalc",
-      "version": "1.1.0",
-      "build": "4",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-10-21T01:09:40-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "f5cae342-279f-4702-8979-6cb2cde9a2d8",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-21T14:38:15.366Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801656652"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "SHK Werkstatt",
       "externalID": "6804749223",
       "bundleOrPackageID": "de.kamilunavo.servicecheck",
@@ -130,31 +230,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6804749223"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "NavoTap: Timing & Highscore",
-      "externalID": "6803636049",
-      "bundleOrPackageID": "com.kamilunavo.onemoretap",
-      "version": "1.1.0",
-      "build": "7",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-10-21T04:38:26-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "a69b05ec-026d-4738-b8af-cc6dfe10ec12",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-25T07:31:19.3Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
       }
     },
     {
@@ -486,31 +561,6 @@
     },
     {
       "provider": "apple",
-      "appName": "KeepMeter: Käufe & Rückgabe",
-      "externalID": "6803227186",
-      "bundleOrPackageID": "de.kamilunavo.keepmeter",
-      "version": "1.1.0",
-      "build": "6",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-10-20T09:56:52-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "27fd48d5-bb16-4409-ad39-34debf607453",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-23T08:25:50.44Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803227186"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "WärmeTakt: Wärmepumpen-Tests",
       "externalID": "6806348716",
       "bundleOrPackageID": "de.kamilunavo.waermetakt",
@@ -557,56 +607,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6806348774"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "HydroCalc: Heizung & Hydraulik",
-      "externalID": "6801788464",
-      "bundleOrPackageID": "de.kamilunavo.hydrocalc",
-      "version": "1.1.0",
-      "build": "3",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-10-21T00:00:49-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "d92c94e6-f48d-424b-a02e-638efa7fde92",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-21T14:34:12.296Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801788464"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "MAGCalc: Ausdehnungsgefäße",
-      "externalID": "6801678865",
-      "bundleOrPackageID": "de.kamilunavo.magcalc",
-      "version": "1.1.0",
-      "build": "4",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-10-20T23:14:44-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "c198449b-b45e-4c64-a4cb-4b144b0c2e7a",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-21T14:31:05.335Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801678865"
       }
     },
     {
