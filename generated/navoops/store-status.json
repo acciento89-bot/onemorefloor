@@ -1,10 +1,135 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-31T05:42:22Z",
+  "generatedAt": "2026-10-31T12:31:19Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "MängelFix: Begehung & Fristen",
+      "externalID": "6801253878",
+      "bundleOrPackageID": "com.kamilunavo.maengelfix",
+      "version": "0.6.0",
+      "build": "11",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T14:40:18-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "c0212e9d-b361-41aa-ac3f-d8eceb3bbe56",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-31T11:52:02.153Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6801253878"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "ZweiCheck: Gemeinsam prüfen",
+      "externalID": "6800781224",
+      "bundleOrPackageID": "de.kamilunavo.zweicheck",
+      "version": "1.2.0",
+      "build": "15",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T14:12:01-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "2c69f4a7-b673-400c-9b1d-a7a118f70f05",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-31T10:39:15.493Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6800781224"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "ArbeitsKlar: Zeiterfassung",
+      "externalID": "6806348774",
+      "bundleOrPackageID": "de.kamilunavo.arbeitsklar",
+      "version": "1.2.0",
+      "build": "6",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T14:30:33-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "b3294665-8262-49e7-b5bf-86232e5c374a",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-31T09:44:16.521Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6806348774"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Rapport AI: Arbeitsberichte",
+      "externalID": "6807486805",
+      "bundleOrPackageID": "de.kamilunavo.rapportai",
+      "version": "1.3.0",
+      "build": "12",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T13:58:30-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "2897a50e-5110-43fe-b621-16a0482875ca",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-31T08:25:35.128Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6807486805"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Kamilunavo Trace: Nachweise",
+      "externalID": "6803765449",
+      "bundleOrPackageID": "de.kamilunavo.trace",
+      "version": "1.2.0",
+      "build": "12",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T13:26:35-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "8b85ed9f-d58f-44fe-87d6-923fd62bfa4a",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-31T07:18:41.782Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803765449"
+      }
+    },
     {
       "provider": "apple",
       "appName": "DuoCompare – Vote Battles",
@@ -55,31 +180,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6804225589"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Kamilunavo Trace: Nachweise",
-      "externalID": "6803765449",
-      "bundleOrPackageID": "de.kamilunavo.trace",
-      "version": "1.2.0",
-      "build": "12",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-30T13:26:35-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "bc1f7094-4325-47e2-9362-e11256a329d7",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-23T08:59:24.608Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803765449"
       }
     },
     {
@@ -400,31 +500,6 @@
     },
     {
       "provider": "apple",
-      "appName": "Rapport AI: Arbeitsberichte",
-      "externalID": "6807486805",
-      "bundleOrPackageID": "de.kamilunavo.rapportai",
-      "version": "1.3.0",
-      "build": "12",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-30T13:58:30-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "28a00f57-a0d6-4866-83e5-c0badbfb55ed",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-23T10:45:02.864Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6807486805"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "NavoKids – Lerninseln",
       "externalID": "6809038305",
       "bundleOrPackageID": "com.kamilunavo.navokids",
@@ -572,81 +647,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6808796440"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "MängelFix: Begehung & Fristen",
-      "externalID": "6801253878",
-      "bundleOrPackageID": "com.kamilunavo.maengelfix",
-      "version": "0.6.0",
-      "build": "10",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-30T14:40:18-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "e29a27d4-ff34-4bb6-b3f7-064b0d6aa8ac",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-24T09:58:10.778Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6801253878"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "ArbeitsKlar: Zeiterfassung",
-      "externalID": "6806348774",
-      "bundleOrPackageID": "de.kamilunavo.arbeitsklar",
-      "version": "1.2.0",
-      "build": "5",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-30T14:30:33-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "789af490-7a7e-49ba-901e-36123406b38c",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-21T14:45:34.863Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6806348774"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "ZweiCheck: Gemeinsam prüfen",
-      "externalID": "6800781224",
-      "bundleOrPackageID": "de.kamilunavo.zweicheck",
-      "version": "1.2.0",
-      "build": "15",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-30T14:12:01-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "6814e497-9c18-44ab-ab80-6c6573805e66",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-24T11:47:43.439Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6800781224"
       }
     },
     {
