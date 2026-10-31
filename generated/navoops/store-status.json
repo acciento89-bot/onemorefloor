@@ -1,10 +1,135 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-31T17:43:58Z",
+  "generatedAt": "2026-10-31T21:35:46Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Idle Handwerker: SHK-Tycoon",
+      "externalID": "6806743167",
+      "bundleOrPackageID": "de.kamilunavo.idlehandwerker",
+      "version": "1.5.0",
+      "build": "21",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T16:50:40-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "c7e81c0f-c847-416c-ae86-340ef34605e7",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-31T20:50:16.888Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6806743167"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Rising Steps: Inselabenteuer",
+      "externalID": "6819872415",
+      "bundleOrPackageID": "com.kamilunavo.risingsteps",
+      "version": "1.2.0",
+      "build": "10",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T16:47:02-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "34272003-1382-416b-9528-1f1b44249b79",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-31T19:47:32.712Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872415"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Perfect Drop: Turm stapeln",
+      "externalID": "6819872064",
+      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
+      "version": "1.2.0",
+      "build": "16",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-10-30T16:36:06-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "03670772-639a-4ffa-aa67-0c591865c26c",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-31T18:18:40.954Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Kintaroq: Geräte-Fehlerhilfe",
+      "externalID": "6808796440",
+      "bundleOrPackageID": "com.kamilunavo.kintaroq",
+      "version": "1.3.0",
+      "build": "7",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-30T14:44:02-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "82e02dec-743a-4757-9b93-bb5ccdb8b46c",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-31T12:53:08.688Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6808796440"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "WärmeTakt: Wärmepumpen-Tests",
+      "externalID": "6806348716",
+      "bundleOrPackageID": "de.kamilunavo.waermetakt",
+      "version": "1.2.0",
+      "build": "7",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-30T14:56:03-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "fa6f9913-6e77-4f19-9f36-47c3a825bad7",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-31T15:59:12.74Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6806348716"
+      }
+    },
     {
       "provider": "apple",
       "appName": "Rapport AI: Arbeitsberichte",
@@ -157,31 +282,6 @@
     },
     {
       "provider": "apple",
-      "appName": "WärmeTakt: Wärmepumpen-Tests",
-      "externalID": "6806348716",
-      "bundleOrPackageID": "de.kamilunavo.waermetakt",
-      "version": "1.2.0",
-      "build": "7",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-30T14:56:03-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "fa6f9913-6e77-4f19-9f36-47c3a825bad7",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-31T15:59:12.74Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6806348716"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "Reklaio: Reklamation & Fristen",
       "externalID": "6799375798",
       "bundleOrPackageID": "de.kamilunavo.reklaio",
@@ -203,31 +303,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6799375798"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Kintaroq: Geräte-Fehlerhilfe",
-      "externalID": "6808796440",
-      "bundleOrPackageID": "com.kamilunavo.kintaroq",
-      "version": "1.3.0",
-      "build": "7",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-30T14:44:02-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "82e02dec-743a-4757-9b93-bb5ccdb8b46c",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-31T12:53:08.688Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6808796440"
       }
     },
     {
@@ -421,81 +496,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Rising Steps: Inselabenteuer",
-      "externalID": "6819872415",
-      "bundleOrPackageID": "com.kamilunavo.risingsteps",
-      "version": "1.2.0",
-      "build": "9",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-30T16:47:02-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "0186b1d9-6d17-4fcc-9d25-eff1a8a56209",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-24T16:39:38.152Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872415"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Perfect Drop: Turm stapeln",
-      "externalID": "6819872064",
-      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
-      "version": "1.2.0",
-      "build": "15",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-30T16:36:06-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "76a6ee80-40a0-4ada-8aa0-c53f4e2a24a4",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-24T17:29:44.691Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Idle Handwerker: SHK-Tycoon",
-      "externalID": "6806743167",
-      "bundleOrPackageID": "de.kamilunavo.idlehandwerker",
-      "version": "1.5.0",
-      "build": "20",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-30T16:50:40-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "2482aa89-7c1c-4456-aef6-867247b70526",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-24T15:52:39.644Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6806743167"
       }
     },
     {
