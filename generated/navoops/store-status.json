@@ -1,33 +1,226 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-30T23:47:53Z",
+  "generatedAt": "2026-10-31T05:42:22Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
     {
       "provider": "apple",
-      "appName": "SHK Werkstatt",
-      "externalID": "6804749223",
-      "bundleOrPackageID": "de.kamilunavo.servicecheck",
+      "appName": "DuoCompare – Vote Battles",
+      "externalID": "6827674565",
+      "bundleOrPackageID": "com.kamilunavo.duocompare",
       "version": "1.0",
-      "build": "6",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-08-24T09:08:15-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "build": "2",
+      "rawState": "REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-10-27T10:56:32-07:00",
+      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
       "review": {
-        "submissionID": "5ae9147d-4dfd-47c6-8c0a-3894c4a1a94d",
-        "submissionState": "WAITING_FOR_REVIEW",
+        "submissionID": "24a3c736-50af-4416-b825-b49342575eb9",
+        "submissionState": "UNRESOLVED_ISSUES",
         "itemStates": [
-          "READY_FOR_REVIEW"
+          "READY_FOR_REVIEW",
+          "REJECTED"
         ],
-        "submittedAt": "2026-10-26T04:12:29.564Z",
+        "submittedAt": "2026-10-28T05:04:02.529Z",
         "track": null,
         "lifecycleState": null,
         "reason": null,
         "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6804749223"
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6827674565"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "99,9%",
+      "externalID": "6804225589",
+      "bundleOrPackageID": "de.kamilunavo.ninenine",
+      "version": "1.0",
+      "build": "20",
+      "rawState": "REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-08-22T06:43:53-07:00",
+      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
+      "review": {
+        "submissionID": "a78428f9-a7f8-4c6d-a8e4-2f21b607d7d2",
+        "submissionState": "UNRESOLVED_ISSUES",
+        "itemStates": [
+          "READY_FOR_REVIEW",
+          "REJECTED"
+        ],
+        "submittedAt": "2026-09-14T16:46:08.709Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6804225589"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Kamilunavo Trace: Nachweise",
+      "externalID": "6803765449",
+      "bundleOrPackageID": "de.kamilunavo.trace",
+      "version": "1.2.0",
+      "build": "12",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-30T13:26:35-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "bc1f7094-4325-47e2-9362-e11256a329d7",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-23T08:59:24.608Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803765449"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "WonderCaps",
+      "externalID": "6812037765",
+      "bundleOrPackageID": "com.kamilunavo.wondercaps",
+      "version": "0.5.0",
+      "build": "10",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-09-14T12:42:24-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
+      "appName": "Monster Auto-Tactics",
+      "externalID": "6826929964",
+      "bundleOrPackageID": "com.kamilunavo.monsterautotactics",
+      "version": "0.1.0",
+      "build": "2",
+      "rawState": "REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-10-25T14:05:13-07:00",
+      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
+      "review": {
+        "submissionID": "06c61b45-d515-41b6-9dca-e2051767b506",
+        "submissionState": "UNRESOLVED_ISSUES",
+        "itemStates": [
+          "READY_FOR_REVIEW",
+          "REJECTED"
+        ],
+        "submittedAt": "2026-10-26T04:21:28.745Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6826929964"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Dungeonwerk: Bauen & Raiden",
+      "externalID": "6826646231",
+      "bundleOrPackageID": "com.kamilunavo.dungeonarchitect",
+      "version": "0.1.0",
+      "build": "2",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-24T11:21:30-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
+      "appName": "Gildenfunke: Helden & Gilde",
+      "externalID": "6824671509",
+      "bundleOrPackageID": "com.kamilunavo.gildenfunke",
+      "version": "0.1.0",
+      "build": "2",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-19T14:27:39-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
+      "appName": "Pocket Rail: Meine Eisenbahn",
+      "externalID": "6824594887",
+      "bundleOrPackageID": "com.kamilunavo.pocketrail",
+      "version": "0.2.0",
+      "build": "3",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-19T10:13:03-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
+      "appName": "Schon erledigt? Haushalt",
+      "externalID": "6806816948",
+      "bundleOrPackageID": "com.kamilunavo.schon-erledigt",
+      "version": "1.2.0",
+      "build": "5",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-30T12:54:08-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "b11ed907-d655-4126-a411-5c914cb369e1",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-30T19:59:18.454Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6806816948"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Runenpfad: Karten & Dungeons",
+      "externalID": "6824596154",
+      "bundleOrPackageID": "com.kamilunavo.runenpfad",
+      "version": "0.3.0",
+      "build": "4",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-19T10:16:28-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
+      "appName": "NavoTap: Timing & Highscore",
+      "externalID": "6803636049",
+      "bundleOrPackageID": "com.kamilunavo.onemoretap",
+      "version": "1.2.0",
+      "build": "8",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-30T11:44:33-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "f12d05d1-704b-4957-9880-c228660e5c1f",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-30T18:49:57.523Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
       }
     },
     {
@@ -57,14 +250,39 @@
     },
     {
       "provider": "apple",
+      "appName": "Perfect Drop: Turm stapeln",
+      "externalID": "6819872064",
+      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
+      "version": "1.2.0",
+      "build": "15",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-30T16:36:06-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "76a6ee80-40a0-4ada-8aa0-c53f4e2a24a4",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-24T17:29:44.691Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
+      }
+    },
+    {
+      "provider": "apple",
       "appName": "Idle Handwerker: SHK-Tycoon",
       "externalID": "6806743167",
       "bundleOrPackageID": "de.kamilunavo.idlehandwerker",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "build": "20",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-10-21T05:24:55-07:00",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-30T16:50:40-07:00",
       "detail": "COMPLETE · APPROVED",
       "review": {
         "submissionID": "2482aa89-7c1c-4456-aef6-867247b70526",
@@ -78,6 +296,31 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6806743167"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "SHK Werkstatt",
+      "externalID": "6804749223",
+      "bundleOrPackageID": "de.kamilunavo.servicecheck",
+      "version": "1.0",
+      "build": "7",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-08-24T09:08:15-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "5ae9147d-4dfd-47c6-8c0a-3894c4a1a94d",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-26T04:12:29.564Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6804749223"
       }
     },
     {
@@ -103,31 +346,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6803227186"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Perfect Drop: Turm stapeln",
-      "externalID": "6819872064",
-      "bundleOrPackageID": "com.kamilunavo.perfectdrop",
-      "version": "1.2.0",
-      "build": "15",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-30T16:36:06-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "76a6ee80-40a0-4ada-8aa0-c53f4e2a24a4",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-24T17:29:44.691Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
       }
     },
     {
@@ -178,31 +396,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6808345429"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "NavoTap: Timing & Highscore",
-      "externalID": "6803636049",
-      "bundleOrPackageID": "com.kamilunavo.onemoretap",
-      "version": "1.2.0",
-      "build": "8",
-      "rawState": "READY_FOR_SALE",
-      "state": "live",
-      "updatedAt": "2026-10-30T11:44:33-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "f12d05d1-704b-4957-9880-c228660e5c1f",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-30T18:49:57.523Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
       }
     },
     {
@@ -458,31 +651,6 @@
     },
     {
       "provider": "apple",
-      "appName": "Kamilunavo Trace: Nachweise",
-      "externalID": "6803765449",
-      "bundleOrPackageID": "de.kamilunavo.trace",
-      "version": "1.2.0",
-      "build": "12",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-30T13:26:35-07:00",
-      "detail": "COMPLETE · APPROVED",
-      "review": {
-        "submissionID": "bc1f7094-4325-47e2-9362-e11256a329d7",
-        "submissionState": "COMPLETE",
-        "itemStates": [
-          "APPROVED"
-        ],
-        "submittedAt": "2026-10-23T08:59:24.608Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803765449"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "BrennerCalc: Brenner & SHK",
       "externalID": "6801656652",
       "bundleOrPackageID": "de.kamilunavo.brennercalc",
@@ -533,135 +701,6 @@
     },
     {
       "provider": "apple",
-      "appName": "Schon erledigt? Haushalt",
-      "externalID": "6806816948",
-      "bundleOrPackageID": "com.kamilunavo.schon-erledigt",
-      "version": "1.2.0",
-      "build": "5",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-30T12:54:08-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "b11ed907-d655-4126-a411-5c914cb369e1",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-30T19:59:18.454Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6806816948"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "DuoCompare – Vote Battles",
-      "externalID": "6827674565",
-      "bundleOrPackageID": "com.kamilunavo.duocompare",
-      "version": "1.0",
-      "build": "1",
-      "rawState": "REJECTED",
-      "state": "rejected",
-      "updatedAt": "2026-10-27T10:56:32-07:00",
-      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
-      "review": {
-        "submissionID": "24a3c736-50af-4416-b825-b49342575eb9",
-        "submissionState": "UNRESOLVED_ISSUES",
-        "itemStates": [
-          "READY_FOR_REVIEW",
-          "REJECTED"
-        ],
-        "submittedAt": "2026-10-28T05:04:02.529Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6827674565"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Monster Auto-Tactics",
-      "externalID": "6826929964",
-      "bundleOrPackageID": "com.kamilunavo.monsterautotactics",
-      "version": "0.1.0",
-      "build": "1",
-      "rawState": "REJECTED",
-      "state": "rejected",
-      "updatedAt": "2026-10-25T14:05:13-07:00",
-      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
-      "review": {
-        "submissionID": "06c61b45-d515-41b6-9dca-e2051767b506",
-        "submissionState": "UNRESOLVED_ISSUES",
-        "itemStates": [
-          "READY_FOR_REVIEW",
-          "REJECTED"
-        ],
-        "submittedAt": "2026-10-26T04:21:28.745Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6826929964"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Runenpfad: Karten & Dungeons",
-      "externalID": "6824596154",
-      "bundleOrPackageID": "com.kamilunavo.runenpfad",
-      "version": "0.3.0",
-      "build": "3",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-19T10:16:28-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "Dungeonwerk: Bauen & Raiden",
-      "externalID": "6826646231",
-      "bundleOrPackageID": "com.kamilunavo.dungeonarchitect",
-      "version": "0.1.0",
-      "build": "1",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-24T11:21:30-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "Pocket Rail: Meine Eisenbahn",
-      "externalID": "6824594887",
-      "bundleOrPackageID": "com.kamilunavo.pocketrail",
-      "version": "0.2.0",
-      "build": "2",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-19T10:13:03-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "Gildenfunke: Helden & Gilde",
-      "externalID": "6824671509",
-      "bundleOrPackageID": "com.kamilunavo.gildenfunke",
-      "version": "0.1.0",
-      "build": "1",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-19T14:27:39-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
       "appName": "One More Floor",
       "externalID": "6819872214",
       "bundleOrPackageID": "com.kamilunavo.onemorefloor",
@@ -696,45 +735,6 @@
       "rawState": "PREPARE_FOR_SUBMISSION",
       "state": "development",
       "updatedAt": "2026-10-06T14:42:17-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "99,9%",
-      "externalID": "6804225589",
-      "bundleOrPackageID": "de.kamilunavo.ninenine",
-      "version": "1.0",
-      "build": "19",
-      "rawState": "REJECTED",
-      "state": "rejected",
-      "updatedAt": "2026-08-22T06:43:53-07:00",
-      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
-      "review": {
-        "submissionID": "a78428f9-a7f8-4c6d-a8e4-2f21b607d7d2",
-        "submissionState": "UNRESOLVED_ISSUES",
-        "itemStates": [
-          "READY_FOR_REVIEW",
-          "REJECTED"
-        ],
-        "submittedAt": "2026-09-14T16:46:08.709Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6804225589"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "WonderCaps",
-      "externalID": "6812037765",
-      "bundleOrPackageID": "com.kamilunavo.wondercaps",
-      "version": "0.5.0",
-      "build": "9",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-09-14T12:42:24-07:00",
       "detail": "PREPARE_FOR_SUBMISSION",
       "review": null
     },
