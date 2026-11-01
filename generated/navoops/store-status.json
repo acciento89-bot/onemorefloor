@@ -1,10 +1,162 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-31T21:35:46Z",
+  "generatedAt": "2026-11-01T01:10:52Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Pocket Rail: Meine Eisenbahn",
+      "externalID": "6824594887",
+      "bundleOrPackageID": "com.kamilunavo.pocketrail",
+      "version": "0.2.0",
+      "build": "4",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-19T10:13:03-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
+      "appName": "NavoKids – Lerninseln",
+      "externalID": "6809038305",
+      "bundleOrPackageID": "com.kamilunavo.navokids",
+      "version": "0.6.0",
+      "build": "17",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-30T14:58:47-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "71fc62f9-745c-43c1-addd-da341534654f",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-31T17:05:00.442Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6809038305"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Reklaio: Reklamation & Fristen",
+      "externalID": "6799375798",
+      "bundleOrPackageID": "de.kamilunavo.reklaio",
+      "version": "0.6.0",
+      "build": "12",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
+      "updatedAt": "2026-10-30T14:53:39-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "5ebeebf1-24fa-4b46-a50e-d7d1d9e58352",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-31T14:43:08.17Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6799375798"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Runenpfad: Karten & Dungeons",
+      "externalID": "6824596154",
+      "bundleOrPackageID": "com.kamilunavo.runenpfad",
+      "version": "0.3.0",
+      "build": "5",
+      "rawState": "PREPARE_FOR_SUBMISSION",
+      "state": "development",
+      "updatedAt": "2026-10-19T10:16:28-07:00",
+      "detail": "PREPARE_FOR_SUBMISSION",
+      "review": null
+    },
+    {
+      "provider": "apple",
+      "appName": "SHK Werkstatt",
+      "externalID": "6804749223",
+      "bundleOrPackageID": "de.kamilunavo.servicecheck",
+      "version": "1.0",
+      "build": "8",
+      "rawState": "WAITING_FOR_REVIEW",
+      "state": "review",
+      "updatedAt": "2026-08-24T09:08:15-07:00",
+      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "review": {
+        "submissionID": "5ae9147d-4dfd-47c6-8c0a-3894c4a1a94d",
+        "submissionState": "WAITING_FOR_REVIEW",
+        "itemStates": [
+          "READY_FOR_REVIEW"
+        ],
+        "submittedAt": "2026-10-26T04:12:29.564Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6804749223"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "Family Life OS",
+      "externalID": "6803079524",
+      "bundleOrPackageID": "de.kamilunavo.familyprototype",
+      "version": "0.1.0",
+      "build": "11",
+      "rawState": "REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-08-19T04:59:27-07:00",
+      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
+      "review": {
+        "submissionID": "3b4e487e-d776-471e-abff-0fae824a72cd",
+        "submissionState": "UNRESOLVED_ISSUES",
+        "itemStates": [
+          "READY_FOR_REVIEW",
+          "REJECTED"
+        ],
+        "submittedAt": "2026-09-14T11:28:35.489Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6803079524"
+      }
+    },
+    {
+      "provider": "apple",
+      "appName": "NavoOps",
+      "externalID": "6811085573",
+      "bundleOrPackageID": "com.kamilunavo.NavoOps",
+      "version": "1.3.1",
+      "build": "8",
+      "rawState": "REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-09-11T07:48:04-07:00",
+      "detail": "UNRESOLVED_ISSUES · REJECTED",
+      "review": {
+        "submissionID": "5ede7f1b-944a-4d4b-bf36-bfaee6690081",
+        "submissionState": "UNRESOLVED_ISSUES",
+        "itemStates": [
+          "REJECTED"
+        ],
+        "submittedAt": "2026-09-20T10:26:40.281Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6811085573"
+      }
+    },
     {
       "provider": "apple",
       "appName": "Idle Handwerker: SHK-Tycoon",
@@ -157,31 +309,6 @@
     },
     {
       "provider": "apple",
-      "appName": "NavoKids – Lerninseln",
-      "externalID": "6809038305",
-      "bundleOrPackageID": "com.kamilunavo.navokids",
-      "version": "0.6.0",
-      "build": "17",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-30T14:58:47-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "71fc62f9-745c-43c1-addd-da341534654f",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-31T17:05:00.442Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6809038305"
-      }
-    },
-    {
-      "provider": "apple",
       "appName": "ArbeitsKlar: Zeiterfassung",
       "externalID": "6806348774",
       "bundleOrPackageID": "de.kamilunavo.arbeitsklar",
@@ -278,31 +405,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6801253878"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Reklaio: Reklamation & Fristen",
-      "externalID": "6799375798",
-      "bundleOrPackageID": "de.kamilunavo.reklaio",
-      "version": "0.6.0",
-      "build": "12",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-10-30T14:53:39-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "5ebeebf1-24fa-4b46-a50e-d7d1d9e58352",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-31T14:43:08.17Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6799375798"
       }
     },
     {
@@ -424,19 +526,6 @@
     },
     {
       "provider": "apple",
-      "appName": "Pocket Rail: Meine Eisenbahn",
-      "externalID": "6824594887",
-      "bundleOrPackageID": "com.kamilunavo.pocketrail",
-      "version": "0.2.0",
-      "build": "3",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-19T10:13:03-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
       "appName": "Schon erledigt? Haushalt",
       "externalID": "6806816948",
       "bundleOrPackageID": "com.kamilunavo.schon-erledigt",
@@ -462,19 +551,6 @@
     },
     {
       "provider": "apple",
-      "appName": "Runenpfad: Karten & Dungeons",
-      "externalID": "6824596154",
-      "bundleOrPackageID": "com.kamilunavo.runenpfad",
-      "version": "0.3.0",
-      "build": "4",
-      "rawState": "PREPARE_FOR_SUBMISSION",
-      "state": "development",
-      "updatedAt": "2026-10-19T10:16:28-07:00",
-      "detail": "PREPARE_FOR_SUBMISSION",
-      "review": null
-    },
-    {
-      "provider": "apple",
       "appName": "NavoTap: Timing & Highscore",
       "externalID": "6803636049",
       "bundleOrPackageID": "com.kamilunavo.onemoretap",
@@ -496,31 +572,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6803636049"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "SHK Werkstatt",
-      "externalID": "6804749223",
-      "bundleOrPackageID": "de.kamilunavo.servicecheck",
-      "version": "1.0",
-      "build": "7",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-08-24T09:08:15-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "5ae9147d-4dfd-47c6-8c0a-3894c4a1a94d",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-26T04:12:29.564Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6804749223"
       }
     },
     {
@@ -596,57 +647,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6808345429"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "NavoOps",
-      "externalID": "6811085573",
-      "bundleOrPackageID": "com.kamilunavo.NavoOps",
-      "version": "1.3.1",
-      "build": "7",
-      "rawState": "REJECTED",
-      "state": "rejected",
-      "updatedAt": "2026-09-11T07:48:04-07:00",
-      "detail": "UNRESOLVED_ISSUES · REJECTED",
-      "review": {
-        "submissionID": "5ede7f1b-944a-4d4b-bf36-bfaee6690081",
-        "submissionState": "UNRESOLVED_ISSUES",
-        "itemStates": [
-          "REJECTED"
-        ],
-        "submittedAt": "2026-09-20T10:26:40.281Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6811085573"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Family Life OS",
-      "externalID": "6803079524",
-      "bundleOrPackageID": "de.kamilunavo.familyprototype",
-      "version": "0.1.0",
-      "build": "10",
-      "rawState": "REJECTED",
-      "state": "rejected",
-      "updatedAt": "2026-08-19T04:59:27-07:00",
-      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
-      "review": {
-        "submissionID": "3b4e487e-d776-471e-abff-0fae824a72cd",
-        "submissionState": "UNRESOLVED_ISSUES",
-        "itemStates": [
-          "READY_FOR_REVIEW",
-          "REJECTED"
-        ],
-        "submittedAt": "2026-09-14T11:28:35.489Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6803079524"
       }
     },
     {
