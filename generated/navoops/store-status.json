@@ -1,10 +1,36 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-05T06:47:16Z",
+  "generatedAt": "2026-11-05T15:28:04Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "SHK Werkstatt",
+      "externalID": "6804749223",
+      "bundleOrPackageID": "de.kamilunavo.servicecheck",
+      "version": "1.0",
+      "build": "8",
+      "rawState": "REJECTED",
+      "state": "rejected",
+      "updatedAt": "2026-08-24T09:08:15-07:00",
+      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
+      "review": {
+        "submissionID": "5ae9147d-4dfd-47c6-8c0a-3894c4a1a94d",
+        "submissionState": "UNRESOLVED_ISSUES",
+        "itemStates": [
+          "READY_FOR_REVIEW",
+          "REJECTED"
+        ],
+        "submittedAt": "2026-10-26T04:12:29.564Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6804749223"
+      }
+    },
     {
       "provider": "apple",
       "appName": "Idle Handwerker: SHK-Tycoon",
@@ -272,31 +298,6 @@
       "updatedAt": "2026-10-19T10:16:28-07:00",
       "detail": "PREPARE_FOR_SUBMISSION",
       "review": null
-    },
-    {
-      "provider": "apple",
-      "appName": "SHK Werkstatt",
-      "externalID": "6804749223",
-      "bundleOrPackageID": "de.kamilunavo.servicecheck",
-      "version": "1.0",
-      "build": "8",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
-      "updatedAt": "2026-08-24T09:08:15-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
-      "review": {
-        "submissionID": "5ae9147d-4dfd-47c6-8c0a-3894c4a1a94d",
-        "submissionState": "WAITING_FOR_REVIEW",
-        "itemStates": [
-          "READY_FOR_REVIEW"
-        ],
-        "submittedAt": "2026-10-26T04:12:29.564Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6804749223"
-      }
     },
     {
       "provider": "apple",
