@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-11T06:22:26Z",
+  "generatedAt": "2026-11-11T15:12:58Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
@@ -12,15 +12,15 @@
       "bundleOrPackageID": "de.kamilunavo.idlehandwerker",
       "version": "1.5.0",
       "build": "23",
-      "rawState": "WAITING_FOR_REVIEW",
-      "state": "review",
+      "rawState": "REJECTED",
+      "state": "rejected",
       "updatedAt": "2026-10-30T16:50:40-07:00",
-      "detail": "WAITING_FOR_REVIEW · READY_FOR_REVIEW",
+      "detail": "UNRESOLVED_ISSUES · REJECTED",
       "review": {
         "submissionID": "c7e81c0f-c847-416c-ae86-340ef34605e7",
-        "submissionState": "WAITING_FOR_REVIEW",
+        "submissionState": "UNRESOLVED_ISSUES",
         "itemStates": [
-          "READY_FOR_REVIEW"
+          "REJECTED"
         ],
         "submittedAt": "2026-11-10T10:38:36.439Z",
         "track": null,
