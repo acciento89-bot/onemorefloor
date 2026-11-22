@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-22T17:20:27Z",
+  "generatedAt": "2026-11-22T18:21:20Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
@@ -12,8 +12,8 @@
       "bundleOrPackageID": "com.kamilunavo.monsterautotactics",
       "version": "0.1.0",
       "build": "3",
-      "rawState": "PENDING_DEVELOPER_RELEASE",
-      "state": "development",
+      "rawState": "READY_FOR_SALE",
+      "state": "live",
       "updatedAt": "2026-10-25T14:05:13-07:00",
       "detail": "COMPLETE · APPROVED",
       "review": {
