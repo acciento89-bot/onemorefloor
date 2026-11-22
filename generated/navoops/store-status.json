@@ -1,10 +1,35 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-22T14:20:38Z",
+  "generatedAt": "2026-11-22T15:20:07Z",
   "sourceRepository": "acciento89-bot/onemorefloor",
   "appleAvailable": true,
   "googleAvailable": false,
   "apps": [
+    {
+      "provider": "apple",
+      "appName": "Monster Auto-Tactics",
+      "externalID": "6826929964",
+      "bundleOrPackageID": "com.kamilunavo.monsterautotactics",
+      "version": "0.1.0",
+      "build": "3",
+      "rawState": "PENDING_DEVELOPER_RELEASE",
+      "state": "development",
+      "updatedAt": "2026-10-25T14:05:13-07:00",
+      "detail": "COMPLETE · APPROVED",
+      "review": {
+        "submissionID": "06c61b45-d515-41b6-9dca-e2051767b506",
+        "submissionState": "COMPLETE",
+        "itemStates": [
+          "APPROVED"
+        ],
+        "submittedAt": "2026-10-26T04:21:28.745Z",
+        "track": null,
+        "lifecycleState": null,
+        "reason": null,
+        "reasonAvailability": "consoleOnly",
+        "consoleURL": "https://appstoreconnect.apple.com/apps/6826929964"
+      }
+    },
     {
       "provider": "apple",
       "appName": "Idle Handwerker: SHK-Tycoon",
@@ -205,32 +230,6 @@
         "reason": null,
         "reasonAvailability": "consoleOnly",
         "consoleURL": "https://appstoreconnect.apple.com/apps/6819872064"
-      }
-    },
-    {
-      "provider": "apple",
-      "appName": "Monster Auto-Tactics",
-      "externalID": "6826929964",
-      "bundleOrPackageID": "com.kamilunavo.monsterautotactics",
-      "version": "0.1.0",
-      "build": "3",
-      "rawState": "REJECTED",
-      "state": "rejected",
-      "updatedAt": "2026-10-25T14:05:13-07:00",
-      "detail": "UNRESOLVED_ISSUES · READY_FOR_REVIEW, REJECTED",
-      "review": {
-        "submissionID": "06c61b45-d515-41b6-9dca-e2051767b506",
-        "submissionState": "UNRESOLVED_ISSUES",
-        "itemStates": [
-          "READY_FOR_REVIEW",
-          "REJECTED"
-        ],
-        "submittedAt": "2026-10-26T04:21:28.745Z",
-        "track": null,
-        "lifecycleState": null,
-        "reason": null,
-        "reasonAvailability": "consoleOnly",
-        "consoleURL": "https://appstoreconnect.apple.com/apps/6826929964"
       }
     },
     {
